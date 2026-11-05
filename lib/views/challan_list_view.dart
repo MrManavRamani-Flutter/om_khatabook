@@ -495,8 +495,8 @@ class ChallanListView extends StatelessWidget {
                         ),
                         _buildStatusChip(context, provider, 'all', 'All'),
                         _buildStatusChip(context, provider, 'paid', 'Paid', color: AppColors.successText),
-                        _buildStatusChip(context, provider, 'unpaid', '⚠️ Unpaid', color: AppColors.warningText),
-                        _buildStatusChip(context, provider, 'bounced', '❌ Bounced', color: AppColors.warningText),
+                        _buildStatusChip(context, provider, 'unpaid', 'Unpaid Warning', color: AppColors.warningText),
+                        _buildStatusChip(context, provider, 'bounced', 'Bounced', color: AppColors.warningText),
 
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 4),
@@ -919,10 +919,10 @@ class ChallanListView extends StatelessWidget {
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.warning_amber_rounded, size: 12, color: Colors.white),
+              Icon(Icons.warning_amber_rounded, size: 13, color: Colors.white),
               SizedBox(width: 4),
               Text(
-                '⚠️ UNPAID CASH',
+                'UNPAID CASH',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -1071,6 +1071,7 @@ class ChallanListView extends StatelessWidget {
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
+      showCheckmark: false,
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -1086,6 +1087,7 @@ class ChallanListView extends StatelessWidget {
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
+      showCheckmark: false,
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
