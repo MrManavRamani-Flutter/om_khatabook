@@ -1,3 +1,12 @@
+enum LedgerViewMode {
+  table('Table (Excel Grid)'),
+  compact('Compact List'),
+  cards('Large Cards');
+
+  final String label;
+  const LedgerViewMode(this.label);
+}
+
 enum PaymentOption {
   cash,
   cheque;

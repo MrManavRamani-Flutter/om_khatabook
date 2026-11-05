@@ -34,6 +34,9 @@ void main() {
     expect(find.text('Challan & Billing Ledger'), findsOneWidget);
     expect(find.text('Parties Directory'), findsWidgets);
     expect(find.text('Financial Reports'), findsOneWidget);
-    expect(find.textContaining('PARTIAL: PAID'), findsWidgets);
+    expect(find.textContaining('PARTIAL'), findsWidgets);
+    expect(find.text('Excel Table'), findsOneWidget);
+    expect(find.text('Compact'), findsOneWidget);
+    expect(find.text('Cards'), findsOneWidget);
   });
 }

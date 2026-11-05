@@ -28,6 +28,9 @@ class ChallanProvider extends ChangeNotifier {
   // Sorting state (Date Ascending vs Descending)
   bool _sortAscending = false; // false = Newest First (Desc), true = Oldest First (Asc)
 
+  // View Mode (Table / Cards / Compact)
+  LedgerViewMode _viewMode = LedgerViewMode.table;
+
   ChallanProvider(this._storage);
 
   List<Party> get parties => _parties.where((p) => !p.isDeleted).toList();
@@ -52,12 +55,25 @@ class ChallanProvider extends ChangeNotifier {
   int? get selectedMonth => _selectedMonth;
   int? get selectedYear => _selectedYear;
   bool get sortAscending => _sortAscending;
+  LedgerViewMode get viewMode => _viewMode;
+
+  void setViewMode(LedgerViewMode mode) {
+    if (_viewMode == mode) return;
+    _viewMode = mode;
+    _storage.setLedgerViewMode(mode.name);
+    notifyListeners();
+  }
 
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
     _isDarkMode = _storage.isDarkMode;
+    final savedMode = _storage.ledgerViewMode;
+    _viewMode = LedgerViewMode.values.firstWhere(
+      (e) => e.name == savedMode,
+      orElse: () => LedgerViewMode.table,
+    );
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
 

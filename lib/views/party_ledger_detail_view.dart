@@ -756,14 +756,18 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     child: Text(
                       'Showing ${filtered.length} of ${allPartyChallans.length} challans for "${party.name}"',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  // WINDOWS EXPLORER STYLE VIEW MODE SWITCHER
+                  _buildViewModeSwitcher(context, provider),
                 ],
               ),
             ),
             const SizedBox(height: 12),
 
-            // LIST OF CHALLANS FOR THIS PARTY ONLY
+            // LIST OF CHALLANS FOR THIS PARTY ONLY (TABLE / COMPACT / CARDS)
             if (filtered.isEmpty)
               Card(
                 child: Padding(
@@ -805,6 +809,10 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   ),
                 ),
               )
+            else if (provider.viewMode == LedgerViewMode.table)
+              _buildExcelTableView(context, filtered)
+            else if (provider.viewMode == LedgerViewMode.compact)
+              _buildCompactListView(context, filtered)
             else
               ListView.builder(
                 shrinkWrap: true,
@@ -1097,25 +1105,619 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     );
   }
 
-  Widget _buildStatusBadge(ChallanEntry item) {
+  Widget _buildViewModeSwitcher(BuildContext context, ChallanProvider provider) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildViewModeButton(
+            context,
+            mode: LedgerViewMode.table,
+            current: provider.viewMode,
+            icon: Icons.table_chart_outlined,
+            label: 'Excel Table',
+            tooltip: 'Excel Grid View (Dense rows, view many records at once)',
+            onTap: () => provider.setViewMode(LedgerViewMode.table),
+          ),
+          _buildViewModeButton(
+            context,
+            mode: LedgerViewMode.compact,
+            current: provider.viewMode,
+            icon: Icons.view_list_rounded,
+            label: 'Compact',
+            tooltip: 'Compact List View',
+            onTap: () => provider.setViewMode(LedgerViewMode.compact),
+          ),
+          _buildViewModeButton(
+            context,
+            mode: LedgerViewMode.cards,
+            current: provider.viewMode,
+            icon: Icons.view_agenda_outlined,
+            label: 'Cards',
+            tooltip: 'Large Cards View',
+            onTap: () => provider.setViewMode(LedgerViewMode.cards),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewModeButton(
+    BuildContext context, {
+    required LedgerViewMode mode,
+    required LedgerViewMode current,
+    required IconData icon,
+    required String label,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    final isSelected = mode == current;
+    final primaryColor = AppColors.primary;
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? Theme.of(context).cardColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? primaryColor : Theme.of(context).textTheme.bodySmall?.color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? primaryColor : Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExcelTableView(BuildContext context, List<ChallanEntry> entries) {
+    final sumChallan = entries.fold(0.0, (s, c) => s + c.challanAmount);
+    final sumGst = entries.fold(0.0, (s, c) => s + c.gstAmount);
+    final sumFinal = entries.fold(0.0, (s, c) => s + c.finalAmount);
+    final sumPaid = entries.fold(0.0, (s, c) => s + c.paidAmount);
+    final sumDue = entries.fold(0.0, (s, c) => s + (c.paymentOption == PaymentOption.cash ? c.remainingAmount : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0)));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // EXCEL TABLE HEADER ROW
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            child: const Row(
+              children: [
+                SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                SizedBox(width: 80, child: Text('DATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                SizedBox(width: 95, child: Text('CHALLAN #', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                Expanded(flex: 3, child: Text('NOTES / REMARKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                SizedBox(width: 80, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+              ],
+            ),
+          ),
+
+          // DATA ROWS
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: entries.length,
+            separatorBuilder: (context, index) => Divider(
+              height: 1,
+              thickness: 1,
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.12),
+            ),
+            itemBuilder: (context, index) {
+              final item = entries[index];
+              final isCash = item.paymentOption == PaymentOption.cash;
+              final isUnpaidCash = isCash && !item.isCashPaid && !item.isPartiallyPaid;
+              final isPartialCash = isCash && item.isPartiallyPaid;
+              final isBounced = !isCash && item.chequeDetails?.status == ChequeStatus.bounced;
+              final hasWarning = isUnpaidCash || isBounced;
+
+              Color rowBg;
+              if (hasWarning) {
+                rowBg = isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2);
+              } else if (isPartialCash) {
+                rowBg = isDark ? const Color(0xFF332707) : const Color(0xFFFFFDF5);
+              } else {
+                rowBg = index.isEven
+                    ? Theme.of(context).cardColor
+                    : (isDark ? const Color(0xFF1E293B).withValues(alpha: 0.4) : const Color(0xFFF8FAFC));
+              }
+
+              final dueAmt = isCash ? item.remainingAmount : (item.chequeDetails?.status != ChequeStatus.cleared ? item.finalAmount : 0.0);
+
+              return Material(
+                color: rowBg,
+                child: InkWell(
+                  onTap: () => _openViewChallan(context, item),
+                  hoverColor: AppColors.primary.withValues(alpha: 0.06),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    child: Row(
+                      children: [
+                        // #
+                        SizedBox(
+                          width: 32,
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                        // DATE
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            Formatters.shortDate(item.date),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        // CHALLAN NO
+                        SizedBox(
+                          width: 95,
+                          child: Text(
+                            item.challanNo,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: hasWarning ? AppColors.warningText : AppColors.primary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // NOTES / REMARKS
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            item.notes.isNotEmpty ? item.notes : 'No remarks',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: item.notes.isNotEmpty ? null : Colors.grey,
+                              fontStyle: item.notes.isNotEmpty ? FontStyle.normal : FontStyle.italic,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // CHALLAN AMT
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              Formatters.currency(item.challanAmount),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ),
+                        // GST BILL & AMT
+                        Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Text(
+                              item.gstBillNo.isNotEmpty
+                                  ? '${item.gstBillNo} (${Formatters.currency(item.gstAmount)})'
+                                  : '-',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: item.gstBillNo.isNotEmpty ? null : Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // FINAL AMT
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              Formatters.currency(item.finalAmount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: hasWarning
+                                    ? AppColors.warningText
+                                    : (isPartialCash ? const Color(0xFFB45309) : AppColors.primary),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // PAID / RECVD
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              Formatters.currency(item.paidAmount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: item.isFullyPaid ? AppColors.successText : const Color(0xFFB45309),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // BALANCE DUE
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              dueAmt > 0 ? Formatters.currency(dueAmt) : '-',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: dueAmt > 0 ? AppColors.warningText : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // STATUS
+                        SizedBox(
+                          width: 135,
+                          child: Center(
+                            child: _buildStatusBadge(item, compact: true),
+                          ),
+                        ),
+                        // ACTIONS
+                        SizedBox(
+                          width: 80,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildActionIcon(
+                                icon: Icons.visibility_outlined,
+                                tooltip: 'View Full Details',
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                                onTap: () => _openViewChallan(context, item),
+                              ),
+                              const SizedBox(width: 2),
+                              _buildActionIcon(
+                                icon: Icons.edit_outlined,
+                                tooltip: 'Edit Entry',
+                                color: AppColors.primary,
+                                onTap: () => _openEditChallan(context, item),
+                              ),
+                              const SizedBox(width: 2),
+                              _buildActionIcon(
+                                icon: Icons.delete_outline,
+                                tooltip: 'Move to Bin',
+                                color: AppColors.warningText,
+                                onTap: () => _confirmDeleteChallan(context, item),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // EXCEL TOTAL FOOTER ROW
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.35),
+                  width: 2.0,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 207,
+                  child: Text(
+                    'TOTAL (${entries.length} Entries)',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const Expanded(flex: 3, child: SizedBox()),
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      Formatters.currency(sumChallan),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        Formatters.currency(sumGst),
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      Formatters.currency(sumFinal),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      Formatters.currency(sumPaid),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.successText),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      Formatters.currency(sumDue),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: sumDue > 0 ? AppColors.warningText : Colors.grey),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 215),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactListView(BuildContext context, List<ChallanEntry> entries) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final item = entries[index];
+        final isCash = item.paymentOption == PaymentOption.cash;
+        final isUnpaidCash = isCash && !item.isCashPaid && !item.isPartiallyPaid;
+        final isPartialCash = isCash && item.isPartiallyPaid;
+        final isBounced = !isCash && item.chequeDetails?.status == ChequeStatus.bounced;
+        final hasWarning = isUnpaidCash || isBounced;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final dueAmt = isCash ? item.remainingAmount : (item.chequeDetails?.status != ChequeStatus.cleared ? item.finalAmount : 0.0);
+
+        final rowBg = hasWarning
+            ? (isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2))
+            : (isPartialCash
+                ? (isDark ? const Color(0xFF332707) : const Color(0xFFFFFDF5))
+                : Theme.of(context).cardColor);
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          decoration: BoxDecoration(
+            color: rowBg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: hasWarning
+                  ? AppColors.warningBorder
+                  : (isPartialCash ? const Color(0xFFFDE68A) : Theme.of(context).dividerColor.withValues(alpha: 0.2)),
+              width: hasWarning || isPartialCash ? 1.5 : 1.0,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _openViewChallan(context, item),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: hasWarning
+                            ? AppColors.warningText.withValues(alpha: 0.15)
+                            : AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '#${item.challanNo}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: hasWarning ? AppColors.warningText : AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      Formatters.shortDate(item.date),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.notes.isNotEmpty ? item.notes : 'Challan #${item.challanNo}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatusBadge(item, compact: true),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          Formatters.currency(item.finalAmount),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: hasWarning ? AppColors.warningText : AppColors.primary,
+                          ),
+                        ),
+                        if (dueAmt > 0)
+                          Text(
+                            'Due: ${Formatters.currency(dueAmt)}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildActionIcon(
+                          icon: Icons.visibility_outlined,
+                          tooltip: 'View Full Details',
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                          onTap: () => _openViewChallan(context, item),
+                        ),
+                        _buildActionIcon(
+                          icon: Icons.edit_outlined,
+                          tooltip: 'Edit Entry',
+                          color: AppColors.primary,
+                          onTap: () => _openEditChallan(context, item),
+                        ),
+                        _buildActionIcon(
+                          icon: Icons.delete_outline,
+                          tooltip: 'Move to Bin',
+                          color: AppColors.warningText,
+                          onTap: () => _confirmDeleteChallan(context, item),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionIcon({
+    required IconData icon,
+    required String tooltip,
+    Color? color,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(4),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Icon(icon, size: 15, color: color),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(ChallanEntry item, {bool compact = false}) {
     if (item.paymentOption == PaymentOption.cash) {
       if (item.isPartiallyPaid) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
             color: const Color(0xFFFFFBEB),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(color: const Color(0xFFFDE68A)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.pie_chart, size: 12, color: Color(0xFFB45309)),
+              const Icon(Icons.pie_chart, size: 11, color: Color(0xFFB45309)),
               const SizedBox(width: 4),
               Text(
-                'PARTIAL: PAID ${Formatters.currency(item.paidAmount)} • DUE ${Formatters.currency(item.remainingAmount)}',
+                compact
+                    ? 'PARTIAL'
+                    : 'PARTIAL: PAID ${Formatters.currency(item.paidAmount)} • DUE ${Formatters.currency(item.remainingAmount)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF92400E),
                 ),
@@ -1125,21 +1727,23 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         );
       } else if (item.isCashPaid) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
             color: AppColors.successBgLight,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(5),
             border: Border.all(color: AppColors.successBorder),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check, size: 12, color: AppColors.successText),
-              SizedBox(width: 4),
+              const Icon(Icons.check, size: 11, color: AppColors.successText),
+              const SizedBox(width: 3),
               Text(
-                'CASH PAID',
-                style: TextStyle(
-                  fontSize: 11,
+                compact ? 'PAID' : 'CASH PAID',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
                   fontWeight: FontWeight.bold,
                   color: AppColors.successText,
                 ),
@@ -1149,20 +1753,22 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         );
       } else {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
             color: AppColors.warningText,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(5),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.warning_amber_rounded, size: 13, color: Colors.white),
-              SizedBox(width: 4),
+              const Icon(Icons.warning_amber_rounded, size: 11, color: Colors.white),
+              const SizedBox(width: 3),
               Text(
-                'UNPAID CASH',
-                style: TextStyle(
-                  fontSize: 11,
+                compact ? 'UNPAID' : 'UNPAID CASH',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -1177,6 +1783,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
       Color text;
       Color border;
       IconData icon;
+      String label;
 
       switch (status) {
         case ChequeStatus.cleared:
@@ -1184,37 +1791,42 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           text = AppColors.successText;
           border = AppColors.successBorder;
           icon = Icons.check_circle;
+          label = compact ? 'CLEARED' : 'CHEQUE: CLEARED';
           break;
         case ChequeStatus.bounced:
           bg = AppColors.warningText;
           text = Colors.white;
           border = AppColors.warningBorder;
           icon = Icons.cancel;
+          label = compact ? 'BOUNCED' : 'CHEQUE: BOUNCED';
           break;
         case ChequeStatus.pending:
           bg = AppColors.pendingBgLight;
           text = AppColors.pendingText;
           border = AppColors.pendingBorder;
           icon = Icons.hourglass_top;
+          label = compact ? 'PENDING' : 'CHEQUE: PENDING CLEARANCE';
           break;
       }
 
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(5),
           border: Border.all(color: border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: text),
-            const SizedBox(width: 4),
+            Icon(icon, size: 11, color: text),
+            const SizedBox(width: 3),
             Text(
-              'CHEQUE: ${status.label.toUpperCase()}',
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: FontWeight.bold,
                 color: text,
               ),

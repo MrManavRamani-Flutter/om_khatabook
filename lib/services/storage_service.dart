@@ -11,6 +11,7 @@ class StorageService {
   static const String _keyChallans = 'om_challans_v2';
   static const String _keyThemeMode = 'om_theme_mode_v2';
   static const String _keyFirstRun = 'om_first_run_v2';
+  static const String _keyLedgerViewMode = 'om_ledger_view_mode_v2';
 
   late SharedPreferences _prefs;
 
@@ -28,6 +29,12 @@ class StorageService {
   bool get isDarkMode => _prefs.getBool(_keyThemeMode) ?? false;
   Future<void> setDarkMode(bool value) async {
     await _prefs.setBool(_keyThemeMode, value);
+  }
+
+  // --- VIEW MODE (TABLE / CARDS / COMPACT) ---
+  String get ledgerViewMode => _prefs.getString(_keyLedgerViewMode) ?? 'table';
+  Future<void> setLedgerViewMode(String mode) async {
+    await _prefs.setString(_keyLedgerViewMode, mode);
   }
 
   // --- PARTIES ---
