@@ -35,30 +35,30 @@ void main() {
     await tester.tap(find.text('Parties Directory').first);
     await tester.pumpAndSettle();
 
-    // 2. Verify all 3 parties are shown in Directory
-    expect(find.text('Ramesh Patel & Sons'), findsOneWidget);
-    expect(find.text('Shreeji Traders'), findsOneWidget);
-    expect(find.text('Krishna Textile Mills'), findsOneWidget);
+    // 2. Verify registered parties are shown in Directory
+    expect(find.text('Manav Fab'), findsOneWidget);
+    expect(find.text('Swastik Creation'), findsOneWidget);
+    expect(find.text('Kamdar Silk Mills'), findsOneWidget);
 
-    // 3. Click on "Ramesh Patel & Sons" card
-    await tester.tap(find.text('Ramesh Patel & Sons'));
+    // 3. Click on "Manav Fab" card
+    await tester.tap(find.text('Manav Fab'));
     await tester.pumpAndSettle();
 
     // 4. Verify PartyLedgerDetailView is opened
     expect(find.byType(PartyLedgerDetailView), findsOneWidget);
     expect(find.textContaining('Party Ledger'), findsWidgets);
 
-    // 5. Verify ONLY Ramesh Patel & Sons records are present
-    expect(find.text('Ramesh Patel & Sons'), findsWidgets);
-    expect(find.text('Shreeji Traders'), findsNothing);
-    expect(find.text('Krishna Textile Mills'), findsNothing);
+    // 5. Verify ONLY Manav Fab records view is active
+    expect(find.text('Manav Fab'), findsWidgets);
+    expect(find.text('Swastik Creation'), findsNothing);
+    expect(find.text('Kamdar Silk Mills'), findsNothing);
 
     // 6. Test Back button returns to Parties Directory
     await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     expect(find.byType(PartyLedgerDetailView), findsNothing);
-    expect(find.text('Shreeji Traders'), findsOneWidget);
+    expect(find.text('Manav Fab'), findsOneWidget);
   });
 }
 

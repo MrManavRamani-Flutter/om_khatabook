@@ -77,8 +77,12 @@ class ChallanProvider extends ChangeNotifier {
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
 
-    if (_storage.isFirstRun && _parties.isEmpty) {
-      await _seedInitialData();
+    if (!_storage.isCleanDataMigrated) {
+      await _cleanAndSeedRealParties();
+      await _storage.markCleanDataMigrated();
+      await _storage.markFirstRunComplete();
+    } else if (_storage.isFirstRun && _parties.isEmpty) {
+      await _seedRealParties();
       await _storage.markFirstRunComplete();
     }
 
@@ -544,117 +548,96 @@ class ChallanProvider extends ChangeNotifier {
     return ok;
   }
 
-  // --- INITIAL SEED DATA ---
-  Future<void> _seedInitialData() async {
-    final p1 = Party(
-      id: _uuid.v4(),
-      name: 'Ramesh Patel & Sons',
-      phone: '98250 12345',
-      address: 'Ring Road, Surat',
-      gstNumber: '24AAAAA0000A1Z5',
-      createdAt: DateTime.now().subtract(const Duration(days: 30)),
-    );
+  // --- REAL REGISTERED PARTIES (FROM NOTEBOOK REGISTER) ---
+  static const List<String> initialPartyNames = [
+    'Manav Fab',
+    'Swastik Creation',
+    'Kamdar Silk Mills',
+    'Heera Enterprise',
+    'Radhe Mohan Silk Mills',
+    'Chirag Creation',
+    'Omkar Parag',
+    'Guru Dharmesh Bhai',
+    'Maya Silk Mills',
+    'Paree Pratik',
+    'Moti Mohan',
+    'Shree Om Creation',
+    'Pratham Trading',
+    'Rakesh Corporation',
+    'Varnika',
+    'MRT Creation',
+  ];
 
-    final p2 = Party(
-      id: _uuid.v4(),
-      name: 'Shreeji Traders',
-      phone: '98980 54321',
-      address: 'Kalupur, Ahmedabad',
-      gstNumber: '24BBBBB1111B2Z8',
-      createdAt: DateTime.now().subtract(const Duration(days: 20)),
-    );
-
-    final p3 = Party(
-      id: _uuid.v4(),
-      name: 'Krishna Textile Mills',
-      phone: '94260 77889',
-      address: 'Varachha, Surat',
-      gstNumber: '24CCCCC2222C3Z1',
-      createdAt: DateTime.now().subtract(const Duration(days: 10)),
-    );
-
-    _parties = [p1, p2, p3];
+  Future<void> _seedRealParties() async {
+    final now = DateTime.now();
+    _parties = [];
+    for (int i = 0; i < initialPartyNames.length; i++) {
+      _parties.add(
+        Party(
+          id: _uuid.v4(),
+          name: initialPartyNames[i],
+          phone: '',
+          address: '',
+          gstNumber: '',
+          createdAt: now.subtract(Duration(minutes: (initialPartyNames.length - i) * 5)),
+        ),
+      );
+    }
     await _storage.saveParties(_parties);
 
-    final now = DateTime.now();
-
-    _challans = [
-      ChallanEntry(
-        id: _uuid.v4(),
-        date: now.subtract(const Duration(days: 1)),
-        challanNo: 'CH-2026-101',
-        partyId: p1.id,
-        partyName: p1.name,
-        challanAmount: 48000,
-        finalAmount: 50400,
-        paidAmount: 20000,
-        gstBillNo: 'GST-2026-042',
-        gstAmount: 2400,
-        paymentOption: PaymentOption.cash,
-        isCashPaid: false,
-        notes: 'Delivery dispatched, partial advance cash received ₹20,000, balance ₹30,400 pending',
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      ChallanEntry(
-        id: _uuid.v4(),
-        date: now.subtract(const Duration(days: 4)),
-        challanNo: 'CH-2026-098',
-        partyId: p2.id,
-        partyName: p2.name,
-        challanAmount: 25000,
-        finalAmount: 26250,
-        gstBillNo: 'GST-2026-039',
-        gstAmount: 1250,
-        paymentOption: PaymentOption.cash,
-        isCashPaid: true,
-        notes: 'Cash received in full at shop',
-        createdAt: now.subtract(const Duration(days: 4)),
-      ),
-      ChallanEntry(
-        id: _uuid.v4(),
-        date: now.subtract(const Duration(days: 6)),
-        challanNo: 'CH-2026-092',
-        partyId: p3.id,
-        partyName: p3.name,
-        challanAmount: 75000,
-        finalAmount: 78750,
-        gstBillNo: 'GST-2026-035',
-        gstAmount: 3750,
-        paymentOption: PaymentOption.cheque,
-        isCashPaid: false,
-        chequeDetails: ChequeDetails(
-          chequeNo: '408912',
-          chequeDate: now.add(const Duration(days: 2)),
-          bankName: 'HDFC Bank',
-          chequeAmount: 78750,
-          status: ChequeStatus.pending,
-        ),
-        notes: 'Cheque deposited in account, awaiting clearance',
-        createdAt: now.subtract(const Duration(days: 6)),
-      ),
-      ChallanEntry(
-        id: _uuid.v4(),
-        date: now.subtract(const Duration(days: 12)),
-        challanNo: 'CH-2026-085',
-        partyId: p1.id,
-        partyName: p1.name,
-        challanAmount: 120000,
-        finalAmount: 126000,
-        gstBillNo: 'GST-2026-028',
-        gstAmount: 6000,
-        paymentOption: PaymentOption.cheque,
-        isCashPaid: false,
-        chequeDetails: ChequeDetails(
-          chequeNo: '112233',
-          chequeDate: now.subtract(const Duration(days: 10)),
-          bankName: 'State Bank of India',
-          chequeAmount: 126000,
-          status: ChequeStatus.cleared,
-        ),
-        notes: 'Cleared on 28th October',
-        createdAt: now.subtract(const Duration(days: 12)),
-      ),
-    ];
+    // Ledger starts completely clean with 0 dummy records
+    _challans = [];
     await _storage.saveChallans(_challans);
+
+    _viewMode = LedgerViewMode.table;
+    await _storage.setLedgerViewMode(LedgerViewMode.table.name);
+  }
+
+  Future<void> _cleanAndSeedRealParties() async {
+    // 1. Remove old dummy parties
+    const dummyNames = {
+      'ramesh patel & sons',
+      'shreeji traders',
+      'krishna textile mills',
+    };
+    _parties.removeWhere((p) => dummyNames.contains(p.name.trim().toLowerCase()));
+
+    // 2. Remove old dummy challans
+    const dummyChallans = {
+      'ch-2026-101',
+      'ch-2026-098',
+      'ch-2026-092',
+      'ch-2026-085',
+    };
+    _challans.removeWhere((c) => dummyChallans.contains(c.challanNo.trim().toLowerCase()));
+
+    // 3. Ensure all 16 notebook parties exist in _parties
+    final existingNames = _parties.map((p) => p.name.trim().toLowerCase()).toSet();
+    final now = DateTime.now();
+    final toAdd = <Party>[];
+    for (int i = 0; i < initialPartyNames.length; i++) {
+      final name = initialPartyNames[i];
+      if (!existingNames.contains(name.toLowerCase())) {
+        toAdd.add(
+          Party(
+            id: _uuid.v4(),
+            name: name,
+            phone: '',
+            address: '',
+            gstNumber: '',
+            createdAt: now.subtract(Duration(minutes: (initialPartyNames.length - i) * 5)),
+          ),
+        );
+      }
+    }
+    _parties.addAll(toAdd);
+
+    // 4. Save clean data
+    await _storage.saveParties(_parties);
+    await _storage.saveChallans(_challans);
+
+    // 5. Default view mode to table
+    _viewMode = LedgerViewMode.table;
+    await _storage.setLedgerViewMode(LedgerViewMode.table.name);
   }
 }

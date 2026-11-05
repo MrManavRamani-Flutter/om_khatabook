@@ -34,7 +34,7 @@ void main() {
     expect(find.text('Challan & Billing Ledger'), findsOneWidget);
     expect(find.text('Parties Directory'), findsWidgets);
     expect(find.text('Financial Reports'), findsOneWidget);
-    expect(find.textContaining('PARTIAL'), findsWidgets);
+    expect(find.text('No Challan entries recorded yet'), findsOneWidget);
     expect(find.text('Excel Table'), findsOneWidget);
     expect(find.text('Compact'), findsOneWidget);
     expect(find.text('Cards'), findsOneWidget);

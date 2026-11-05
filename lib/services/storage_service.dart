@@ -12,6 +12,7 @@ class StorageService {
   static const String _keyThemeMode = 'om_theme_mode_v2';
   static const String _keyFirstRun = 'om_first_run_v2';
   static const String _keyLedgerViewMode = 'om_ledger_view_mode_v2';
+  static const String _keyCleanMigration = 'om_clean_parties_v3';
 
   late SharedPreferences _prefs;
 
@@ -23,6 +24,12 @@ class StorageService {
 
   Future<void> markFirstRunComplete() async {
     await _prefs.setBool(_keyFirstRun, true);
+  }
+
+  bool get isCleanDataMigrated => _prefs.getBool(_keyCleanMigration) ?? false;
+
+  Future<void> markCleanDataMigrated() async {
+    await _prefs.setBool(_keyCleanMigration, true);
   }
 
   // --- THEME ---

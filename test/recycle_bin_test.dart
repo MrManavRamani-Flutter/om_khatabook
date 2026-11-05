@@ -15,11 +15,23 @@ void main() {
       await storageService.init();
       provider = ChallanProvider(storageService);
       await provider.initialize();
+
+      // Add a test challan for recycle bin testing
+      await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-TEST-001',
+        partyId: provider.parties.first.id,
+        partyName: provider.parties.first.name,
+        challanAmount: 10000,
+        finalAmount: 10500,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: true,
+      );
     });
 
     test('Initial seeded data loads active entries and empty recycle bin', () {
-      expect(provider.parties.length, 3);
-      expect(provider.challans.length, 4);
+      expect(provider.parties.length, 16);
+      expect(provider.challans.length, 1);
       expect(provider.deletedParties.length, 0);
       expect(provider.deletedChallans.length, 0);
       expect(provider.recycleBinCount, 0);
@@ -103,14 +115,25 @@ void main() {
       expect(provider.parties.any((p) => p.id == party.id), isFalse);
     });
 
-    test('Warning highlight for unpaid cash entries', () {
+    test('Warning highlight for unpaid cash entries', () async {
+      await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-UNPAID-001',
+        partyId: provider.parties.first.id,
+        partyName: provider.parties.first.name,
+        challanAmount: 15000,
+        finalAmount: 15750,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: false,
+      );
+
       final unpaidCashChallan = provider.challans.firstWhere(
-        (c) => c.paymentOption == PaymentOption.cash && !c.isCashPaid,
+        (c) => c.challanNo == 'CH-UNPAID-001',
       );
       expect(unpaidCashChallan.hasWarning, isTrue);
 
       final paidCashChallan = provider.challans.firstWhere(
-        (c) => c.paymentOption == PaymentOption.cash && c.isCashPaid,
+        (c) => c.challanNo == 'CH-TEST-001',
       );
       expect(paidCashChallan.hasWarning, isFalse);
     });

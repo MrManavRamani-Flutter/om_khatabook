@@ -626,13 +626,17 @@ class ChallanListView extends StatelessWidget {
                           color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'No Challan entries match the active filters',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        Text(
+                          provider.challans.isEmpty
+                              ? 'No Challan entries recorded yet'
+                              : 'No Challan entries match the active filters',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Adjust your search, clear filters, or click "Add Challan Entry".',
+                          provider.challans.isEmpty
+                              ? 'Click "Add Challan Entry" above or below to create your first challan.'
+                              : 'Adjust your search, clear filters, or click "Add Challan Entry".',
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context).textTheme.bodySmall?.color,
