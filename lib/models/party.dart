@@ -1,39 +1,18 @@
-enum PartyType {
-  customer,
-  supplier,
-  member;
-
-  String get displayName {
-    switch (this) {
-      case PartyType.customer:
-        return 'Customer (Grahak)';
-      case PartyType.supplier:
-        return 'Supplier (Vyapari)';
-      case PartyType.member:
-        return 'Group Member';
-    }
-  }
-}
-
 class Party {
   final String id;
   final String name;
   final String phone;
   final String address;
-  final PartyType type;
-  final double openingBalance; // positive = they owe you, negative = you owe them
+  final String gstNumber;
   final DateTime createdAt;
-  final String notes;
 
   Party({
     required this.id,
     required this.name,
-    required this.phone,
+    this.phone = '',
     this.address = '',
-    this.type = PartyType.customer,
-    this.openingBalance = 0.0,
+    this.gstNumber = '',
     required this.createdAt,
-    this.notes = '',
   });
 
   Map<String, dynamic> toJson() {
@@ -42,10 +21,8 @@ class Party {
       'name': name,
       'phone': phone,
       'address': address,
-      'type': type.name,
-      'openingBalance': openingBalance,
+      'gstNumber': gstNumber,
       'createdAt': createdAt.toIso8601String(),
-      'notes': notes,
     };
   }
 
@@ -55,15 +32,10 @@ class Party {
       name: json['name'] as String,
       phone: json['phone'] as String? ?? '',
       address: json['address'] as String? ?? '',
-      type: PartyType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => PartyType.customer,
-      ),
-      openingBalance: (json['openingBalance'] as num?)?.toDouble() ?? 0.0,
+      gstNumber: json['gstNumber'] as String? ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
-      notes: json['notes'] as String? ?? '',
     );
   }
 
@@ -71,19 +43,15 @@ class Party {
     String? name,
     String? phone,
     String? address,
-    PartyType? type,
-    double? openingBalance,
-    String? notes,
+    String? gstNumber,
   }) {
     return Party(
       id: id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
-      type: type ?? this.type,
-      openingBalance: openingBalance ?? this.openingBalance,
+      gstNumber: gstNumber ?? this.gstNumber,
       createdAt: createdAt,
-      notes: notes ?? this.notes,
     );
   }
 }

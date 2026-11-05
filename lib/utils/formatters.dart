@@ -14,7 +14,7 @@ class Formatters {
   );
 
   static String currency(double amount, {bool showDecimals = false}) {
-    if (showDecimals && amount % 1 != 0) {
+    if (showDecimals || amount % 1 != 0) {
       return _inrDecimalFormatter.format(amount);
     }
     return _inrFormatter.format(amount);
@@ -29,6 +29,6 @@ class Formatters {
   }
 
   static String shortDate(DateTime dt) {
-    return DateFormat('dd/MM/yy').format(dt);
+    return DateFormat('dd/MM/yyyy').format(dt);
   }
 }

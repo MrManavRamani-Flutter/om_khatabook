@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  // Brand & Slate Primary
   static const Color primary = Color(0xFF0F766E); // Teal 700
   static const Color primaryLight = Color(0xFF14B8A6); // Teal 500
   static const Color primaryDark = Color(0xFF115E59); // Teal 800
 
-  static const Color gaveRed = Color(0xFFDC2626); // Debit / Gave (You gave)
-  static const Color gaveRedLight = Color(0xFFFEE2E2);
-  
-  static const Color gotGreen = Color(0xFF059669); // Credit / Got (You got)
-  static const Color gotGreenLight = Color(0xFFD1FAE5);
+  // Warning Highlight (Light Red for Unpaid Cash / Bounced Cheques)
+  static const Color warningBgLight = Color(0xFFFFF1F2); // Rose/Red 50
+  static const Color warningBgDark = Color(0xFF3B1219);
+  static const Color warningBorder = Color(0xFFFDA4AF); // Rose 300
+  static const Color warningBorderDark = Color(0xFF9F1239);
+  static const Color warningText = Color(0xFFBE123C); // Rose 700
 
-  static const Color amberGold = Color(0xFFD97706);
-  static const Color neutralSlate = Color(0xFF334155);
+  // Success Highlight (Paid / Cleared)
+  static const Color successBgLight = Color(0xFFF0FDF4); // Green 50
+  static const Color successBgDark = Color(0xFF062E1A);
+  static const Color successBorder = Color(0xFF86EFAC);
+  static const Color successText = Color(0xFF15803D);
+
+  // Cheque Pending
+  static const Color pendingBgLight = Color(0xFFFFFBEB); // Amber 50
+  static const Color pendingBorder = Color(0xFFFCD34D);
+  static const Color pendingText = Color(0xFFB45309);
+
+  // Neutrals
+  static const Color slate = Color(0xFF334155);
 }
 
 class AppTheme {
@@ -22,12 +35,12 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primary,
       primary: AppColors.primary,
-      secondary: AppColors.amberGold,
+      secondary: AppColors.primaryLight,
       brightness: Brightness.light,
       surface: const Color(0xFFF8FAFC),
     ),
     scaffoldBackgroundColor: const Color(0xFFF1F5F9),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -75,12 +88,12 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.primaryLight,
       primary: AppColors.primaryLight,
-      secondary: AppColors.amberGold,
+      secondary: AppColors.primary,
       brightness: Brightness.dark,
       surface: const Color(0xFF1E293B),
     ),
     scaffoldBackgroundColor: const Color(0xFF0F172A),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: const Color(0xFF1E293B),
       elevation: 0,
       shape: RoundedRectangleBorder(
