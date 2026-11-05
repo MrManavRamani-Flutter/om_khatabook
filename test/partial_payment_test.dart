@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:om_khatabook/models/challan_entry.dart';
-import 'package:om_khatabook/providers/challan_provider.dart';
 
 void main() {
   group('Partial Cash Payment Tests', () {
