@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import 'challan_list_view.dart';
 import 'parties_view.dart';
+import 'recycle_bin_view.dart';
 import 'settings_view.dart';
 import 'summary_reports_view.dart';
 
@@ -59,6 +60,9 @@ class _MainLayoutState extends State<MainLayout> {
         contentBody = const SummaryReportsView();
         break;
       case 3:
+        contentBody = const RecycleBinView();
+        break;
+      case 4:
         contentBody = const SettingsView();
         break;
       default:
@@ -66,6 +70,7 @@ class _MainLayoutState extends State<MainLayout> {
     }
 
     final warningCount = provider.unpaidWarningCount;
+    final recycleBinCount = provider.recycleBinCount;
 
     return Scaffold(
       body: Row(
@@ -93,22 +98,31 @@ class _MainLayoutState extends State<MainLayout> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primaryDark, AppColors.primary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
+                              color: AppColors.primary.withValues(alpha: 0.25),
                               blurRadius: 8,
-                              offset: const Offset(0, 4),
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: Icon(Icons.menu_book, color: Colors.white, size: 24),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            'assets/logo/app_logo.png',
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              color: AppColors.primary,
+                              child: const Center(
+                                child: Icon(Icons.account_balance_wallet,
+                                    color: Colors.white, size: 24),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -174,6 +188,14 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                       _buildNavItem(
                         index: 3,
+                        icon: Icons.delete_outline,
+                        activeIcon: Icons.delete,
+                        label: 'Recycle Bin',
+                        badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
+                        isWarningBadge: false,
+                      ),
+                      _buildNavItem(
+                        index: 4,
                         icon: Icons.settings_outlined,
                         activeIcon: Icons.settings,
                         label: 'Settings & Backup',

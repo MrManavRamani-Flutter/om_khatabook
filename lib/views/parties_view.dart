@@ -34,9 +34,9 @@ class _PartiesViewState extends State<PartiesView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Party?'),
+        title: const Text('Move Party to Recycle Bin?'),
         content: Text(
-          'Are you sure you want to delete ${party.name}? Existing challans linked to this party will remain preserved.',
+          'Are you sure you want to move ${party.name} to the Recycle Bin? Existing challans linked to this party will remain preserved, and you can restore or permanently delete this party anytime from the Recycle Bin.',
         ),
         actions: [
           TextButton(
@@ -50,9 +50,21 @@ class _PartiesViewState extends State<PartiesView> {
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              context.read<ChallanProvider>().deleteParty(party.id);
+              context.read<ChallanProvider>().moveToBinParty(party.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${party.name} moved to Recycle Bin'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: Colors.amberAccent,
+                    onPressed: () {
+                      context.read<ChallanProvider>().restoreParty(party.id);
+                    },
+                  ),
+                ),
+              );
             },
-            child: const Text('Delete'),
+            child: const Text('Move to Bin'),
           ),
         ],
       ),

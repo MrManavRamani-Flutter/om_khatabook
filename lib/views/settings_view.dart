@@ -218,6 +218,61 @@ class SettingsView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // DATA STATS & RECYCLE BIN CARD
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.storage_outlined, color: AppColors.primary),
+                        SizedBox(width: 10),
+                        Text(
+                          'Database Overview',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Active Challans',
+                            '${provider.challans.length}',
+                            Icons.receipt_long,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Registered Parties',
+                            '${provider.parties.length}',
+                            Icons.people,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Recycle Bin Items',
+                            '${provider.recycleBinCount}',
+                            Icons.delete_outline,
+                            color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // DATA BACKUP & RESTORE
             Card(
               child: Padding(
@@ -301,6 +356,54 @@ class SettingsView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon, {
+    Color? color,
+  }) {
+    final theme = Theme.of(context);
+    final effectiveColor = color ?? theme.colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: effectiveColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: effectiveColor.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: effectiveColor, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: effectiveColor,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

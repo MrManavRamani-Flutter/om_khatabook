@@ -1,0 +1,98 @@
+name: Build Windows Desktop Setup Installer (.exe)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build & Package Windows .EXE Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter Environment
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows Desktop Support
+        run: flutter config --enable-windows-desktop
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Run Unit & Widget Tests
+        run: flutter test
+
+      - name: Build Windows Desktop (Release Mode)
+        run: flutter build windows --release
+
+      - name: Verify Build Output Structure
+        shell: pwsh
+        run: |
+          # Ensure x64 directory structure matches Inno Setup expectations
+          if (Test-Path "build\windows\runner\Release" -and -not (Test-Path "build\windows\x64\runner\Release")) {
+            Write-Host "Re-aligning build output directory structure..."
+            New-Item -ItemType Directory -Force -Path "build\windows\x64\runner"
+            Copy-Item -Recurse -Force "build\windows\runner\Release" "build\windows\x64\runner\Release"
+          }
+          
+          if (-not (Test-Path "build\windows\x64\runner\Release\om_khatabook.exe")) {
+            Write-Error "Release executable om_khatabook.exe was not found!"
+            exit 1
+          }
+          
+          New-Item -ItemType Directory -Force -Path "build\installer"
+          Write-Host "Build output verified successfully."
+
+      - name: Install Inno Setup Compiler
+        run: choco install innosetup -y --no-progress
+
+      - name: Compile Windows Setup Installer (.exe)
+        shell: pwsh
+        run: |
+          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $isccPath)) {
+            $isccPath = (Get-Command iscc.exe).Source
+          }
+          Write-Host "Using Inno Setup Compiler: $isccPath"
+          & $isccPath "windows\installer\inno_setup.iss"
+
+      - name: Create Portable Zip Package
+        shell: pwsh
+        run: |
+          $releaseDir = "build\windows\x64\runner\Release\*"
+          Compress-Archive -Path $releaseDir -DestinationPath "build\installer\OmMavtarKhataBook_Windows_Portable_v2.0.0.zip" -Force
+          Write-Host "Created portable ZIP package."
+
+      - name: Upload Windows Setup .EXE & Portable Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmMavtarKhataBook-Windows-Installer
+          path: build/installer/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Output Release Summary to GitHub Action
+        shell: pwsh
+        run: |
+          $setupExe = Get-Item "build\installer\OmMavtarKhataBook_Setup.exe"
+          $setupSizeMB = [math]::Round($setupExe.Length / 1MB, 2)
+          
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "# 🚀 OM Mavtar Group Khata Book - Windows Release Ready!"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### Artifacts generated:"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- **Setup Installer**: `OmMavtarKhataBook_Setup.exe` ($setupSizeMB MB)"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- **Portable Zip**: `OmMavtarKhataBook_Windows_Portable_v2.0.0.zip`"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### How to download & run:"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "1. Scroll down to the **Artifacts** section below on this run page."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "2. Click **OmMavtarKhataBook-Windows-Installer** to download the zip."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "3. Run `OmMavtarKhataBook_Setup.exe` to install on any Windows 10/11 computer."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "4. Clean uninstall is available anytime via Windows *Add or Remove Programs*."

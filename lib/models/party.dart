@@ -5,6 +5,8 @@ class Party {
   final String address;
   final String gstNumber;
   final DateTime createdAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
 
   Party({
     required this.id,
@@ -13,6 +15,8 @@ class Party {
     this.address = '',
     this.gstNumber = '',
     required this.createdAt,
+    this.isDeleted = false,
+    this.deletedAt,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +27,8 @@ class Party {
       'address': address,
       'gstNumber': gstNumber,
       'createdAt': createdAt.toIso8601String(),
+      'isDeleted': isDeleted,
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -36,6 +42,10 @@ class Party {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'] as String)
+          : null,
     );
   }
 
@@ -44,6 +54,9 @@ class Party {
     String? phone,
     String? address,
     String? gstNumber,
+    bool? isDeleted,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
   }) {
     return Party(
       id: id,
@@ -52,6 +65,8 @@ class Party {
       address: address ?? this.address,
       gstNumber: gstNumber ?? this.gstNumber,
       createdAt: createdAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
     );
   }
 }

@@ -3,58 +3,58 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../providers/challan_provider.dart';
+import '../services/export_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/export_report_dialog.dart';
 
 class SummaryReportsView extends StatelessWidget {
   const SummaryReportsView({super.key});
 
-  void _exportCsv(BuildContext context) {
-    final provider = context.read<ChallanProvider>();
-    final challans = provider.challans;
-
-    final StringBuffer buffer = StringBuffer();
-    buffer.writeln(
-        'Date,Challan No,Party Name,Challan Amount,Final Amount,GST Bill No,GST Amount,Payment Option,Payment Status,Cheque No,Bank Name,Cheque Date,Cheque Amount,Notes');
-
-    for (var c in challans) {
-      final dateStr = Formatters.date(c.date);
-      final challanNoStr = '"${c.challanNo.replaceAll('"', '""')}"';
-      final partyStr = '"${c.partyName.replaceAll('"', '""')}"';
-      final challanAmtStr = c.challanAmount.toStringAsFixed(2);
-      final finalAmtStr = c.finalAmount.toStringAsFixed(2);
-      final gstBillStr = '"${c.gstBillNo.replaceAll('"', '""')}"';
-      final gstAmtStr = c.gstAmount.toStringAsFixed(2);
-      final paymentOptStr = c.paymentOption.label;
-      final statusStr = c.statusDisplay;
-
-      String chkNo = '';
-      String bank = '';
-      String chkDate = '';
-      String chkAmt = '';
-
-      if (c.paymentOption == PaymentOption.cheque && c.chequeDetails != null) {
-        chkNo = '"${c.chequeDetails!.chequeNo.replaceAll('"', '""')}"';
-        bank = '"${c.chequeDetails!.bankName.replaceAll('"', '""')}"';
-        chkDate = Formatters.date(c.chequeDetails!.chequeDate);
-        chkAmt = c.chequeDetails!.chequeAmount.toStringAsFixed(2);
-      }
-
-      final notesStr = '"${c.notes.replaceAll('"', '""')}"';
-
-      buffer.writeln(
-          '$dateStr,$challanNoStr,$partyStr,$challanAmtStr,$finalAmtStr,$gstBillStr,$gstAmtStr,$paymentOptStr,$statusStr,$chkNo,$bank,$chkDate,$chkAmt,$notesStr');
-    }
-
-    Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            'Exported ${challans.length} records to CSV and copied to clipboard! Paste directly into Excel or Numbers.'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
+  void _openCustomReportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const ExportReportDialog(),
     );
+  }
+
+  Future<void> _quickExportPdf(BuildContext context) async {
+    final provider = context.read<ChallanProvider>();
+    await ExportService.printOrPreviewPdf(
+      entries: provider.filteredChallans,
+      filterSummary: provider.activeFilterSummary,
+      sortAscending: provider.sortAscending,
+    );
+  }
+
+  Future<void> _quickExportExcel(BuildContext context) async {
+    final provider = context.read<ChallanProvider>();
+    try {
+      final path = await ExportService.generateAndSaveExcel(
+        entries: provider.filteredChallans,
+        filterSummary: provider.activeFilterSummary,
+        sortAscending: provider.sortAscending,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Excel (.xlsx) saved to: $path'),
+            backgroundColor: AppColors.primary,
+            action: SnackBarAction(
+              label: 'Copy Path',
+              textColor: Colors.white,
+              onPressed: () => Clipboard.setData(ClipboardData(text: path)),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Excel export error: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -93,7 +93,7 @@ class SummaryReportsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // HEADER
+            // HEADER WITH ACTIONS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -122,15 +122,37 @@ class SummaryReportsView extends StatelessWidget {
                     ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _exportCsv(context),
-                  icon: const Icon(Icons.download),
-                  label: const Text('Export to CSV / Excel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  ),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _quickExportPdf(context),
+                      icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                      label: const Text('Quick PDF'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => _quickExportExcel(context),
+                      icon: const Icon(Icons.table_chart, color: Color(0xFF15803D), size: 18),
+                      label: const Text('Quick Excel'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _openCustomReportDialog(context),
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: const Text('Custom Report Generator'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -317,4 +339,3 @@ class SummaryReportsView extends StatelessWidget {
     );
   }
 }
-

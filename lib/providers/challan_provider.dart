@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
@@ -15,27 +16,42 @@ class ChallanProvider extends ChangeNotifier {
 
   // Filter state
   String _searchQuery = '';
-  String? _selectedPartyId;
+  Set<String> _selectedPartyIds = {}; // Supports multiple or single party selection
   PaymentOption? _paymentOptionFilter;
   String? _statusFilter; // 'all', 'paid', 'unpaid', 'pending', 'bounced'
-  String _dateFilter = 'all'; // 'all', 'today', 'week', 'month'
+  String _dateFilter = 'all'; // 'all', 'today', 'week', 'month', 'custom', 'monthly_picker'
   DateTime? _customStartDate;
   DateTime? _customEndDate;
+  int? _selectedMonth; // 1 - 12
+  int? _selectedYear; // e.g. 2026
+
+  // Sorting state (Date Ascending vs Descending)
+  bool _sortAscending = false; // false = Newest First (Desc), true = Oldest First (Asc)
 
   ChallanProvider(this._storage);
 
-  List<Party> get parties => List.unmodifiable(_parties);
-  List<ChallanEntry> get challans => List.unmodifiable(_challans);
+  List<Party> get parties => _parties.where((p) => !p.isDeleted).toList();
+  List<Party> get deletedParties => _parties.where((p) => p.isDeleted).toList();
+  List<ChallanEntry> get challans => _challans.where((c) => !c.isDeleted).toList();
+  List<ChallanEntry> get deletedChallans => _challans.where((c) => c.isDeleted).toList();
+  int get recycleBinCount => deletedChallans.length + deletedParties.length;
+
   bool get isDarkMode => _isDarkMode;
   bool get isLoading => _isLoading;
 
   String get searchQuery => _searchQuery;
-  String? get selectedPartyId => _selectedPartyId;
+  Set<String> get selectedPartyIds => Set.unmodifiable(_selectedPartyIds);
+  String? get selectedSinglePartyId =>
+      _selectedPartyIds.length == 1 ? _selectedPartyIds.first : null;
+
   PaymentOption? get paymentOptionFilter => _paymentOptionFilter;
   String? get statusFilter => _statusFilter;
   String get dateFilter => _dateFilter;
   DateTime? get customStartDate => _customStartDate;
   DateTime? get customEndDate => _customEndDate;
+  int? get selectedMonth => _selectedMonth;
+  int? get selectedYear => _selectedYear;
+  bool get sortAscending => _sortAscending;
 
   Future<void> initialize() async {
     _isLoading = true;
@@ -61,7 +77,30 @@ class ChallanProvider extends ChangeNotifier {
   }
 
   void setSelectedPartyId(String? partyId) {
-    _selectedPartyId = partyId;
+    if (partyId == null || partyId.isEmpty) {
+      _selectedPartyIds.clear();
+    } else {
+      _selectedPartyIds = {partyId};
+    }
+    notifyListeners();
+  }
+
+  void togglePartySelection(String partyId) {
+    if (_selectedPartyIds.contains(partyId)) {
+      _selectedPartyIds.remove(partyId);
+    } else {
+      _selectedPartyIds.add(partyId);
+    }
+    notifyListeners();
+  }
+
+  void setSelectedPartyIds(Set<String> ids) {
+    _selectedPartyIds = Set.from(ids);
+    notifyListeners();
+  }
+
+  void clearPartySelection() {
+    _selectedPartyIds.clear();
     notifyListeners();
   }
 
@@ -79,17 +118,43 @@ class ChallanProvider extends ChangeNotifier {
     _dateFilter = filter;
     _customStartDate = start;
     _customEndDate = end;
+    if (filter != 'monthly_picker') {
+      _selectedMonth = null;
+      _selectedYear = null;
+    }
+    notifyListeners();
+  }
+
+  void setMonthlyFilter(int month, int year) {
+    _dateFilter = 'monthly_picker';
+    _selectedMonth = month;
+    _selectedYear = year;
+    _customStartDate = null;
+    _customEndDate = null;
+    notifyListeners();
+  }
+
+  void toggleSortOrder() {
+    _sortAscending = !_sortAscending;
+    notifyListeners();
+  }
+
+  void setSortAscending(bool ascending) {
+    _sortAscending = ascending;
     notifyListeners();
   }
 
   void resetFilters() {
     _searchQuery = '';
-    _selectedPartyId = null;
+    _selectedPartyIds.clear();
     _paymentOptionFilter = null;
     _statusFilter = null;
     _dateFilter = 'all';
     _customStartDate = null;
     _customEndDate = null;
+    _selectedMonth = null;
+    _selectedYear = null;
+    _sortAscending = false;
     notifyListeners();
   }
 
@@ -97,8 +162,8 @@ class ChallanProvider extends ChangeNotifier {
   List<ChallanEntry> get filteredChallans {
     final now = DateTime.now();
 
-    return _challans.where((item) {
-      // Search
+    final result = challans.where((item) {
+      // 1. Search Query
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchChallan = item.challanNo.toLowerCase().contains(q);
@@ -118,23 +183,23 @@ class ChallanProvider extends ChangeNotifier {
         }
       }
 
-      // Party filter
-      if (_selectedPartyId != null && _selectedPartyId!.isNotEmpty) {
-        if (item.partyId != _selectedPartyId) return false;
+      // 2. Party Filter (All / Single / Multiple)
+      if (_selectedPartyIds.isNotEmpty) {
+        if (!_selectedPartyIds.contains(item.partyId)) {
+          return false;
+        }
       }
 
-      // Payment option filter
+      // 3. Payment Option Filter
       if (_paymentOptionFilter != null) {
         if (item.paymentOption != _paymentOptionFilter) return false;
       }
 
-      // Status filter
+      // 4. Status Filter
       if (_statusFilter != null && _statusFilter != 'all') {
         if (_statusFilter == 'unpaid') {
-          // Cash unpaid or Cheque pending/bounced
           if (!item.isPending && !item.hasWarning) return false;
         } else if (_statusFilter == 'paid') {
-          // Cash paid or Cheque cleared
           final isCleared = item.paymentOption == PaymentOption.cash
               ? item.isCashPaid
               : item.chequeDetails?.status == ChequeStatus.cleared;
@@ -144,7 +209,7 @@ class ChallanProvider extends ChangeNotifier {
         }
       }
 
-      // Date filter
+      // 5. Date Filter
       if (_dateFilter == 'today') {
         if (item.date.year != now.year ||
             item.date.month != now.month ||
@@ -157,6 +222,13 @@ class ChallanProvider extends ChangeNotifier {
       } else if (_dateFilter == 'month') {
         final thirtyDaysAgo = now.subtract(const Duration(days: 30));
         if (item.date.isBefore(thirtyDaysAgo)) return false;
+      } else if (_dateFilter == 'monthly_picker' &&
+          _selectedMonth != null &&
+          _selectedYear != null) {
+        if (item.date.month != _selectedMonth ||
+            item.date.year != _selectedYear) {
+          return false;
+        }
       } else if (_dateFilter == 'custom' &&
           _customStartDate != null &&
           _customEndDate != null) {
@@ -167,23 +239,88 @@ class ChallanProvider extends ChangeNotifier {
       }
 
       return true;
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList();
+
+    // 6. Date Sorting (Ascending vs Descending)
+    result.sort((a, b) =>
+        _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
+
+    return result;
+  }
+
+  // --- FILTER SUMMARY DESCRIPTION ---
+  String get activeFilterSummary {
+    final List<String> parts = [];
+
+    // Party description
+    if (_selectedPartyIds.isEmpty) {
+      parts.add('All Parties');
+    } else if (_selectedPartyIds.length == 1) {
+      final p = _parties.firstWhere((p) => p.id == _selectedPartyIds.first,
+          orElse: () => Party(id: '', name: 'Selected Party', createdAt: DateTime.now()));
+      parts.add('Party: ${p.name}');
+    } else {
+      parts.add('${_selectedPartyIds.length} Selected Parties');
+    }
+
+    // Date description
+    if (_dateFilter == 'monthly_picker' && _selectedMonth != null && _selectedYear != null) {
+      final date = DateTime(_selectedYear!, _selectedMonth!);
+      parts.add('Month: ${DateFormat('MMMM yyyy').format(date)}');
+    } else if (_dateFilter == 'today') {
+      parts.add('Period: Today');
+    } else if (_dateFilter == 'week') {
+      parts.add('Period: Last 7 Days');
+    } else if (_dateFilter == 'month') {
+      parts.add('Period: Last 30 Days');
+    } else if (_dateFilter == 'custom' && _customStartDate != null && _customEndDate != null) {
+      parts.add(
+          'Period: ${DateFormat('dd/MM/yy').format(_customStartDate!)} - ${DateFormat('dd/MM/yy').format(_customEndDate!)}');
+    } else {
+      parts.add('Period: All Time');
+    }
+
+    // Payment & Status
+    if (_paymentOptionFilter != null) {
+      parts.add('Mode: ${_paymentOptionFilter!.label}');
+    }
+    if (_statusFilter != null && _statusFilter != 'all') {
+      parts.add('Status: ${_statusFilter!.toUpperCase()}');
+    }
+
+    parts.add('Sort: ${_sortAscending ? "Oldest First (Asc)" : "Newest First (Desc)"}');
+
+    return parts.join(' • ');
+  }
+
+  // Available unique months from data (for month dropdown)
+  List<DateTime> get availableMonths {
+    final Set<String> seen = {};
+    final List<DateTime> list = [];
+    for (var c in _challans) {
+      final key = '${c.date.year}-${c.date.month}';
+      if (!seen.contains(key)) {
+        seen.add(key);
+        list.add(DateTime(c.date.year, c.date.month, 1));
+      }
+    }
+    list.sort((a, b) => b.compareTo(a)); // Newest month first
+    return list;
   }
 
   // --- SUMMARY TOTALS ---
   double get totalChallanAmount =>
-      _challans.fold(0.0, (sum, item) => sum + item.challanAmount);
+      filteredChallans.fold(0.0, (sum, item) => sum + item.challanAmount);
 
   double get totalFinalAmount =>
-      _challans.fold(0.0, (sum, item) => sum + item.finalAmount);
+      filteredChallans.fold(0.0, (sum, item) => sum + item.finalAmount);
 
   double get totalGstAmount =>
-      _challans.fold(0.0, (sum, item) => sum + item.gstAmount);
+      filteredChallans.fold(0.0, (sum, item) => sum + item.gstAmount);
 
   double get totalUnpaidAmount {
     double sum = 0.0;
-    for (var c in _challans) {
+    for (var c in filteredChallans) {
       if (c.paymentOption == PaymentOption.cash && !c.isCashPaid) {
         sum += c.finalAmount;
       } else if (c.paymentOption == PaymentOption.cheque &&
@@ -195,9 +332,9 @@ class ChallanProvider extends ChangeNotifier {
   }
 
   int get unpaidWarningCount =>
-      _challans.where((c) => c.hasWarning).length;
+      filteredChallans.where((c) => c.hasWarning).length;
 
-  // --- CRUD: PARTIES ---
+  // --- CRUD & RECYCLE BIN: PARTIES ---
   Future<Party> addParty({
     required String name,
     String phone = '',
@@ -222,7 +359,6 @@ class ChallanProvider extends ChangeNotifier {
     final idx = _parties.indexWhere((p) => p.id == updated.id);
     if (idx != -1) {
       _parties[idx] = updated;
-      // Also update partyName in existing challans
       for (int i = 0; i < _challans.length; i++) {
         if (_challans[i].partyId == updated.id) {
           _challans[i] = _challans[i].copyWith(partyName: updated.name);
@@ -234,13 +370,42 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteParty(String partyId) async {
+  Future<void> moveToBinParty(String partyId) async {
+    final idx = _parties.indexWhere((p) => p.id == partyId);
+    if (idx != -1) {
+      _parties[idx] = _parties[idx].copyWith(
+        isDeleted: true,
+        deletedAt: DateTime.now(),
+      );
+      _selectedPartyIds.remove(partyId);
+      await _storage.saveParties(_parties);
+      notifyListeners();
+    }
+  }
+
+  Future<void> restoreParty(String partyId) async {
+    final idx = _parties.indexWhere((p) => p.id == partyId);
+    if (idx != -1) {
+      _parties[idx] = _parties[idx].copyWith(
+        isDeleted: false,
+        clearDeletedAt: true,
+      );
+      await _storage.saveParties(_parties);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePermanentlyParty(String partyId) async {
     _parties.removeWhere((p) => p.id == partyId);
+    _selectedPartyIds.remove(partyId);
     await _storage.saveParties(_parties);
     notifyListeners();
   }
 
-  // --- CRUD: CHALLAN ENTRIES ---
+  /// Backward compatibility: Deleting a party moves it to the Recycle Bin
+  Future<void> deleteParty(String partyId) => moveToBinParty(partyId);
+
+  // --- CRUD & RECYCLE BIN: CHALLAN ENTRIES ---
   Future<ChallanEntry> addChallan({
     required DateTime date,
     required String challanNo,
@@ -269,7 +434,7 @@ class ChallanProvider extends ChangeNotifier {
       isCashPaid: isCashPaid,
       chequeDetails: chequeDetails,
       notes: notes.trim(),
-      createdAt: DateTime.now(), // Hidden from UI, auto-stamped
+      createdAt: DateTime.now(),
     );
 
     _challans.insert(0, entry);
@@ -287,9 +452,45 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteChallan(String id) async {
+  Future<void> moveToBinChallan(String id) async {
+    final idx = _challans.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _challans[idx] = _challans[idx].copyWith(
+        isDeleted: true,
+        deletedAt: DateTime.now(),
+      );
+      await _storage.saveChallans(_challans);
+      notifyListeners();
+    }
+  }
+
+  Future<void> restoreChallan(String id) async {
+    final idx = _challans.indexWhere((c) => c.id == id);
+    if (idx != -1) {
+      _challans[idx] = _challans[idx].copyWith(
+        isDeleted: false,
+        clearDeletedAt: true,
+      );
+      await _storage.saveChallans(_challans);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePermanentlyChallan(String id) async {
     _challans.removeWhere((c) => c.id == id);
     await _storage.saveChallans(_challans);
+    notifyListeners();
+  }
+
+  /// Backward compatibility: Deleting a challan moves it to the Recycle Bin
+  Future<void> deleteChallan(String id) => moveToBinChallan(id);
+
+  // --- EMPTY RECYCLE BIN ---
+  Future<void> emptyRecycleBin() async {
+    _challans.removeWhere((c) => c.isDeleted);
+    _parties.removeWhere((p) => p.isDeleted);
+    await _storage.saveChallans(_challans);
+    await _storage.saveParties(_parties);
     notifyListeners();
   }
 
@@ -350,7 +551,6 @@ class ChallanProvider extends ChangeNotifier {
     final now = DateTime.now();
 
     _challans = [
-      // 1. CASH UNPAID -> Must be highlighted in warning/light-red!
       ChallanEntry(
         id: _uuid.v4(),
         date: now.subtract(const Duration(days: 1)),
@@ -362,12 +562,10 @@ class ChallanProvider extends ChangeNotifier {
         gstBillNo: 'GST-2026-042',
         gstAmount: 2400,
         paymentOption: PaymentOption.cash,
-        isCashPaid: false, // UNPAID CASH -> LIGHT RED HIGHLIGHT!
+        isCashPaid: false,
         notes: 'Delivery dispatched, cash payment pending upon verification',
         createdAt: now.subtract(const Duration(days: 1)),
       ),
-
-      // 2. CASH PAID -> Normal green highlight
       ChallanEntry(
         id: _uuid.v4(),
         date: now.subtract(const Duration(days: 4)),
@@ -379,12 +577,10 @@ class ChallanProvider extends ChangeNotifier {
         gstBillNo: 'GST-2026-039',
         gstAmount: 1250,
         paymentOption: PaymentOption.cash,
-        isCashPaid: true, // PAID
+        isCashPaid: true,
         notes: 'Cash received in full at shop',
         createdAt: now.subtract(const Duration(days: 4)),
       ),
-
-      // 3. CHEQUE PENDING
       ChallanEntry(
         id: _uuid.v4(),
         date: now.subtract(const Duration(days: 6)),
@@ -407,8 +603,6 @@ class ChallanProvider extends ChangeNotifier {
         notes: 'Cheque deposited in account, awaiting clearance',
         createdAt: now.subtract(const Duration(days: 6)),
       ),
-
-      // 4. CHEQUE CLEARED
       ChallanEntry(
         id: _uuid.v4(),
         date: now.subtract(const Duration(days: 12)),
@@ -435,4 +629,3 @@ class ChallanProvider extends ChangeNotifier {
     await _storage.saveChallans(_challans);
   }
 }
-

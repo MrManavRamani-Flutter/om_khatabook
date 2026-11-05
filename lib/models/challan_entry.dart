@@ -92,6 +92,8 @@ class ChallanEntry {
   final ChequeDetails? chequeDetails;
   final String notes;
   final DateTime createdAt; // Hidden from form, set to DateTime.now()
+  final bool isDeleted; // Recycle bin flag
+  final DateTime? deletedAt; // Timestamp when moved to bin
 
   ChallanEntry({
     required this.id,
@@ -108,6 +110,8 @@ class ChallanEntry {
     this.chequeDetails,
     this.notes = '',
     required this.createdAt,
+    this.isDeleted = false,
+    this.deletedAt,
   });
 
   /// Indicates if this record requires warning highlight
@@ -159,6 +163,8 @@ class ChallanEntry {
       'chequeDetails': chequeDetails?.toJson(),
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
+      'isDeleted': isDeleted,
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -186,6 +192,10 @@ class ChallanEntry {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'] as String)
+          : null,
     );
   }
 
@@ -202,6 +212,9 @@ class ChallanEntry {
     bool? isCashPaid,
     ChequeDetails? chequeDetails,
     String? notes,
+    bool? isDeleted,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
   }) {
     return ChallanEntry(
       id: id,
@@ -218,6 +231,8 @@ class ChallanEntry {
       chequeDetails: chequeDetails ?? this.chequeDetails,
       notes: notes ?? this.notes,
       createdAt: createdAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
     );
   }
 }

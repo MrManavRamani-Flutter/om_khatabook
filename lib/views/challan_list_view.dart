@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
+import '../widgets/export_report_dialog.dart';
 import '../widgets/view_challan_dialog.dart';
 
 class ChallanListView extends StatelessWidget {
@@ -31,13 +33,177 @@ class ChallanListView extends StatelessWidget {
     );
   }
 
+  void _openExportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const ExportReportDialog(),
+    );
+  }
+
+  void _showMultiPartyDialog(BuildContext context, ChallanProvider provider) {
+    final parties = provider.parties;
+    final selectedIds = Set<String>.from(provider.selectedPartyIds);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Select Multiple Parties'),
+          content: SizedBox(
+            width: 480,
+            height: 380,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${selectedIds.length} of ${parties.length} Selected'),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedIds.addAll(parties.map((p) => p.id));
+                            });
+                          },
+                          child: const Text('Select All'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedIds.clear();
+                            });
+                          },
+                          child: const Text('Clear All'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: parties.length,
+                    itemBuilder: (ctx, index) {
+                      final p = parties[index];
+                      final isChecked = selectedIds.contains(p.id);
+                      return CheckboxListTile(
+                        dense: true,
+                        title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(p.phone.isNotEmpty ? p.phone : p.address),
+                        value: isChecked,
+                        onChanged: (val) {
+                          setDialogState(() {
+                            if (val == true) {
+                              selectedIds.add(p.id);
+                            } else {
+                              selectedIds.remove(p.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                provider.setSelectedPartyIds(selectedIds);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Apply Filter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMonthPicker(BuildContext context, ChallanProvider provider) {
+    int selectedMonth = provider.selectedMonth ?? DateTime.now().month;
+    int selectedYear = provider.selectedYear ?? DateTime.now().year;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Filter by Month & Year'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select Month:'),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<int>(
+                initialValue: selectedMonth,
+                decoration: const InputDecoration(isDense: true),
+                items: List.generate(12, (index) {
+                  final m = index + 1;
+                  return DropdownMenuItem(
+                    value: m,
+                    child: Text(DateFormat('MMMM').format(DateTime(2026, m))),
+                  );
+                }),
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedMonth = val);
+                },
+              ),
+              const SizedBox(height: 14),
+              const Text('Select Year:'),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<int>(
+                initialValue: selectedYear,
+                decoration: const InputDecoration(isDense: true),
+                items: [2024, 2025, 2026, 2027].map((y) {
+                  return DropdownMenuItem(value: y, child: Text('$y'));
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => selectedYear = val);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                provider.setMonthlyFilter(selectedMonth, selectedYear);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Apply Month Filter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmDelete(BuildContext context, ChallanEntry entry) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Challan Entry?'),
+        title: const Text('Move to Recycle Bin?'),
         content: Text(
-          'Are you sure you want to delete Challan #${entry.challanNo} (${entry.partyName})?',
+          'Challan #${entry.challanNo} (${entry.partyName}) will be moved to the Recycle Bin. You can restore it anytime or delete it permanently from the bin.',
         ),
         actions: [
           TextButton(
@@ -51,9 +217,21 @@ class ChallanListView extends StatelessWidget {
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              context.read<ChallanProvider>().deleteChallan(entry.id);
+              context.read<ChallanProvider>().moveToBinChallan(entry.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Challan #${entry.challanNo} moved to Recycle Bin'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: Colors.amberAccent,
+                    onPressed: () {
+                      context.read<ChallanProvider>().restoreChallan(entry.id);
+                    },
+                  ),
+                ),
+              );
             },
-            child: const Text('Delete'),
+            child: const Text('Move to Bin'),
           ),
         ],
       ),
@@ -73,7 +251,7 @@ class ChallanListView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // TOP HEADER
+            // TOP HEADER WITH PRIMARY ACTIONS
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -106,15 +284,29 @@ class ChallanListView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _openAddDialog(context),
-                  icon: const Icon(Icons.add_circle, size: 20),
-                  label: const Text('Add Challan Entry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  ),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _openExportDialog(context),
+                      icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                      label: const Text('Generate PDF / Excel'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: () => _openAddDialog(context),
+                      icon: const Icon(Icons.add_circle, size: 20),
+                      label: const Text('Add Challan Entry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -180,6 +372,7 @@ class ChallanListView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    // ROW 1: SEARCH, PARTY DROPDOWN, MULTI-PARTY BUTTON, PAYMENT OPTION, RESET
                     Row(
                       children: [
                         // SEARCH
@@ -187,7 +380,7 @@ class ChallanListView extends StatelessWidget {
                           flex: 4,
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Search by Challan No, Party, GST Bill, or Cheque No...',
+                              hintText: 'Search by Challan No, Party, GST Bill, or Cheque...',
                               prefixIcon: const Icon(Icons.search, size: 20),
                               isDense: true,
                               suffixIcon: provider.searchQuery.isNotEmpty
@@ -206,16 +399,18 @@ class ChallanListView extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
 
-                        // PARTY FILTER DROPDOWN
+                        // PARTY DROPDOWN (SINGLE / ALL)
                         Expanded(
                           flex: 3,
                           child: DropdownButtonFormField<String?>(
-                            initialValue: provider.selectedPartyId,
+                            initialValue: provider.selectedSinglePartyId,
                             isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Party Filter',
+                            decoration: InputDecoration(
+                              labelText: provider.selectedPartyIds.length > 1
+                                  ? '${provider.selectedPartyIds.length} Parties Selected'
+                                  : 'Party Filter',
                               isDense: true,
-                              prefixIcon: Icon(Icons.business, size: 18),
+                              prefixIcon: const Icon(Icons.business, size: 18),
                             ),
                             items: [
                               const DropdownMenuItem(value: null, child: Text('All Parties')),
@@ -225,6 +420,30 @@ class ChallanListView extends StatelessWidget {
                                   )),
                             ],
                             onChanged: (val) => provider.setSelectedPartyId(val),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // MULTI-PARTY SELECTION BUTTON
+                        OutlinedButton.icon(
+                          onPressed: () => _showMultiPartyDialog(context, provider),
+                          icon: const Icon(Icons.checklist, size: 16),
+                          label: Text(
+                            provider.selectedPartyIds.length > 1
+                                ? '${provider.selectedPartyIds.length} Selected'
+                                : 'Multi-Party',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                            side: BorderSide(
+                              color: provider.selectedPartyIds.length > 1
+                                  ? AppColors.primary
+                                  : Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                            ),
+                            backgroundColor: provider.selectedPartyIds.length > 1
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -259,11 +478,12 @@ class ChallanListView extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // SECOND ROW: STATUS & DATE CHIPS
+                    // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
+                          // STATUS CHIPS
                           const Text(
                             'Status: ',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
@@ -276,8 +496,11 @@ class ChallanListView extends StatelessWidget {
                           const SizedBox(width: 6),
                           _buildStatusChip(context, provider, 'bounced', '❌ Bounced', color: AppColors.warningText),
 
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 16),
+                          Container(width: 1, height: 24, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+                          const SizedBox(width: 16),
 
+                          // PERIOD CHIPS
                           const Text(
                             'Period: ',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
@@ -289,6 +512,47 @@ class ChallanListView extends StatelessWidget {
                           _buildDateChip(context, provider, 'week', 'Last 7 Days'),
                           const SizedBox(width: 6),
                           _buildDateChip(context, provider, 'month', 'Last 30 Days'),
+                          const SizedBox(width: 6),
+
+                          // DEDICATED MONTH PICKER BUTTON
+                          ActionChip(
+                            avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                            label: Text(
+                              provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
+                                  ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
+                                  : 'Pick Month...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: provider.dateFilter == 'monthly_picker'
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: provider.dateFilter == 'monthly_picker' ? AppColors.primary : null,
+                              ),
+                            ),
+                            backgroundColor: provider.dateFilter == 'monthly_picker'
+                                ? AppColors.primary.withValues(alpha: 0.15)
+                                : null,
+                            onPressed: () => _showMonthPicker(context, provider),
+                          ),
+
+                          const SizedBox(width: 16),
+                          Container(width: 1, height: 24, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
+                          const SizedBox(width: 16),
+
+                          // DATE SORT ASCENDING / DESCENDING TOGGLE
+                          ActionChip(
+                            avatar: Icon(
+                              provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            label: Text(
+                              provider.sortAscending ? 'Date: Oldest First (Asc)' : 'Date: Newest First (Desc)',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                            onPressed: () => provider.toggleSortOrder(),
+                          ),
                         ],
                       ),
                     ),
@@ -296,7 +560,50 @@ class ChallanListView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // ACTIVE FILTER BANNER (IF FILTER APPLIED)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Showing: ${provider.activeFilterSummary} (${entries.length} records)',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => _openExportDialog(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download_rounded, size: 15, color: AppColors.primary),
+                        SizedBox(width: 4),
+                        Text(
+                          'Export This View',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // LEDGER RECORDS LIST
             if (entries.isEmpty)
@@ -358,8 +665,6 @@ class ChallanListView extends StatelessWidget {
     final isBouncedCheque = !isCash && item.chequeDetails?.status == ChequeStatus.bounced;
     final hasWarning = isUnpaidCash || isBouncedCheque;
 
-    // Card background color:
-    // If unpaid cash or bounced cheque -> Highlighted in light-red!
     final cardBgColor = hasWarning
         ? (Theme.of(context).brightness == Brightness.dark
             ? AppColors.warningBgDark
@@ -399,7 +704,6 @@ class ChallanListView extends StatelessWidget {
               // ROW 1: CHALLAN NO, DATE, WARNING / STATUS BADGE, ACTIONS
               Row(
                 children: [
-                  // CHALLAN NUMBER BADGE
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -418,8 +722,6 @@ class ChallanListView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-
-                  // DATE
                   Row(
                     children: [
                       const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
@@ -431,13 +733,8 @@ class ChallanListView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(width: 12),
-
-                  // STATUS BADGE (HIGHLIGHTED IF UNPAID CASH!)
                   _buildStatusBadge(item),
-
                   const Spacer(),
-
-                  // ACTION BUTTONS
                   IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
@@ -461,7 +758,6 @@ class ChallanListView extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // PARTY NAME
                   Expanded(
                     flex: 4,
                     child: Column(
@@ -492,8 +788,6 @@ class ChallanListView extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // CHALLAN AMOUNT
                   Expanded(
                     flex: 2,
                     child: Column(
@@ -511,8 +805,6 @@ class ChallanListView extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // GST BILL NO & GST AMOUNT
                   Expanded(
                     flex: 3,
                     child: Column(
@@ -537,8 +829,6 @@ class ChallanListView extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // FINAL AMOUNT
                   Expanded(
                     flex: 3,
                     child: Column(
@@ -563,7 +853,6 @@ class ChallanListView extends StatelessWidget {
                 ],
               ),
 
-              // IF CHEQUE: SHOW CHEQUE DETAILS SUB-BAR
               if (!isCash && item.chequeDetails != null) ...[
                 const SizedBox(height: 10),
                 Container(
@@ -618,7 +907,6 @@ class ChallanListView extends StatelessWidget {
           ),
         );
       } else {
-        // UNPAID CASH -> WARNING HIGHLIGHT BADGE!
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -643,7 +931,6 @@ class ChallanListView extends StatelessWidget {
         );
       }
     } else {
-      // CHEQUE STATUS
       final status = item.chequeDetails?.status ?? ChequeStatus.pending;
       Color bg;
       Color text;
