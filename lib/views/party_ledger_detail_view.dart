@@ -337,7 +337,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              party.name,
+              provider.formatCasedText(party.name),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
@@ -414,7 +414,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           Row(
                             children: [
                               Text(
-                                party.name,
+                                provider.formatCasedText(party.name),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -754,7 +754,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Showing ${filtered.length} of ${allPartyChallans.length} challans for "${party.name}"',
+                      'Showing ${filtered.length} of ${allPartyChallans.length} challans for "${provider.formatCasedText(party.name)}"',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -784,7 +784,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         const SizedBox(height: 12),
                         Text(
                           allPartyChallans.isEmpty
-                              ? 'No challan records found for ${party.name}'
+                              ? 'No challan records found for ${provider.formatCasedText(party.name)}'
                               : 'No challans match the active filters',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),

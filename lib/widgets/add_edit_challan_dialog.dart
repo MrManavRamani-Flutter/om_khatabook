@@ -200,59 +200,65 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       }
     }
 
+    final provider = context.read<ChallanProvider>();
+    final formattedPartyName = provider.formatCasedText(partyName);
+    final formattedChallanNo = _challanNoController.text.trim().toUpperCase();
+    final formattedGstBillNo = _gstBillNoController.text.trim().toUpperCase();
+    final formattedNotes = provider.formatCasedText(_notesController.text.trim());
+    final formattedBankName = provider.formatCasedText(_bankNameController.text.trim());
+
     ChequeDetails? cheque;
     if (_paymentOption == PaymentOption.cheque) {
       final chkAmt = double.tryParse(_chequeAmountController.text.trim()) ?? finalAmt;
       cheque = ChequeDetails(
         chequeDate: _chequeDate,
         chequeNo: _chequeNoController.text.trim(),
-        bankName: _bankNameController.text.trim(),
+        bankName: formattedBankName,
         chequeAmount: chkAmt,
         status: _chequeStatus,
       );
     }
 
-    final provider = context.read<ChallanProvider>();
     final partyId = _selectedParty?.id ??
         provider.parties
             .firstWhere(
-              (p) => p.name.toLowerCase() == partyName.toLowerCase(),
-              orElse: () => Party(id: '', name: partyName, createdAt: DateTime.now()),
+              (p) => p.name.toLowerCase() == formattedPartyName.toLowerCase(),
+              orElse: () => Party(id: '', name: formattedPartyName, createdAt: DateTime.now()),
             )
             .id;
 
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(
         date: _selectedDate,
-        challanNo: _challanNoController.text.trim(),
+        challanNo: formattedChallanNo,
         partyId: partyId.isNotEmpty ? partyId : widget.entryToEdit!.partyId,
-        partyName: partyName,
+        partyName: formattedPartyName,
         challanAmount: challanAmt,
         finalAmount: finalAmt,
         paidAmount: paidAmt,
-        gstBillNo: _gstBillNoController.text.trim(),
+        gstBillNo: formattedGstBillNo,
         gstAmount: gstAmt,
         paymentOption: _paymentOption,
         isCashPaid: cashPaidBool,
         chequeDetails: cheque,
-        notes: _notesController.text.trim(),
+        notes: formattedNotes,
       );
       await provider.updateChallan(updated);
     } else {
       await provider.addChallan(
         date: _selectedDate,
-        challanNo: _challanNoController.text.trim(),
+        challanNo: formattedChallanNo,
         partyId: partyId,
-        partyName: partyName,
+        partyName: formattedPartyName,
         challanAmount: challanAmt,
         finalAmount: finalAmt,
         paidAmount: paidAmt,
-        gstBillNo: _gstBillNoController.text.trim(),
+        gstBillNo: formattedGstBillNo,
         gstAmount: gstAmt,
         paymentOption: _paymentOption,
         isCashPaid: cashPaidBool,
         chequeDetails: cheque,
-        notes: _notesController.text.trim(),
+        notes: formattedNotes,
       );
     }
 
@@ -262,7 +268,9 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.entryToEdit != null;
-    final parties = context.watch<ChallanProvider>().parties;
+    final provider = context.watch<ChallanProvider>();
+    final parties = provider.parties;
+    final casingStyle = provider.textCasingStyle;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -326,6 +334,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                               child: TextFormField(
                                 controller: _challanNoController,
                                 autofocus: !isEdit,
+                                inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                                textCapitalization: TextCapitalization.characters,
                                 decoration: const InputDecoration(
                                   labelText: 'Challan No. *',
                                   prefixIcon: Icon(Icons.tag, size: 18),
@@ -376,10 +386,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                   return TextFormField(
                                     controller: controller,
                                     focusNode: focusNode,
-                                    decoration: const InputDecoration(
+                                    inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
+                                    textCapitalization: casingStyle == TextCasingStyle.uppercase
+                                        ? TextCapitalization.characters
+                                        : (casingStyle == TextCasingStyle.titleCase
+                                            ? TextCapitalization.words
+                                            : TextCapitalization.none),
+                                    decoration: InputDecoration(
                                       labelText: 'Party / Business Name *',
-                                      prefixIcon: Icon(Icons.business, size: 18),
-                                      hintText: 'Type to search existing party...',
+                                      prefixIcon: const Icon(Icons.business, size: 18),
+                                      hintText: casingStyle.apply('Type to search or enter party...'),
                                     ),
                                     validator: (v) => v == null || v.trim().isEmpty
                                         ? 'Party name is required'
@@ -462,6 +478,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                               flex: 5,
                               child: TextFormField(
                                 controller: _gstBillNoController,
+                                inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                                textCapitalization: TextCapitalization.characters,
                                 decoration: const InputDecoration(
                                   labelText: 'GST Bill No.',
                                   prefixIcon: Icon(Icons.receipt, size: 18),
@@ -780,10 +798,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                       flex: 5,
                                       child: TextFormField(
                                         controller: _bankNameController,
-                                        decoration: const InputDecoration(
+                                        inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
+                                        textCapitalization: casingStyle == TextCasingStyle.uppercase
+                                            ? TextCapitalization.characters
+                                            : (casingStyle == TextCasingStyle.titleCase
+                                                ? TextCapitalization.words
+                                                : TextCapitalization.none),
+                                        decoration: InputDecoration(
                                           labelText: 'Bank Name *',
-                                          hintText: 'e.g. HDFC, State Bank of India',
-                                          prefixIcon: Icon(Icons.account_balance, size: 18),
+                                          hintText: casingStyle.apply('e.g. HDFC, State Bank of India'),
+                                          prefixIcon: const Icon(Icons.account_balance, size: 18),
                                         ),
                                         validator: (v) {
                                           if (_paymentOption == PaymentOption.cheque) {
@@ -848,10 +872,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                         TextFormField(
                           controller: _notesController,
                           maxLines: 2,
-                          decoration: const InputDecoration(
+                          inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
+                          textCapitalization: casingStyle == TextCasingStyle.uppercase
+                              ? TextCapitalization.characters
+                              : (casingStyle == TextCasingStyle.titleCase
+                                  ? TextCapitalization.words
+                                  : TextCapitalization.none),
+                          decoration: InputDecoration(
                             labelText: 'Notes / Remarks (Optional)',
-                            prefixIcon: Icon(Icons.notes, size: 18),
-                            hintText: 'Any delivery details or payment remarks',
+                            prefixIcon: const Icon(Icons.notes, size: 18),
+                            hintText: casingStyle.apply('Any delivery details or payment remarks'),
                           ),
                         ),
                       ],

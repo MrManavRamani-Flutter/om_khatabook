@@ -12,6 +12,8 @@ class StorageService {
   static const String _keyThemeMode = 'om_theme_mode_v2';
   static const String _keyFirstRun = 'om_first_run_v2';
   static const String _keyLedgerViewMode = 'om_ledger_view_mode_v2';
+  static const String _keyPartyViewMode = 'om_party_view_mode_v2';
+  static const String _keyTextCasingRule = 'om_text_casing_rule_v2';
   static const String _keyCleanMigration = 'om_clean_parties_v3';
 
   late SharedPreferences _prefs;
@@ -42,6 +44,17 @@ class StorageService {
   String get ledgerViewMode => _prefs.getString(_keyLedgerViewMode) ?? 'table';
   Future<void> setLedgerViewMode(String mode) async {
     await _prefs.setString(_keyLedgerViewMode, mode);
+  }
+
+  String get partyViewMode => _prefs.getString(_keyPartyViewMode) ?? 'table';
+  Future<void> setPartyViewMode(String mode) async {
+    await _prefs.setString(_keyPartyViewMode, mode);
+  }
+
+  // --- TEXT CASING PREFERENCE (UPPERCASE DEFAULT) ---
+  String get textCasingStyle => _prefs.getString(_keyTextCasingRule) ?? 'uppercase';
+  Future<void> setTextCasingStyle(String style) async {
+    await _prefs.setString(_keyTextCasingRule, style);
   }
 
   // --- PARTIES ---

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/challan_entry.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -212,6 +213,116 @@ class SettingsView extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                     ),
+                    Divider(
+                      height: 28,
+                      thickness: 1,
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                    ),
+                    const Row(
+                      children: [
+                        Icon(Icons.text_fields_rounded, color: AppColors.primary, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Text Casing & Typography (Data Entry)',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose how party names, challans, and entry details appear and format automatically',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...TextCasingStyle.values.map((style) {
+                      final isSelected = provider.textCasingStyle == style;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.08)
+                              : Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => provider.setTextCasingStyle(style),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    color: isSelected ? AppColors.primary : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              style.label,
+                                              style: TextStyle(
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                fontSize: 13.5,
+                                                color: isSelected ? AppColors.primary : null,
+                                              ),
+                                            ),
+                                            if (style == TextCasingStyle.uppercase) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'Default',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          style.example,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),

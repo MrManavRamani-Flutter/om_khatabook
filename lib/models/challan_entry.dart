@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 enum LedgerViewMode {
   table('Table (Excel Grid)'),
   compact('Compact List'),
@@ -5,6 +7,62 @@ enum LedgerViewMode {
 
   final String label;
   const LedgerViewMode(this.label);
+}
+
+enum TextCasingStyle {
+  uppercase('ALL CAPITAL LETTERS (UPPERCASE)'),
+  titleCase('Capitalize Each Word (Title Case)'),
+  lowercase('all small letters (lowercase)');
+
+  final String label;
+  const TextCasingStyle(this.label);
+
+  String get example {
+    switch (this) {
+      case TextCasingStyle.uppercase:
+        return 'e.g. MANAV FAB, RING ROAD, SURAT';
+      case TextCasingStyle.titleCase:
+        return 'e.g. Manav Fab, Ring Road, Surat';
+      case TextCasingStyle.lowercase:
+        return 'e.g. manav fab, ring road, surat';
+    }
+  }
+
+  String apply(String text) {
+    if (text.isEmpty) return text;
+    switch (this) {
+      case TextCasingStyle.uppercase:
+        return text.toUpperCase();
+      case TextCasingStyle.lowercase:
+        return text.toLowerCase();
+      case TextCasingStyle.titleCase:
+        final words = text.split(' ');
+        final capitalized = words.map((w) {
+          if (w.isEmpty) return w;
+          if (w.length == 1) return w.toUpperCase();
+          return w[0].toUpperCase() + w.substring(1).toLowerCase();
+        });
+        return capitalized.join(' ');
+    }
+  }
+}
+
+class DynamicCaseTextInputFormatter extends TextInputFormatter {
+  final TextCasingStyle style;
+
+  const DynamicCaseTextInputFormatter(this.style);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final formatted = style.apply(newValue.text);
+    return newValue.copyWith(
+      text: formatted,
+      selection: newValue.selection,
+    );
+  }
 }
 
 enum PaymentOption {

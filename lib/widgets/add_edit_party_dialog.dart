@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/challan_entry.dart';
 import '../models/party.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
@@ -45,21 +46,26 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<ChallanProvider>();
 
+    final formattedName = provider.formatCasedText(_nameController.text.trim());
+    final formattedAddress = provider.formatCasedText(_addressController.text.trim());
+    final phone = _phoneController.text.trim();
+    final gstin = _gstController.text.trim().toUpperCase();
+
     if (widget.partyToEdit != null) {
       final updated = widget.partyToEdit!.copyWith(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        address: _addressController.text.trim(),
-        gstNumber: _gstController.text.trim(),
+        name: formattedName,
+        phone: phone,
+        address: formattedAddress,
+        gstNumber: gstin,
       );
       await provider.updateParty(updated);
       if (mounted) Navigator.of(context).pop(updated);
     } else {
       final created = await provider.addParty(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        address: _addressController.text.trim(),
-        gstNumber: _gstController.text.trim(),
+        name: formattedName,
+        phone: phone,
+        address: formattedAddress,
+        gstNumber: gstin,
       );
       if (mounted) Navigator.of(context).pop(created);
     }
@@ -68,6 +74,8 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.partyToEdit != null;
+    final provider = context.watch<ChallanProvider>();
+    final casingStyle = provider.textCasingStyle;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -101,10 +109,16 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
                 TextFormField(
                   controller: _nameController,
                   autofocus: true,
-                  decoration: const InputDecoration(
+                  inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
+                  textCapitalization: casingStyle == TextCasingStyle.uppercase
+                      ? TextCapitalization.characters
+                      : (casingStyle == TextCasingStyle.titleCase
+                          ? TextCapitalization.words
+                          : TextCapitalization.none),
+                  decoration: InputDecoration(
                     labelText: 'Party / Business Name *',
-                    prefixIcon: Icon(Icons.business, size: 20),
-                    hintText: 'e.g. Ramesh Patel & Sons',
+                    prefixIcon: const Icon(Icons.business, size: 20),
+                    hintText: casingStyle.apply('Manav Fab'),
                   ),
                   validator: (v) => v == null || v.trim().isEmpty
                       ? 'Party name is required'
@@ -123,10 +137,16 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _addressController,
-                  decoration: const InputDecoration(
+                  inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
+                  textCapitalization: casingStyle == TextCasingStyle.uppercase
+                      ? TextCapitalization.characters
+                      : (casingStyle == TextCasingStyle.titleCase
+                          ? TextCapitalization.words
+                          : TextCapitalization.none),
+                  decoration: InputDecoration(
                     labelText: 'Address / City',
-                    prefixIcon: Icon(Icons.location_on, size: 20),
-                    hintText: 'e.g. Ring Road, Surat',
+                    prefixIcon: const Icon(Icons.location_on, size: 20),
+                    hintText: casingStyle.apply('Ring Road, Surat'),
                   ),
                 ),
                 const SizedBox(height: 14),

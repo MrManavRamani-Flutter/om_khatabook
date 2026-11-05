@@ -674,6 +674,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   Widget _buildChallanCard(BuildContext context, ChallanEntry item) {
+    final provider = context.watch<ChallanProvider>();
     final isCash = item.paymentOption == PaymentOption.cash;
     final isUnpaidCash = isCash && !item.isCashPaid && !item.isPartiallyPaid;
     final isPartialCash = isCash && item.isPartiallyPaid;
@@ -810,7 +811,7 @@ class ChallanListView extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          item.partyName,
+                          provider.formatCasedText(item.partyName),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1035,6 +1036,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   Widget _buildExcelTableView(BuildContext context, List<ChallanEntry> entries) {
+    final provider = context.watch<ChallanProvider>();
     final sumChallan = entries.fold(0.0, (s, c) => s + c.challanAmount);
     final sumGst = entries.fold(0.0, (s, c) => s + c.gstAmount);
     final sumFinal = entries.fold(0.0, (s, c) => s + c.finalAmount);
@@ -1160,7 +1162,7 @@ class ChallanListView extends StatelessWidget {
                         Expanded(
                           flex: 3,
                           child: Text(
-                            item.partyName,
+                            provider.formatCasedText(item.partyName),
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1369,6 +1371,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   Widget _buildCompactListView(BuildContext context, List<ChallanEntry> entries) {
+    final provider = context.watch<ChallanProvider>();
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1436,7 +1439,7 @@ class ChallanListView extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        item.partyName,
+                        provider.formatCasedText(item.partyName),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),

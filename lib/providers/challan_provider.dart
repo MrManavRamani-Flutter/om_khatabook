@@ -30,6 +30,10 @@ class ChallanProvider extends ChangeNotifier {
 
   // View Mode (Table / Cards / Compact)
   LedgerViewMode _viewMode = LedgerViewMode.table;
+  LedgerViewMode _partyViewMode = LedgerViewMode.table;
+
+  // Text Casing Style (Uppercase default)
+  TextCasingStyle _textCasingStyle = TextCasingStyle.uppercase;
 
   ChallanProvider(this._storage);
 
@@ -56,6 +60,8 @@ class ChallanProvider extends ChangeNotifier {
   int? get selectedYear => _selectedYear;
   bool get sortAscending => _sortAscending;
   LedgerViewMode get viewMode => _viewMode;
+  LedgerViewMode get partyViewMode => _partyViewMode;
+  TextCasingStyle get textCasingStyle => _textCasingStyle;
 
   void setViewMode(LedgerViewMode mode) {
     if (_viewMode == mode) return;
@@ -63,6 +69,22 @@ class ChallanProvider extends ChangeNotifier {
     _storage.setLedgerViewMode(mode.name);
     notifyListeners();
   }
+
+  void setPartyViewMode(LedgerViewMode mode) {
+    if (_partyViewMode == mode) return;
+    _partyViewMode = mode;
+    _storage.setPartyViewMode(mode.name);
+    notifyListeners();
+  }
+
+  void setTextCasingStyle(TextCasingStyle style) {
+    if (_textCasingStyle == style) return;
+    _textCasingStyle = style;
+    _storage.setTextCasingStyle(style.name);
+    notifyListeners();
+  }
+
+  String formatCasedText(String text) => _textCasingStyle.apply(text);
 
   Future<void> initialize() async {
     _isLoading = true;
@@ -74,6 +96,19 @@ class ChallanProvider extends ChangeNotifier {
       (e) => e.name == savedMode,
       orElse: () => LedgerViewMode.table,
     );
+
+    final savedPartyMode = _storage.partyViewMode;
+    _partyViewMode = LedgerViewMode.values.firstWhere(
+      (e) => e.name == savedPartyMode,
+      orElse: () => LedgerViewMode.table,
+    );
+
+    final savedCasing = _storage.textCasingStyle;
+    _textCasingStyle = TextCasingStyle.values.firstWhere(
+      (e) => e.name == savedCasing,
+      orElse: () => TextCasingStyle.uppercase,
+    );
+
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
 
