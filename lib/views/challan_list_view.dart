@@ -478,83 +478,86 @@ class ChallanListView extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          // STATUS CHIPS
-                          const Text(
-                            'Status: ',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                    // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC (NO HORIZONTAL SCROLL)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // STATUS CHIPS
+                        const Text(
+                          'Status: ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
                           ),
-                          _buildStatusChip(context, provider, 'all', 'All'),
-                          const SizedBox(width: 6),
-                          _buildStatusChip(context, provider, 'paid', 'Paid / Cleared', color: AppColors.successText),
-                          const SizedBox(width: 6),
-                          _buildStatusChip(context, provider, 'unpaid', '⚠️ Unpaid Warning', color: AppColors.warningText),
-                          const SizedBox(width: 6),
-                          _buildStatusChip(context, provider, 'bounced', '❌ Bounced', color: AppColors.warningText),
+                        ),
+                        _buildStatusChip(context, provider, 'all', 'All'),
+                        _buildStatusChip(context, provider, 'paid', 'Paid', color: AppColors.successText),
+                        _buildStatusChip(context, provider, 'unpaid', '⚠️ Unpaid', color: AppColors.warningText),
+                        _buildStatusChip(context, provider, 'bounced', '❌ Bounced', color: AppColors.warningText),
 
-                          const SizedBox(width: 16),
-                          Container(width: 1, height: 24, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
-                          const SizedBox(width: 16),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Text('•', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                        ),
 
-                          // PERIOD CHIPS
-                          const Text(
-                            'Period: ',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                        // PERIOD CHIPS
+                        const Text(
+                          'Period: ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
                           ),
-                          _buildDateChip(context, provider, 'all', 'All Time'),
-                          const SizedBox(width: 6),
-                          _buildDateChip(context, provider, 'today', 'Today'),
-                          const SizedBox(width: 6),
-                          _buildDateChip(context, provider, 'week', 'Last 7 Days'),
-                          const SizedBox(width: 6),
-                          _buildDateChip(context, provider, 'month', 'Last 30 Days'),
-                          const SizedBox(width: 6),
+                        ),
+                        _buildDateChip(context, provider, 'all', 'All Time'),
+                        _buildDateChip(context, provider, 'today', 'Today'),
+                        _buildDateChip(context, provider, 'week', 'Last 7 Days'),
+                        _buildDateChip(context, provider, 'month', 'Last 30 Days'),
 
-                          // DEDICATED MONTH PICKER BUTTON
-                          ActionChip(
-                            avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
-                            label: Text(
-                              provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
-                                  ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
-                                  : 'Pick Month...',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: provider.dateFilter == 'monthly_picker'
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: provider.dateFilter == 'monthly_picker' ? AppColors.primary : null,
-                              ),
+                        // DEDICATED MONTH PICKER BUTTON
+                        ActionChip(
+                          avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                          label: Text(
+                            provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
+                                ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
+                                : 'Pick Month...',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: provider.dateFilter == 'monthly_picker'
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: provider.dateFilter == 'monthly_picker' ? AppColors.primary : null,
                             ),
-                            backgroundColor: provider.dateFilter == 'monthly_picker'
-                                ? AppColors.primary.withValues(alpha: 0.15)
-                                : null,
-                            onPressed: () => _showMonthPicker(context, provider),
                           ),
+                          backgroundColor: provider.dateFilter == 'monthly_picker'
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () => _showMonthPicker(context, provider),
+                        ),
 
-                          const SizedBox(width: 16),
-                          Container(width: 1, height: 24, color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
-                          const SizedBox(width: 16),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Text('•', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                        ),
 
-                          // DATE SORT ASCENDING / DESCENDING TOGGLE
-                          ActionChip(
-                            avatar: Icon(
-                              provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            label: Text(
-                              provider.sortAscending ? 'Date: Oldest First (Asc)' : 'Date: Newest First (Desc)',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                            onPressed: () => provider.toggleSortOrder(),
+                        // DATE SORT TOGGLE
+                        ActionChip(
+                          avatar: Icon(
+                            provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                            size: 16,
+                            color: AppColors.primary,
                           ),
-                        ],
-                      ),
+                          label: Text(
+                            provider.sortAscending ? 'Date: Oldest First ↑' : 'Date: Newest First ↓',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          onPressed: () => provider.toggleSortOrder(),
+                        ),
+                      ],
                     ),
                   ],
                 ),
