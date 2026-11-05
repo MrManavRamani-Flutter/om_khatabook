@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:om_khatabook/models/challan_entry.dart';
-import 'package:om_khatabook/models/party.dart';
 import 'package:om_khatabook/providers/challan_provider.dart';
 import 'package:om_khatabook/services/storage_service.dart';
 
