@@ -37,20 +37,25 @@ jobs:
       - name: Verify Build Output Structure
         shell: pwsh
         run: |
-          # Ensure x64 directory structure matches Inno Setup expectations
-          if (Test-Path "build\windows\runner\Release" -and -not (Test-Path "build\windows\x64\runner\Release")) {
-            Write-Host "Re-aligning build output directory structure..."
-            New-Item -ItemType Directory -Force -Path "build\windows\x64\runner"
-            Copy-Item -Recurse -Force "build\windows\runner\Release" "build\windows\x64\runner\Release"
-          }
-          
-          if (-not (Test-Path "build\windows\x64\runner\Release\om_khatabook.exe")) {
-            Write-Error "Release executable om_khatabook.exe was not found!"
+          # Locate built executable dynamically
+          $exe = Get-ChildItem -Path "build\windows" -Filter "om_khatabook.exe" -Recurse | Select-Object -First 1
+          if ($null -eq $exe) {
+            Write-Error "Release executable om_khatabook.exe was not found in build\windows!"
             exit 1
           }
-          
-          New-Item -ItemType Directory -Force -Path "build\installer"
-          Write-Host "Build output verified successfully."
+          Write-Host "Found release executable at: $($exe.FullName)"
+          $srcDir = $exe.DirectoryName
+
+          # Ensure build\windows\x64\runner\Release exists for Inno Setup
+          $targetDir = "build\windows\x64\runner\Release"
+          if (-not (Test-Path "$targetDir\om_khatabook.exe")) {
+            Write-Host "Aligning build output into $targetDir..."
+            New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+            Copy-Item -Path "$srcDir\*" -Destination $targetDir -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Force -Path "build\installer" | Out-Null
+          Write-Host "Build output structure verified successfully."
 
       - name: Install Inno Setup Compiler
         run: choco install innosetup -y --no-progress
@@ -58,12 +63,18 @@ jobs:
       - name: Compile Windows Setup Installer (.exe)
         shell: pwsh
         run: |
-          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $isccPath)) {
-            $isccPath = (Get-Command iscc.exe).Source
+          $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue)?.Source
+          if (-not $iscc) {
+            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+              $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe"
+            } else {
+              $iscc = (Get-ChildItem -Path "C:\Program Files*" -Filter "ISCC.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1)?.FullName
+            }
           }
-          Write-Host "Using Inno Setup Compiler: $isccPath"
-          & $isccPath "windows\installer\inno_setup.iss"
+          Write-Host "Using Inno Setup Compiler: $iscc"
+          & $iscc "windows\installer\inno_setup.iss"
 
       - name: Create Portable Zip Package
         shell: pwsh
