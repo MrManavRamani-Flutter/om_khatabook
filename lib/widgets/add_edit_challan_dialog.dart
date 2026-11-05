@@ -9,8 +9,9 @@ import 'add_edit_party_dialog.dart';
 
 class AddEditChallanDialog extends StatefulWidget {
   final ChallanEntry? entryToEdit;
+  final Party? initialParty;
 
-  const AddEditChallanDialog({super.key, this.entryToEdit});
+  const AddEditChallanDialog({super.key, this.entryToEdit, this.initialParty});
 
   @override
   State<AddEditChallanDialog> createState() => _AddEditChallanDialogState();
@@ -66,6 +67,9 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         _chequeAmountController.text = c.chequeAmount.toStringAsFixed(0);
         _chequeStatus = c.status;
       }
+    } else if (widget.initialParty != null) {
+      _selectedParty = widget.initialParty;
+      _partySearchController.text = widget.initialParty!.name;
     }
   }
 

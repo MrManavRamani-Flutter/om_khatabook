@@ -5,6 +5,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_party_dialog.dart';
+import 'party_ledger_detail_view.dart';
 
 class PartiesView extends StatefulWidget {
   const PartiesView({super.key});
@@ -100,31 +101,35 @@ class _PartiesViewState extends State<PartiesView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Parties Directory',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Parties Directory',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Pre-add and manage registered parties, contact info, and GST numbers',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.7),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pre-add and manage registered parties, contact info, and GST numbers',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withValues(alpha: 0.7),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   onPressed: () => _openAddParty(context),
                   icon: const Icon(Icons.person_add, size: 20),
@@ -213,122 +218,145 @@ class _PartiesViewState extends State<PartiesView> {
                         color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
                       ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                            foregroundColor: AppColors.primary,
-                            child: Text(
-                              party.name.isNotEmpty
-                                  ? party.name[0].toUpperCase()
-                                  : 'P',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 18),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PartyLedgerDetailView(partyId: party.id),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  party.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    if (party.phone.isNotEmpty) ...[
-                                      Text(
-                                        '📞 ${party.phone}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.color,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                    ],
-                                    if (party.address.isNotEmpty) ...[
-                                      Text(
-                                        '📍 ${party.address}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.color
-                                              ?.withValues(alpha: 0.7),
-                                        ),
-                                      ),
-                                    ],
-                                    if (party.gstNumber.isNotEmpty) ...[
-                                      const SizedBox(width: 10),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'GSTIN: ${party.gstNumber}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
                             children: [
-                              Text(
-                                Formatters.currency(totalBilled),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor:
+                                    AppColors.primary.withValues(alpha: 0.12),
+                                foregroundColor: AppColors.primary,
+                                child: Text(
+                                  party.name.isNotEmpty
+                                      ? party.name[0].toUpperCase()
+                                      : 'P',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 18),
                                 ),
                               ),
-                              Text(
-                                '${partyChallans.length} Challans${unpaidCount > 0 ? ' • $unpaidCount Unpaid' : ''}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: unpaidCount > 0
-                                      ? AppColors.warningText
-                                      : Colors.grey,
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      party.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        if (party.phone.isNotEmpty)
+                                          Text(
+                                            '📞 ${party.phone}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color,
+                                            ),
+                                          ),
+                                        if (party.address.isNotEmpty)
+                                          Text(
+                                            '📍 ${party.address}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color
+                                                  ?.withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        if (party.gstNumber.isNotEmpty)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'GSTIN: ${party.gstNumber}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    Formatters.currency(totalBilled),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${partyChallans.length} Challans${unpaidCount > 0 ? ' • $unpaidCount Unpaid' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: unpaidCount > 0
+                                          ? AppColors.warningText
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                tooltip: 'Edit Party',
+                                onPressed: () => _openEditParty(context, party),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline,
+                                    size: 18, color: AppColors.warningText),
+                                tooltip: 'Delete Party',
+                                onPressed: () => _confirmDelete(context, party),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 20,
+                                color: AppColors.primary,
                               ),
                             ],
                           ),
-                          const SizedBox(width: 16),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            tooltip: 'Edit Party',
-                            onPressed: () => _openEditParty(context, party),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                size: 18, color: AppColors.warningText),
-                            tooltip: 'Delete Party',
-                            onPressed: () => _confirmDelete(context, party),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );

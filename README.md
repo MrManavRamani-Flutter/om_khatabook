@@ -1,6 +1,39 @@
+<p align="center">
+  <img src="assets/logo/app_logo.png" width="120" height="120" alt="OM Mavtar Group Logo" style="border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+</p>
+
 # OM Mavtar Group Khata Book - Desktop Challan & Billing Management System
 
-A dedicated, high-performance desktop ledger application built for **OM Mavtar Group**, optimized for **Windows 10/11** and **macOS**. Developed entirely in **100% English** with complete offline-first local storage, full manual CRUD controls, advanced PDF/Excel reports, two-stage Recycle Bin security, and automated CI/CD for Windows setup `.exe` distribution.
+A dedicated, high-performance desktop ledger application built for **OM Mavtar Group**, optimized for **Windows 10/11** and **macOS**. Developed entirely in **100% English** with complete offline-first local storage, full manual CRUD controls, advanced PDF/Excel reports, two-stage Recycle Bin security, dedicated party-wise ledgers, and automated CI/CD for Windows setup `.exe` distribution.
+
+---
+
+## 📸 Application Screenshots
+
+### 1. Challan & Billing Ledger (Main Screen)
+The primary commercial ledger view showing live financial KPI cards, zero-horizontal-scroll filter toolbar, and delivery challans with prominent **light-red warning highlights** for unpaid cash entries.
+
+<p align="center">
+  <img src="docs/screenshots/challan_ledger.jpg" alt="Challan & Billing Ledger" width="95%" style="border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08);" />
+</p>
+
+---
+
+### 2. Parties Directory & Dedicated Party Ledger
+Directory of registered commercial parties. Clicking on any party opens their **exclusive Party Ledger Screen** showing only their transactions, party-specific KPIs, and instant export options.
+
+<p align="center">
+  <img src="docs/screenshots/parties_directory.png" alt="Parties Directory" width="95%" style="border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08);" />
+</p>
+
+---
+
+### 3. Financial KPI Metrics & Smart Search
+Real-time financial KPI cards calculating Total Challan Gross Amount, Total Final Billed Amount, Total GST Component, and Pending/Unpaid Dues.
+
+<p align="center">
+  <img src="docs/screenshots/overview_dashboard.jpg" alt="Financial KPI Metrics" width="95%" style="border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08);" />
+</p>
 
 ---
 
@@ -10,32 +43,33 @@ A dedicated, high-performance desktop ledger application built for **OM Mavtar G
 | :--- | :--- |
 | **Manual Data Control** | User manually creates, edits, soft-deletes, views, and filters all challan entries and parties. |
 | **B2B Challan Fields** | Date, Challan No., Party, Challan Amount, Final Amount, GST Bill No., GST Amount, Payment Option (Cash / Cheque). |
-| **Unpaid Cash Warning** | Unpaid / Pending cash entries are automatically highlighted in **light-red / warning tone** (`⚠️ UNPAID CASH`). |
-| **Cheque Tracking** | Cheque Date, Cheque No., Issuing Bank Name, Cheque Amount, Status (Pending, Cleared, Bounced). |
-| **Parties Directory** | Dedicated party management with instant autocomplete search during challan creation. |
+| **Dedicated Party Ledger** | Clicking any party in the Parties Directory navigates to an exclusive screen displaying **only that party's records** with party-specific totals. |
+| **Unpaid Cash Warning** | Unpaid / Pending cash entries are automatically highlighted in **light-red / warning tone** (`[ ⚠️ UNPAID CASH ]`). |
+| **Cheque Settlement** | Cheque Date, Cheque No., Issuing Bank Name, Cheque Amount, Status (Pending, Cleared, Bounced). |
 | **PDF & Excel Reports** | Filter by Single/Multiple Parties, Monthly/Period ranges, Ascending/Descending date sorting. |
 | **Recycle Bin (Trash)** | Deleted challans and parties move to the Recycle Bin first. Restore anytime or permanently delete forever. |
 | **Database Backup & Restore** | 100% offline JSON export and restore from the Settings screen. |
 | **Windows Setup Installer (.exe)** | One-click `.exe` installer with desktop shortcuts and clean Windows Programs & Features uninstaller. |
-| **GitHub Actions CI/CD** | Automated cloud build that compiles the release `.exe` setup file downloadable from GitHub. |
+| **macOS Native Desktop App** | Fully compiled release macOS app installed to Applications and Desktop with custom Retina app icons. |
+| **Zero Horizontal Scroll** | Responsive `Wrap` layout ensures all filter chips and sorting controls fit on screen without horizontal scrolling. |
 
 ---
 
 ## 2. Core Field Specifications
 
-Every challan record in OM Mavtar Group Khata Book contains:
+Every delivery challan record in OM Mavtar Group Khata Book contains:
 
 1. **Date** (`date`): Displayed prominently on the table and card; selectable via date picker (defaults to current date).
 2. **Challan No.** (`challanNo`): Unique challan identifier (e.g. `CH-2026-101`).
 3. **Party** (`partyName` / `partyId`): Selected through an instant searchable dropdown / autocomplete populated from pre-registered parties.
-4. **Challan Amount** (`challanAmount`): Base/gross amount of the delivery challan.
+4. **Challan Amount** (`challanAmount`): Base gross amount of the delivery challan.
 5. **Final Amount** (`finalAmount`): Final settlement amount payable/receivable.
 6. **GST Bill No.** (`gstBillNo`): Tax invoice number corresponding to the challan.
 7. **GST Amount** (`gstAmount`): GST component amount.
 8. **Payment Option**:
    - **Cash**:
      - Status: `Paid` or `Unpaid / Pending`.
-     - **Warning Highlight**: When marked unpaid, the entire row/card is shaded in light red with a red badge: `⚠️ UNPAID CASH`.
+     - **Warning Highlight**: When marked unpaid, the entire row/card is shaded in light red with a distinct warning badge: `[ ⚠️ UNPAID CASH ]`.
    - **Cheque**:
      - *Cheque Date*: Issue date.
      - *Cheque No.*: 6-digit cheque identifier.
@@ -46,28 +80,46 @@ Every challan record in OM Mavtar Group Khata Book contains:
 
 ---
 
-## 3. Recycle Bin (Trash / Soft Delete)
+## 3. Dedicated Party Ledger View
 
-To prevent accidental data loss:
-- When a user deletes a challan or party from the main view, it is **moved to the Recycle Bin** (marked `isDeleted: true` with a timestamp).
-- A quick **Undo** snackbar allows immediate reversal.
-- In the **Recycle Bin** tab:
-  - **Restore**: Returns the record back into the active ledger / party directory immediately.
-  - **Delete Permanently**: Permanently erases the record from the database. Once permanently purged, it cannot be recovered from any archive.
-  - **Empty Recycle Bin**: Purges all soft-deleted records across both challans and parties with a single confirmation.
+When you navigate to the **Parties Directory** and click on any party card:
+- You are taken to a dedicated **Party Ledger Screen** for that specific party.
+- **Exclusive Records**: Displays **only that party's transactions**—no other party data is mixed in.
+- **Party Header**: Displays party phone number, registered business address, GSTIN badge, and registration date.
+- **Party KPI Summary Cards**:
+  - Total Challan Gross Amount for this party.
+  - Total Final Billed Amount for this party.
+  - Total GST Component for this party.
+  - Pending / Unpaid Dues for this party.
+- **Dedicated Actions**:
+  - `+ Add Challan`: Automatically pre-selects this party in the entry dialog.
+  - `Export Party Ledger`: Generates PDF / Excel reports strictly for this party.
+  - Full local search, payment mode filters, status filters, and date sorting.
 
 ---
 
-## 4. Reports & Data Export (PDF & Excel)
+## 4. Recycle Bin (Trash / Soft Delete)
 
-Generate reports tailored to your exact criteria:
+To safeguard against accidental deletion:
+- When a user deletes a challan or party, it is **moved to the Recycle Bin** (`isDeleted: true` with deletion timestamp).
+- An immediate **Undo** snackbar allows instant reversal.
+- In the **Recycle Bin** screen:
+  - **Restore**: Returns the record back into the active ledger or party directory with a single click.
+  - **Delete Permanently**: Permanently purges the record from the database. Once permanently purged, it cannot be recovered from any archive.
+  - **Empty Recycle Bin**: Permanently deletes all soft-deleted records across both challans and parties.
+
+---
+
+## 5. Reports & Data Export (PDF & Excel)
+
+Generate reports tailored to your exact business requirements:
 
 ### PDF Reports:
 - **Print / Preview**: Landscape layout with OM Mavtar Group branding, active filter summary, summary KPI cards, styled data tables, and page counters.
 - **Save PDF**: Directly writes formatted `.pdf` to your system's Documents folder.
 
 ### Excel (.xlsx) Reports:
-- Generates Microsoft Excel workbooks with formatted headers, dates, numbers, and calculated sum totals.
+- Generates genuine Microsoft Excel workbooks with formatted headers, dates, numbers, and calculated sum totals.
 
 ### Filter Scopes:
 - **Party Selection**:
@@ -85,7 +137,7 @@ Generate reports tailored to your exact criteria:
 
 ---
 
-## 5. Windows 10/11 Setup Installer (.exe) & GitHub Actions
+## 6. Windows 10/11 Setup Installer (.exe) & GitHub Actions
 
 ### Automatic Cloud Builds via GitHub Actions
 A complete GitHub Actions workflow (`.github/workflows/build_windows_exe.yml`) is set up to automatically build the Windows installer whenever you push to GitHub or trigger it manually:
@@ -93,7 +145,7 @@ A complete GitHub Actions workflow (`.github/workflows/build_windows_exe.yml`) i
 1. **Push your code to GitHub**:
    ```bash
    git add .
-   git commit -m "Add Recycle Bin, Windows installer, and CI/CD workflow"
+   git commit -m "Add screenshots, party ledger screen, and installer updates"
    git push origin main
    ```
 2. **Go to GitHub**:
@@ -121,7 +173,7 @@ iscc windows\installer\inno_setup.iss
 
 ---
 
-## 6. How to Run Locally
+## 7. How to Run Locally
 
 ### macOS Desktop:
 ```bash
@@ -147,47 +199,55 @@ flutter analyze
 
 ---
 
-## 7. Project Architecture
+## 8. Project Architecture
 
 ```
 om_khatabook/
 ├── .github/
 │   └── workflows/
-│       └── build_windows_exe.yml      # GitHub Actions CI/CD for Windows .exe
+│       └── build_windows_exe.yml        # GitHub Actions CI/CD for Windows .exe
 ├── assets/
 │   └── logo/
-│       ├── app_logo.png              # Primary OM Mavtar Group branding logo
-│       └── app_logo_white.png        # Transparent/light variant logo
+│       ├── app_logo.png                # Primary OM Mavtar Group branding logo
+│       └── app_logo_white.png          # Transparent/light variant logo
+├── docs/
+│   └── screenshots/
+│       ├── challan_ledger.jpg          # Main Challan Ledger screenshot
+│       ├── parties_directory.png       # Parties Directory screenshot
+│       └── overview_dashboard.jpg      # Financial KPI overview screenshot
 ├── lib/
-│   ├── main.dart                      # App entry point with Provider scope
+│   ├── main.dart                        # App entry point with Provider scope
 │   ├── models/
-│   │   ├── challan_entry.dart         # Challan model with soft-delete & warning flags
-│   │   └── party.dart                 # Party directory model with soft-delete
+│   │   ├── challan_entry.dart           # Challan model with soft-delete & warning flags
+│   │   └── party.dart                   # Party directory model with soft-delete
 │   ├── providers/
-│   │   └── challan_provider.dart      # Business logic, filters, sorting, Recycle Bin
+│   │   └── challan_provider.dart        # Business logic, filters, sorting, Recycle Bin
 │   ├── services/
-│   │   ├── export_service.dart        # PDF & Excel (.xlsx) generator
-│   │   └── storage_service.dart       # Local persistence & JSON backup/restore
+│   │   ├── export_service.dart          # PDF & Excel (.xlsx) generator
+│   │   └── storage_service.dart         # Local persistence & JSON backup/restore
 │   ├── theme/
-│   │   └── app_theme.dart             # Corporate branding theme (Light & Dark)
+│   │   └── app_theme.dart               # Corporate branding theme (Light & Dark)
 │   ├── views/
-│   │   ├── challan_list_view.dart     # Main Challan Ledger with filters & warning highlight
-│   │   ├── main_layout.dart           # Desktop sidebar layout with app logo & badges
-│   │   ├── parties_view.dart          # Party directory management
-│   │   ├── recycle_bin_view.dart      # Recycle Bin with Restore & Permanent Delete
-│   │   ├── settings_view.dart         # Backup, restore & database metrics
-│   │   └── summary_reports_view.dart  # Financial KPI summary & export launcher
+│   │   ├── challan_list_view.dart       # Main Challan Ledger with filters & warning highlight
+│   │   ├── main_layout.dart             # Desktop sidebar layout with app logo & badges
+│   │   ├── parties_view.dart            # Party directory management (click to view ledger)
+│   │   ├── party_ledger_detail_view.dart # Dedicated Party Ledger Screen (exclusive records)
+│   │   ├── recycle_bin_view.dart        # Recycle Bin with Restore & Permanent Delete
+│   │   ├── settings_view.dart           # Backup, restore & database metrics
+│   │   └── summary_reports_view.dart    # Financial KPI summary & export launcher
 │   └── widgets/
 │       ├── add_edit_challan_dialog.dart # Form dialog with party autocomplete
 │       ├── add_edit_party_dialog.dart   # Party creation/editing dialog
-│       └── export_report_dialog.dart    # Report filter & export wizard
+│       ├── export_report_dialog.dart    # Report filter & export wizard
+│       └── view_challan_dialog.dart     # Comprehensive challan details viewer
 ├── test/
-│   ├── recycle_bin_test.dart          # Unit tests for soft-delete & permanent purge
-│   └── widget_test.dart               # Smoke tests for app UI
+│   ├── party_ledger_navigation_test.dart # Tests for party ledger navigation & filtering
+│   ├── recycle_bin_test.dart            # Unit tests for soft-delete & permanent purge
+│   └── widget_test.dart                 # Smoke tests for app UI
 └── windows/
     ├── runner/
     │   └── resources/
-    │       └── app_icon.ico           # Windows multi-resolution icon
+    │       └── app_icon.ico             # Windows multi-resolution icon
     └── installer/
-        └── inno_setup.iss             # Inno Setup Windows installer compiler script
+        └── inno_setup.iss               # Inno Setup Windows installer compiler script
 ```

@@ -14,7 +14,9 @@ enum PartyScope { all, single, multiple }
 enum DateScope { currentFilter, allTime, specificMonth, customRange }
 
 class ExportReportDialog extends StatefulWidget {
-  const ExportReportDialog({super.key});
+  final String? initialPartyId;
+
+  const ExportReportDialog({super.key, this.initialPartyId});
 
   @override
   State<ExportReportDialog> createState() => _ExportReportDialogState();
@@ -40,14 +42,19 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
     final now = DateTime.now();
     _selectedMonth = DateTime(now.year, now.month, 1);
 
-    final provider = context.read<ChallanProvider>();
-    if (provider.selectedPartyIds.isNotEmpty) {
-      if (provider.selectedPartyIds.length == 1) {
-        _partyScope = PartyScope.single;
-        _selectedSinglePartyId = provider.selectedPartyIds.first;
-      } else {
-        _partyScope = PartyScope.multiple;
-        _selectedPartyIds.addAll(provider.selectedPartyIds);
+    if (widget.initialPartyId != null) {
+      _partyScope = PartyScope.single;
+      _selectedSinglePartyId = widget.initialPartyId;
+    } else {
+      final provider = context.read<ChallanProvider>();
+      if (provider.selectedPartyIds.isNotEmpty) {
+        if (provider.selectedPartyIds.length == 1) {
+          _partyScope = PartyScope.single;
+          _selectedSinglePartyId = provider.selectedPartyIds.first;
+        } else {
+          _partyScope = PartyScope.multiple;
+          _selectedPartyIds.addAll(provider.selectedPartyIds);
+        }
       }
     }
   }
