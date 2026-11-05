@@ -101,51 +101,63 @@ class ViewChallanDialog extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: hasWarning
-                      ? AppColors.warningBgLight
-                      : (isCash && entry.isCashPaid)
-                          ? AppColors.successBgLight
-                          : AppColors.pendingBgLight,
+                  color: entry.isPartiallyPaid
+                      ? const Color(0xFFFFFBEB)
+                      : hasWarning
+                          ? AppColors.warningBgLight
+                          : (isCash && entry.isCashPaid)
+                              ? AppColors.successBgLight
+                              : AppColors.pendingBgLight,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: hasWarning
-                        ? AppColors.warningBorder
-                        : (isCash && entry.isCashPaid)
-                            ? AppColors.successBorder
-                            : AppColors.pendingBorder,
+                    color: entry.isPartiallyPaid
+                        ? const Color(0xFFFDE68A)
+                        : hasWarning
+                            ? AppColors.warningBorder
+                            : (isCash && entry.isCashPaid)
+                                ? AppColors.successBorder
+                                : AppColors.pendingBorder,
                     width: 1.5,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      hasWarning
-                          ? Icons.warning_amber_rounded
-                          : (isCash && entry.isCashPaid)
-                              ? Icons.check_circle_outline
-                              : Icons.schedule,
-                      color: hasWarning
-                          ? AppColors.warningText
-                          : (isCash && entry.isCashPaid)
-                              ? AppColors.successText
-                              : AppColors.pendingText,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        hasWarning
-                            ? 'ALERT: Cash Payment is UNPAID / PENDING'
-                            : (isCash && entry.isCashPaid)
-                                ? 'Cash Payment Received & Completed'
-                                : 'Cheque Payment: ${entry.chequeDetails?.status.label ?? "Pending"}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: hasWarning
+                      entry.isPartiallyPaid
+                          ? Icons.pie_chart
+                          : hasWarning
+                              ? Icons.warning_amber_rounded
+                              : (isCash && entry.isCashPaid)
+                                  ? Icons.check_circle_outline
+                                  : Icons.schedule,
+                      color: entry.isPartiallyPaid
+                          ? const Color(0xFFB45309)
+                          : hasWarning
                               ? AppColors.warningText
                               : (isCash && entry.isCashPaid)
                                   ? AppColors.successText
                                   : AppColors.pendingText,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        entry.isPartiallyPaid
+                            ? 'ALERT: Partial Cash Payment (Paid: ${Formatters.currency(entry.paidAmount)} • Due: ${Formatters.currency(entry.remainingAmount)})'
+                            : hasWarning
+                                ? 'ALERT: Cash Payment is UNPAID / PENDING'
+                                : (isCash && entry.isCashPaid)
+                                    ? 'Cash Payment Received & Completed in Full'
+                                    : 'Cheque Payment: ${entry.chequeDetails?.status.label ?? "Pending"}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: entry.isPartiallyPaid
+                              ? const Color(0xFF92400E)
+                              : hasWarning
+                                  ? AppColors.warningText
+                                  : (isCash && entry.isCashPaid)
+                                      ? AppColors.successText
+                                      : AppColors.pendingText,
                         ),
                       ),
                     ),
@@ -171,6 +183,24 @@ class ViewChallanDialog extends StatelessWidget {
                     _buildRow('Challan Amount', Formatters.currency(entry.challanAmount)),
                     const Divider(height: 16),
                     _buildRow('Final Amount', Formatters.currency(entry.finalAmount), isBold: true, highlightColor: AppColors.primary),
+                    if (isCash) ...[
+                      const Divider(height: 16),
+                      _buildRow(
+                        'Cash Received / Paid',
+                        Formatters.currency(entry.paidAmount),
+                        isBold: true,
+                        highlightColor: entry.isFullyPaid ? AppColors.successText : const Color(0xFFB45309),
+                      ),
+                      if (entry.remainingAmount > 0) ...[
+                        const Divider(height: 16),
+                        _buildRow(
+                          'Remaining Balance Due',
+                          Formatters.currency(entry.remainingAmount),
+                          isBold: true,
+                          highlightColor: AppColors.warningText,
+                        ),
+                      ],
+                    ],
                     const Divider(height: 16),
                     _buildRow('GST Bill No.', entry.gstBillNo.isNotEmpty ? entry.gstBillNo : 'N/A'),
                     const Divider(height: 16),

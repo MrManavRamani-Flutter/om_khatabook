@@ -85,10 +85,11 @@ class ChallanEntry {
   final String partyName;
   final double challanAmount;
   final double finalAmount;
+  final double paidAmount; // Received amount (supports partial payments)
   final String gstBillNo;
   final double gstAmount;
   final PaymentOption paymentOption;
-  final bool isCashPaid; // If false for cash, highlighted in warning/light-red
+  final bool isCashPaid; // False if unpaid or partially paid
   final ChequeDetails? chequeDetails;
   final String notes;
   final DateTime createdAt; // Hidden from form, set to DateTime.now()
@@ -103,6 +104,7 @@ class ChallanEntry {
     required this.partyName,
     required this.challanAmount,
     required this.finalAmount,
+    double? paidAmount,
     this.gstBillNo = '',
     this.gstAmount = 0.0,
     required this.paymentOption,
@@ -112,13 +114,33 @@ class ChallanEntry {
     required this.createdAt,
     this.isDeleted = false,
     this.deletedAt,
-  });
+  }) : paidAmount = (paidAmount != null)
+            ? paidAmount
+            : (isCashPaid ? finalAmount : 0.0);
+
+  /// Calculated remaining balance due for this challan
+  double get remainingAmount =>
+      (finalAmount - paidAmount).clamp(0.0, double.infinity);
+
+  /// True if customer made a partial payment (more than 0, but less than final amount)
+  bool get isPartiallyPaid =>
+      paymentOption == PaymentOption.cash &&
+      paidAmount > 0 &&
+      paidAmount < finalAmount;
+
+  /// True if transaction is 100% settled/cleared
+  bool get isFullyPaid {
+    if (paymentOption == PaymentOption.cash) {
+      return isCashPaid && remainingAmount <= 0.001;
+    }
+    return chequeDetails?.status == ChequeStatus.cleared;
+  }
 
   /// Indicates if this record requires warning highlight
-  /// (e.g. Cash and not paid, or Cheque and bounced)
+  /// (e.g. Cash unpaid/partially paid, or Cheque bounced)
   bool get hasWarning {
-    if (paymentOption == PaymentOption.cash && !isCashPaid) {
-      return true;
+    if (paymentOption == PaymentOption.cash) {
+      return !isCashPaid || remainingAmount > 0.001;
     }
     if (paymentOption == PaymentOption.cheque &&
         chequeDetails?.status == ChequeStatus.bounced) {
@@ -128,8 +150,8 @@ class ChallanEntry {
   }
 
   bool get isPending {
-    if (paymentOption == PaymentOption.cash && !isCashPaid) {
-      return true;
+    if (paymentOption == PaymentOption.cash) {
+      return remainingAmount > 0.001;
     }
     if (paymentOption == PaymentOption.cheque &&
         chequeDetails?.status == ChequeStatus.pending) {
@@ -140,6 +162,9 @@ class ChallanEntry {
 
   String get statusDisplay {
     if (paymentOption == PaymentOption.cash) {
+      if (isPartiallyPaid) {
+        return 'Partial Paid (Due: ₹${remainingAmount.toStringAsFixed(0)})';
+      }
       return isCashPaid ? 'Cash Paid' : 'Cash Unpaid';
     } else {
       final s = chequeDetails?.status ?? ChequeStatus.pending;
@@ -156,6 +181,7 @@ class ChallanEntry {
       'partyName': partyName,
       'challanAmount': challanAmount,
       'finalAmount': finalAmount,
+      'paidAmount': paidAmount,
       'gstBillNo': gstBillNo,
       'gstAmount': gstAmount,
       'paymentOption': paymentOption.name,
@@ -169,6 +195,11 @@ class ChallanEntry {
   }
 
   factory ChallanEntry.fromJson(Map<String, dynamic> json) {
+    final finalAmt = (json['finalAmount'] as num?)?.toDouble() ?? 0.0;
+    final isCashPaidVal = json['isCashPaid'] as bool? ?? true;
+    final paidAmt = (json['paidAmount'] as num?)?.toDouble() ??
+        (isCashPaidVal ? finalAmt : 0.0);
+
     return ChallanEntry(
       id: json['id'] as String,
       date: DateTime.parse(json['date'] as String),
@@ -176,14 +207,15 @@ class ChallanEntry {
       partyId: json['partyId'] as String? ?? '',
       partyName: json['partyName'] as String? ?? '',
       challanAmount: (json['challanAmount'] as num?)?.toDouble() ?? 0.0,
-      finalAmount: (json['finalAmount'] as num?)?.toDouble() ?? 0.0,
+      finalAmount: finalAmt,
+      paidAmount: paidAmt,
       gstBillNo: json['gstBillNo'] as String? ?? '',
       gstAmount: (json['gstAmount'] as num?)?.toDouble() ?? 0.0,
       paymentOption: PaymentOption.values.firstWhere(
         (e) => e.name == json['paymentOption'],
         orElse: () => PaymentOption.cash,
       ),
-      isCashPaid: json['isCashPaid'] as bool? ?? true,
+      isCashPaid: isCashPaidVal,
       chequeDetails: json['chequeDetails'] != null
           ? ChequeDetails.fromJson(
               json['chequeDetails'] as Map<String, dynamic>)
@@ -206,6 +238,7 @@ class ChallanEntry {
     String? partyName,
     double? challanAmount,
     double? finalAmount,
+    double? paidAmount,
     String? gstBillNo,
     double? gstAmount,
     PaymentOption? paymentOption,
@@ -224,6 +257,7 @@ class ChallanEntry {
       partyName: partyName ?? this.partyName,
       challanAmount: challanAmount ?? this.challanAmount,
       finalAmount: finalAmount ?? this.finalAmount,
+      paidAmount: paidAmount ?? this.paidAmount,
       gstBillNo: gstBillNo ?? this.gstBillNo,
       gstAmount: gstAmount ?? this.gstAmount,
       paymentOption: paymentOption ?? this.paymentOption,

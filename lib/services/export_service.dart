@@ -28,12 +28,14 @@ class ExportService {
         sorted.fold(0.0, (sum, item) => sum + item.challanAmount);
     final totalFinal = sorted.fold(0.0, (sum, item) => sum + item.finalAmount);
     final totalGst = sorted.fold(0.0, (sum, item) => sum + item.gstAmount);
-    final totalUnpaid = sorted
-        .where((c) =>
-            (c.paymentOption == PaymentOption.cash && !c.isCashPaid) ||
-            (c.paymentOption == PaymentOption.cheque &&
-                c.chequeDetails?.status != ChequeStatus.cleared))
-        .fold(0.0, (sum, item) => sum + item.finalAmount);
+    final totalUnpaid = sorted.fold(0.0, (sum, c) {
+      if (c.paymentOption == PaymentOption.cash) {
+        return sum + c.remainingAmount;
+      } else if (c.chequeDetails?.status != ChequeStatus.cleared) {
+        return sum + c.finalAmount;
+      }
+      return sum;
+    });
 
     pdf.addPage(
       pw.MultiPage(
@@ -137,6 +139,8 @@ class ExportService {
       TextCellValue('Party Name'),
       TextCellValue('Challan Amount (INR)'),
       TextCellValue('Final Amount (INR)'),
+      TextCellValue('Paid Amount (INR)'),
+      TextCellValue('Balance Due (INR)'),
       TextCellValue('GST Bill No.'),
       TextCellValue('GST Amount (INR)'),
       TextCellValue('Payment Option'),
@@ -152,11 +156,18 @@ class ExportService {
     // Data Rows
     double sumChallan = 0.0;
     double sumFinal = 0.0;
+    double sumPaid = 0.0;
+    double sumDue = 0.0;
     double sumGst = 0.0;
 
     for (var c in sorted) {
       sumChallan += c.challanAmount;
       sumFinal += c.finalAmount;
+      sumPaid += c.paidAmount;
+      final due = c.paymentOption == PaymentOption.cash
+          ? c.remainingAmount
+          : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0);
+      sumDue += due;
       sumGst += c.gstAmount;
 
       String chkNo = '';
@@ -179,6 +190,8 @@ class ExportService {
         TextCellValue(c.partyName),
         DoubleCellValue(c.challanAmount),
         DoubleCellValue(c.finalAmount),
+        DoubleCellValue(c.paidAmount),
+        DoubleCellValue(due),
         TextCellValue(c.gstBillNo.isNotEmpty ? c.gstBillNo : '-'),
         DoubleCellValue(c.gstAmount),
         TextCellValue(c.paymentOption.label),
@@ -199,6 +212,8 @@ class ExportService {
       TextCellValue('${sorted.length} Entries'),
       DoubleCellValue(sumChallan),
       DoubleCellValue(sumFinal),
+      DoubleCellValue(sumPaid),
+      DoubleCellValue(sumDue),
       TextCellValue(''),
       DoubleCellValue(sumGst),
       TextCellValue(''),
@@ -365,14 +380,18 @@ class ExportService {
 
     final data = entries.map((c) {
       final isCash = c.paymentOption == PaymentOption.cash;
-      final isWarning = c.hasWarning;
 
       String details = '';
       if (!isCash && c.chequeDetails != null) {
         details =
             'Chk #${c.chequeDetails!.chequeNo} (${c.chequeDetails!.bankName}) - ${c.chequeDetails!.status.label}';
+      } else if (c.isPartiallyPaid) {
+        details =
+            'PARTIAL: Paid ${Formatters.currency(c.paidAmount)}, Due ${Formatters.currency(c.remainingAmount)}';
+      } else if (c.isCashPaid) {
+        details = 'PAID IN FULL';
       } else {
-        details = isWarning ? 'WARNING: UNPAID' : 'PAID';
+        details = 'WARNING: UNPAID (Due ${Formatters.currency(c.finalAmount)})';
       }
 
       return [

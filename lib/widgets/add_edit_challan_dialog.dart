@@ -7,6 +7,15 @@ import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'add_edit_party_dialog.dart';
 
+enum CashPaymentMode {
+  fullyPaid('Fully Paid'),
+  partiallyPaid('Partially Paid'),
+  unpaid('Unpaid / Due');
+
+  final String label;
+  const CashPaymentMode(this.label);
+}
+
 class AddEditChallanDialog extends StatefulWidget {
   final ChallanEntry? entryToEdit;
   final Party? initialParty;
@@ -25,13 +34,14 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   final _partySearchController = TextEditingController();
   final _challanAmountController = TextEditingController();
   final _finalAmountController = TextEditingController();
+  final _paidAmountController = TextEditingController();
   final _gstBillNoController = TextEditingController();
   final _gstAmountController = TextEditingController(text: '0');
   final _notesController = TextEditingController();
 
   Party? _selectedParty;
   PaymentOption _paymentOption = PaymentOption.cash;
-  bool _isCashPaid = false; // Default to unpaid so user is mindful, or user can toggle
+  CashPaymentMode _cashPaymentMode = CashPaymentMode.unpaid;
 
   // Cheque fields
   late DateTime _chequeDate;
@@ -57,7 +67,18 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _gstAmountController.text = e.gstAmount.toStringAsFixed(0);
       _notesController.text = e.notes;
       _paymentOption = e.paymentOption;
-      _isCashPaid = e.isCashPaid;
+      if (e.paymentOption == PaymentOption.cash) {
+        if (e.isPartiallyPaid) {
+          _cashPaymentMode = CashPaymentMode.partiallyPaid;
+          _paidAmountController.text = e.paidAmount.toStringAsFixed(0);
+        } else if (e.isCashPaid || e.paidAmount >= e.finalAmount) {
+          _cashPaymentMode = CashPaymentMode.fullyPaid;
+          _paidAmountController.text = e.finalAmount.toStringAsFixed(0);
+        } else {
+          _cashPaymentMode = CashPaymentMode.unpaid;
+          _paidAmountController.text = '0';
+        }
+      }
 
       if (e.chequeDetails != null) {
         final c = e.chequeDetails!;
@@ -79,6 +100,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     _partySearchController.dispose();
     _challanAmountController.dispose();
     _finalAmountController.dispose();
+    _paidAmountController.dispose();
     _gstBillNoController.dispose();
     _gstAmountController.dispose();
     _notesController.dispose();
@@ -116,6 +138,10 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     if (_chequeAmountController.text.isEmpty && val.isNotEmpty) {
       _chequeAmountController.text = val;
     }
+    if (_cashPaymentMode == CashPaymentMode.fullyPaid) {
+      _paidAmountController.text = val;
+    }
+    setState(() {});
   }
 
   Future<void> _openQuickAddParty() async {
@@ -149,6 +175,31 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     final finalAmt = double.parse(_finalAmountController.text.trim());
     final gstAmt = double.tryParse(_gstAmountController.text.trim()) ?? 0.0;
 
+    double paidAmt = 0.0;
+    bool cashPaidBool = false;
+
+    if (_paymentOption == PaymentOption.cash) {
+      if (_cashPaymentMode == CashPaymentMode.fullyPaid) {
+        paidAmt = finalAmt;
+        cashPaidBool = true;
+      } else if (_cashPaymentMode == CashPaymentMode.unpaid) {
+        paidAmt = 0.0;
+        cashPaidBool = false;
+      } else {
+        // Partially Paid
+        paidAmt = double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
+        if (paidAmt >= finalAmt) {
+          paidAmt = finalAmt;
+          cashPaidBool = true;
+        } else if (paidAmt <= 0) {
+          paidAmt = 0.0;
+          cashPaidBool = false;
+        } else {
+          cashPaidBool = false;
+        }
+      }
+    }
+
     ChequeDetails? cheque;
     if (_paymentOption == PaymentOption.cheque) {
       final chkAmt = double.tryParse(_chequeAmountController.text.trim()) ?? finalAmt;
@@ -178,10 +229,11 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         partyName: partyName,
         challanAmount: challanAmt,
         finalAmount: finalAmt,
+        paidAmount: paidAmt,
         gstBillNo: _gstBillNoController.text.trim(),
         gstAmount: gstAmt,
         paymentOption: _paymentOption,
-        isCashPaid: _isCashPaid,
+        isCashPaid: cashPaidBool,
         chequeDetails: cheque,
         notes: _notesController.text.trim(),
       );
@@ -194,10 +246,11 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         partyName: partyName,
         challanAmount: challanAmt,
         finalAmount: finalAmt,
+        paidAmount: paidAmt,
         gstBillNo: _gstBillNoController.text.trim(),
         gstAmount: gstAmt,
         paymentOption: _paymentOption,
-        isCashPaid: _isCashPaid,
+        isCashPaid: cashPaidBool,
         chequeDetails: cheque,
         notes: _notesController.text.trim(),
       );
@@ -466,16 +519,20 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                         // DYNAMIC SUB-FORM FOR CASH OR CHEQUE
                         if (_paymentOption == PaymentOption.cash) ...[
                           Container(
-                            padding: const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: _isCashPaid
+                              color: _cashPaymentMode == CashPaymentMode.fullyPaid
                                   ? AppColors.successBgLight
-                                  : AppColors.warningBgLight,
-                              borderRadius: BorderRadius.circular(10),
+                                  : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                      ? const Color(0xFFFFFBEB)
+                                      : AppColors.warningBgLight,
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: _isCashPaid
+                                color: _cashPaymentMode == CashPaymentMode.fullyPaid
                                     ? AppColors.successBorder
-                                    : AppColors.warningBorder,
+                                    : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                        ? const Color(0xFFFDE68A)
+                                        : AppColors.warningBorder,
                                 width: 1.5,
                               ),
                             ),
@@ -483,52 +540,176 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          _isCashPaid
-                                              ? Icons.check_circle
+                                    Icon(
+                                      _cashPaymentMode == CashPaymentMode.fullyPaid
+                                          ? Icons.check_circle
+                                          : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                              ? Icons.pie_chart
                                               : Icons.warning_amber_rounded,
-                                          color: _isCashPaid
-                                              ? AppColors.successText
+                                      color: _cashPaymentMode == CashPaymentMode.fullyPaid
+                                          ? AppColors.successText
+                                          : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                              ? const Color(0xFFB45309)
                                               : AppColors.warningText,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _isCashPaid
-                                              ? 'Cash Payment Received (Paid)'
-                                              : 'Cash Payment Pending / Unpaid',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: _isCashPaid
-                                                ? AppColors.successText
-                                                : AppColors.warningText,
-                                          ),
-                                        ),
-                                      ],
+                                      size: 20,
                                     ),
-                                    Switch(
-                                      value: _isCashPaid,
-                                      activeThumbColor: AppColors.successText,
-                                      onChanged: (val) => setState(() => _isCashPaid = val),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Cash Payment Status *',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: _cashPaymentMode == CashPaymentMode.fullyPaid
+                                            ? AppColors.successText
+                                            : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                ? const Color(0xFF92400E)
+                                                : AppColors.warningText,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _isCashPaid
-                                      ? 'Marked as completed cash transaction.'
-                                      : 'Warning: This entry will be highlighted in LIGHT-RED in the ledger table until paid.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: _isCashPaid
-                                        ? AppColors.successText
-                                        : AppColors.warningText,
-                                  ),
+                                const SizedBox(height: 12),
+
+                                // 3 CASH PAYMENT MODES
+                                SegmentedButton<CashPaymentMode>(
+                                  showSelectedIcon: false,
+                                  segments: const [
+                                    ButtonSegment(
+                                      value: CashPaymentMode.fullyPaid,
+                                      label: Text('Fully Paid'),
+                                      icon: Icon(Icons.check_circle_outline, size: 16),
+                                    ),
+                                    ButtonSegment(
+                                      value: CashPaymentMode.partiallyPaid,
+                                      label: Text('Partially Paid'),
+                                      icon: Icon(Icons.pie_chart_outline, size: 16),
+                                    ),
+                                    ButtonSegment(
+                                      value: CashPaymentMode.unpaid,
+                                      label: Text('Unpaid / Due'),
+                                      icon: Icon(Icons.pending_actions, size: 16),
+                                    ),
+                                  ],
+                                  selected: {_cashPaymentMode},
+                                  onSelectionChanged: (val) {
+                                    final mode = val.first;
+                                    setState(() {
+                                      _cashPaymentMode = mode;
+                                      final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
+                                      if (mode == CashPaymentMode.fullyPaid) {
+                                        _paidAmountController.text = finalAmt > 0 ? finalAmt.toStringAsFixed(0) : '';
+                                      } else if (mode == CashPaymentMode.unpaid) {
+                                        _paidAmountController.text = '0';
+                                      } else {
+                                        if (_paidAmountController.text == '0' || _paidAmountController.text.isEmpty) {
+                                          _paidAmountController.text = '';
+                                        }
+                                      }
+                                    });
+                                  },
                                 ),
+                                const SizedBox(height: 14),
+
+                                if (_cashPaymentMode == CashPaymentMode.fullyPaid) ...[
+                                  const Text(
+                                    'Full cash amount has been received. This transaction will be marked as Cleared / Paid.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.successText,
+                                    ),
+                                  ),
+                                ] else if (_cashPaymentMode == CashPaymentMode.partiallyPaid) ...[
+                                  // Cash Received text input
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _paidAmountController,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Cash Received / Paid Amount (₹) *',
+                                            prefixIcon: Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                              child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                            ),
+                                            prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                                            hintText: 'Enter partial amount received',
+                                          ),
+                                          validator: (v) {
+                                            if (_paymentOption != PaymentOption.cash || _cashPaymentMode != CashPaymentMode.partiallyPaid) {
+                                              return null;
+                                            }
+                                            if (v == null || v.trim().isEmpty) {
+                                              return 'Please enter partial cash received';
+                                            }
+                                            final paid = double.tryParse(v.trim());
+                                            final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
+                                            if (paid == null || paid <= 0) {
+                                              return 'Must be greater than 0';
+                                            }
+                                            if (paid >= finalAmt && finalAmt > 0) {
+                                              return 'Should be less than Final Amount (use Fully Paid instead)';
+                                            }
+                                            return null;
+                                          },
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Live calculation banner
+                                  Builder(
+                                    builder: (context) {
+                                      final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
+                                      final paidAmt = double.tryParse(_paidAmountController.text.trim()) ?? 0.0;
+                                      final remaining = (finalAmt - paidAmt).clamp(0.0, double.infinity);
+
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.7),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0xFFFCD34D)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Cash Received: ${Formatters.currency(paidAmt)}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF92400E),
+                                              ),
+                                            ),
+                                            Text(
+                                              'Remaining Due: ${Formatters.currency(remaining)}',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.warningText,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ] else ...[
+                                  const Text(
+                                    'Warning: Zero cash received. Full amount will remain pending and highlighted in RED in ledger.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.warningText,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

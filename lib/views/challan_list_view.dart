@@ -664,7 +664,8 @@ class ChallanListView extends StatelessWidget {
 
   Widget _buildChallanCard(BuildContext context, ChallanEntry item) {
     final isCash = item.paymentOption == PaymentOption.cash;
-    final isUnpaidCash = isCash && !item.isCashPaid;
+    final isUnpaidCash = isCash && !item.isCashPaid && !item.isPartiallyPaid;
+    final isPartialCash = isCash && item.isPartiallyPaid;
     final isBouncedCheque = !isCash && item.chequeDetails?.status == ChequeStatus.bounced;
     final hasWarning = isUnpaidCash || isBouncedCheque;
 
@@ -672,20 +673,29 @@ class ChallanListView extends StatelessWidget {
         ? (Theme.of(context).brightness == Brightness.dark
             ? AppColors.warningBgDark
             : AppColors.warningBgLight)
-        : Theme.of(context).cardColor;
+        : (isPartialCash
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF2E2205)
+                : const Color(0xFFFFFDF5))
+            : Theme.of(context).cardColor);
 
     final borderColor = hasWarning
         ? (Theme.of(context).brightness == Brightness.dark
             ? AppColors.warningBorderDark
             : AppColors.warningBorder)
-        : Theme.of(context).dividerColor.withValues(alpha: 0.2);
+        : (isPartialCash
+            ? const Color(0xFFFDE68A)
+            : Theme.of(context).dividerColor.withValues(alpha: 0.2));
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: cardBgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: hasWarning ? 1.8 : 1.0),
+        border: Border.all(
+          color: borderColor,
+          width: hasWarning || isPartialCash ? 1.8 : 1.0,
+        ),
         boxShadow: hasWarning
             ? [
                 BoxShadow(
@@ -694,7 +704,15 @@ class ChallanListView extends StatelessWidget {
                   offset: const Offset(0, 2),
                 ),
               ]
-            : null,
+            : (isPartialCash
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFFDE68A).withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null),
       ),
       child: InkWell(
         onTap: () => _openViewDialog(context, item),
@@ -706,38 +724,47 @@ class ChallanListView extends StatelessWidget {
             children: [
               // ROW 1: CHALLAN NO, DATE, WARNING / STATUS BADGE, ACTIONS
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: hasWarning
-                          ? AppColors.warningText.withValues(alpha: 0.15)
-                          : AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '# ${item.challanNo}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: hasWarning ? AppColors.warningText : AppColors.primary,
-                      ),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: hasWarning
+                                ? AppColors.warningText.withValues(alpha: 0.15)
+                                : AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '# ${item.challanNo}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: hasWarning ? AppColors.warningText : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            Text(
+                              Formatters.date(item.date),
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                        _buildStatusBadge(item),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        Formatters.date(item.date),
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  _buildStatusBadge(item),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
@@ -847,9 +874,22 @@ class ChallanListView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: hasWarning ? AppColors.warningText : AppColors.primary,
+                            color: hasWarning
+                                ? AppColors.warningText
+                                : (item.isPartiallyPaid ? const Color(0xFFB45309) : AppColors.primary),
                           ),
                         ),
+                        if (item.isPartiallyPaid) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -885,7 +925,31 @@ class ChallanListView extends StatelessWidget {
 
   Widget _buildStatusBadge(ChallanEntry item) {
     if (item.paymentOption == PaymentOption.cash) {
-      if (item.isCashPaid) {
+      if (item.isPartiallyPaid) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFFDE68A)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.pie_chart, size: 12, color: Color(0xFFB45309)),
+              const SizedBox(width: 4),
+              Text(
+                'PARTIAL: PAID ${Formatters.currency(item.paidAmount)} • DUE ${Formatters.currency(item.remainingAmount)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF92400E),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else if (item.isCashPaid) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(

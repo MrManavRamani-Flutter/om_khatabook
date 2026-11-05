@@ -72,12 +72,10 @@ class SummaryReportsView extends StatelessWidget {
     final chequeChallans =
         challans.where((c) => c.paymentOption == PaymentOption.cheque).toList();
 
-    final cashPaidAmt = cashChallans
-        .where((c) => c.isCashPaid)
-        .fold(0.0, (s, c) => s + c.finalAmount);
-    final cashUnpaidAmt = cashChallans
-        .where((c) => !c.isCashPaid)
-        .fold(0.0, (s, c) => s + c.finalAmount);
+    final cashPaidAmt =
+        cashChallans.fold(0.0, (s, c) => s + c.paidAmount);
+    final cashUnpaidAmt =
+        cashChallans.fold(0.0, (s, c) => s + c.remainingAmount);
 
     final chequeClearedAmt = chequeChallans
         .where((c) => c.chequeDetails?.status == ChequeStatus.cleared)

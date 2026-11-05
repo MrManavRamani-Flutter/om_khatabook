@@ -200,10 +200,7 @@ class ChallanProvider extends ChangeNotifier {
         if (_statusFilter == 'unpaid') {
           if (!item.isPending && !item.hasWarning) return false;
         } else if (_statusFilter == 'paid') {
-          final isCleared = item.paymentOption == PaymentOption.cash
-              ? item.isCashPaid
-              : item.chequeDetails?.status == ChequeStatus.cleared;
-          if (!isCleared) return false;
+          if (!item.isFullyPaid) return false;
         } else if (_statusFilter == 'bounced') {
           if (item.chequeDetails?.status != ChequeStatus.bounced) return false;
         }
@@ -321,10 +318,23 @@ class ChallanProvider extends ChangeNotifier {
   double get totalUnpaidAmount {
     double sum = 0.0;
     for (var c in filteredChallans) {
-      if (c.paymentOption == PaymentOption.cash && !c.isCashPaid) {
-        sum += c.finalAmount;
+      if (c.paymentOption == PaymentOption.cash) {
+        sum += c.remainingAmount;
       } else if (c.paymentOption == PaymentOption.cheque &&
           c.chequeDetails?.status != ChequeStatus.cleared) {
+        sum += c.finalAmount;
+      }
+    }
+    return sum;
+  }
+
+  double get totalReceivedAmount {
+    double sum = 0.0;
+    for (var c in filteredChallans) {
+      if (c.paymentOption == PaymentOption.cash) {
+        sum += c.paidAmount;
+      } else if (c.paymentOption == PaymentOption.cheque &&
+          c.chequeDetails?.status == ChequeStatus.cleared) {
         sum += c.finalAmount;
       }
     }
@@ -413,6 +423,7 @@ class ChallanProvider extends ChangeNotifier {
     required String partyName,
     required double challanAmount,
     required double finalAmount,
+    double? paidAmount,
     String gstBillNo = '',
     double gstAmount = 0.0,
     required PaymentOption paymentOption,
@@ -428,6 +439,7 @@ class ChallanProvider extends ChangeNotifier {
       partyName: partyName.trim(),
       challanAmount: challanAmount,
       finalAmount: finalAmount,
+      paidAmount: paidAmount,
       gstBillNo: gstBillNo.trim(),
       gstAmount: gstAmount,
       paymentOption: paymentOption,
@@ -559,11 +571,12 @@ class ChallanProvider extends ChangeNotifier {
         partyName: p1.name,
         challanAmount: 48000,
         finalAmount: 50400,
+        paidAmount: 20000,
         gstBillNo: 'GST-2026-042',
         gstAmount: 2400,
         paymentOption: PaymentOption.cash,
         isCashPaid: false,
-        notes: 'Delivery dispatched, cash payment pending upon verification',
+        notes: 'Delivery dispatched, partial advance cash received ₹20,000, balance ₹30,400 pending',
         createdAt: now.subtract(const Duration(days: 1)),
       ),
       ChallanEntry(

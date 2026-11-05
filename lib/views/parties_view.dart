@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/challan_entry.dart';
 import '../models/party.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
@@ -206,8 +207,15 @@ class _PartiesViewState extends State<PartiesView> {
                       challans.where((c) => c.partyId == party.id).toList();
                   final totalBilled = partyChallans.fold(
                       0.0, (sum, c) => sum + c.finalAmount);
-                  final unpaidCount =
-                      partyChallans.where((c) => c.hasWarning).length;
+                  final totalDue = partyChallans.fold(
+                      0.0,
+                      (sum, c) =>
+                          sum +
+                          (c.paymentOption == PaymentOption.cash
+                              ? c.remainingAmount
+                              : (c.chequeDetails?.status != ChequeStatus.cleared
+                                  ? c.finalAmount
+                                  : 0.0)));
 
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -325,11 +333,13 @@ class _PartiesViewState extends State<PartiesView> {
                                     ),
                                   ),
                                   Text(
-                                    '${partyChallans.length} Challans${unpaidCount > 0 ? ' • $unpaidCount Unpaid' : ''}',
+                                    totalDue > 0
+                                        ? '${partyChallans.length} Challans • Due: ${Formatters.currency(totalDue)}'
+                                        : '${partyChallans.length} Challans • Settled',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
-                                      color: unpaidCount > 0
+                                      color: totalDue > 0
                                           ? AppColors.warningText
                                           : Colors.grey,
                                     ),
