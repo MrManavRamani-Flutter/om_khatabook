@@ -122,6 +122,18 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     super.dispose();
   }
 
+  String _calcHintText() {
+    final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
+    final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
+    final pct = double.tryParse(_gstPercentageController.text.trim()) ?? 5.0;
+    if (finalAmt > 0) {
+      return 'Auto: ₹${finalAmt.toStringAsFixed(0)} × $pct%';
+    } else if (challanAmt > 0) {
+      return 'Auto: ₹${challanAmt.toStringAsFixed(0)} × $pct%';
+    }
+    return 'Optional: Manual or auto';
+  }
+
   void _recalculateGst() {
     if (!_hasGst) {
       _gstAmountController.text = '0';
@@ -639,165 +651,190 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                               ),
                               if (_hasGst) ...[
                                 const SizedBox(height: 12),
-                                // GST Rate % input & Quick Percentage chips
-                                Row(
+                                // ROW A: GST BILL NO & 4 FIXED PREFIXES
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(
-                                      width: 140,
-                                      child: TextFormField(
-                                        controller: _gstPercentageController,
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        decoration: const InputDecoration(
-                                          labelText: 'GST Rate %',
-                                          suffixText: '%',
-                                          prefixIcon: Icon(Icons.percent, size: 16),
-                                          isDense: true,
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'GST Bill Prefix: ',
+                                          style: TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey),
                                         ),
-                                        onChanged: (_) => _recalculateGst(),
-                                      ),
+                                        ...['JK', 'OMC', 'MK', 'KK'].map((prefix) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(right: 6),
+                                            child: InkWell(
+                                              onTap: () {
+                                                final current =
+                                                    _gstBillNoController.text.trim().toUpperCase();
+                                                String rest = current;
+                                                for (final p in ['JK', 'OMC', 'MK', 'KK']) {
+                                                  if (current.startsWith(p)) {
+                                                    rest = current
+                                                        .substring(p.length)
+                                                        .replaceFirst(RegExp(r'^[-\s/]+'), '');
+                                                    break;
+                                                  }
+                                                }
+                                                final newText =
+                                                    rest.isEmpty ? '$prefix-' : '$prefix-$rest';
+                                                setState(() {
+                                                  _gstBillNoController.text = newText;
+                                                });
+                                              },
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 9, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: AppColors.primary.withValues(alpha: 0.4),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  prefix,
+                                                  style: const TextStyle(
+                                                    fontSize: 11.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Wrap(
-                                      spacing: 6,
-                                      children: ['5', '12', '18', '28'].map((rate) {
-                                        final isSel = _gstPercentageController.text == rate;
-                                        return ChoiceChip(
-                                          label: Text('$rate%', style: const TextStyle(fontSize: 11.5)),
-                                          selected: isSel,
-                                          selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                                          onSelected: (selected) {
-                                            if (selected) {
-                                              _gstPercentageController.text = rate;
-                                              _recalculateGst();
-                                            }
-                                          },
+                                    const SizedBox(height: 8),
+                                    Autocomplete<String>(
+                                      initialValue: TextEditingValue(text: _gstBillNoController.text),
+                                      optionsBuilder: (TextEditingValue textVal) {
+                                        const prefixes = ['JK', 'OMC', 'MK', 'KK'];
+                                        final q = textVal.text.trim().toUpperCase();
+                                        if (q.isEmpty) return prefixes;
+                                        return prefixes
+                                            .where((p) => p.startsWith(q) || q.startsWith(p));
+                                      },
+                                      onSelected: (String sel) {
+                                        setState(() {
+                                          _gstBillNoController.text = '$sel-';
+                                        });
+                                      },
+                                      fieldViewBuilder:
+                                          (context, controller, focusNode, onEditingComplete) {
+                                        controller.addListener(() {
+                                          _gstBillNoController.text = controller.text;
+                                        });
+                                        if (_gstBillNoController.text.isNotEmpty &&
+                                            controller.text.isEmpty) {
+                                          controller.text = _gstBillNoController.text;
+                                        }
+                                        return TextFormField(
+                                          controller: controller,
+                                          focusNode: focusNode,
+                                          inputFormatters: const [
+                                            DynamicCaseTextInputFormatter(TextCasingStyle.uppercase),
+                                          ],
+                                          textCapitalization: TextCapitalization.characters,
+                                          decoration: const InputDecoration(
+                                            labelText: 'GST Bill No.',
+                                            prefixIcon: Icon(Icons.receipt_long, size: 18),
+                                            hintText: 'e.g. JK-101, OMC-045, MK-99, KK-12',
+                                          ),
                                         );
-                                      }).toList(),
+                                      },
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                // GST Bill No (with 4 Prefixes) & GST Amount
+                                // ROW B: GST RATE & GST AMOUNT (BALANCED SIDE-BY-SIDE)
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
-                                      flex: 5,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Autocomplete<String>(
-                                            initialValue: TextEditingValue(text: _gstBillNoController.text),
-                                            optionsBuilder: (TextEditingValue textVal) {
-                                              const prefixes = ['JK', 'OMC', 'MK', 'KK'];
-                                              final q = textVal.text.trim().toUpperCase();
-                                              if (q.isEmpty) return prefixes;
-                                              return prefixes.where((p) => p.startsWith(q) || q.startsWith(p));
-                                            },
-                                            onSelected: (String sel) {
-                                              setState(() {
-                                                _gstBillNoController.text = '$sel-';
-                                              });
-                                            },
-                                            fieldViewBuilder:
-                                                (context, controller, focusNode, onEditingComplete) {
-                                              controller.addListener(() {
-                                                _gstBillNoController.text = controller.text;
-                                              });
-                                              if (_gstBillNoController.text.isNotEmpty &&
-                                                  controller.text.isEmpty) {
-                                                controller.text = _gstBillNoController.text;
-                                              }
-                                              return TextFormField(
-                                                controller: controller,
-                                                focusNode: focusNode,
-                                                inputFormatters: const [
-                                                  DynamicCaseTextInputFormatter(TextCasingStyle.uppercase),
-                                                ],
-                                                textCapitalization: TextCapitalization.characters,
-                                                decoration: const InputDecoration(
-                                                  labelText: 'GST Bill No.',
-                                                  prefixIcon: Icon(Icons.receipt_long, size: 18),
-                                                  hintText: 'JK, OMC, MK, KK...',
-                                                ),
-                                              );
-                                            },
+                                          TextFormField(
+                                            controller: _gstPercentageController,
+                                            keyboardType:
+                                                const TextInputType.numberWithOptions(decimal: true),
+                                            decoration: const InputDecoration(
+                                              labelText: 'GST Rate %',
+                                              suffixText: '%',
+                                            ),
+                                            onChanged: (_) => _recalculateGst(),
                                           ),
                                           const SizedBox(height: 6),
-                                          // 4 Fixed Prefix Quick Chips: JK, OMC, MK, KK
-                                          Row(
-                                            children: [
-                                              const Text('Prefix: ',
-                                                  style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                              ...['JK', 'OMC', 'MK', 'KK'].map((prefix) {
-                                                return Padding(
-                                                  padding: const EdgeInsets.only(right: 6),
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      final current = _gstBillNoController.text.trim().toUpperCase();
-                                                      String rest = current;
-                                                      for (final p in ['JK', 'OMC', 'MK', 'KK']) {
-                                                        if (current.startsWith(p)) {
-                                                          rest = current
-                                                              .substring(p.length)
-                                                              .replaceFirst(RegExp(r'^[-\s/]+'), '');
-                                                          break;
-                                                        }
-                                                      }
-                                                      final newText = rest.isEmpty ? '$prefix-' : '$prefix-$rest';
-                                                      setState(() {
-                                                        _gstBillNoController.text = newText;
-                                                      });
-                                                    },
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                          horizontal: 7, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors.primary.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(6),
-                                                        border: Border.all(
-                                                          color: AppColors.primary.withValues(alpha: 0.3),
-                                                        ),
-                                                      ),
-                                                      child: Text(
-                                                        prefix,
-                                                        style: const TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: AppColors.primary,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            ],
+                                          Wrap(
+                                            spacing: 6,
+                                            children: ['5', '12', '18', '28'].map((rate) {
+                                              final isSel = _gstPercentageController.text == rate;
+                                              return ChoiceChip(
+                                                label:
+                                                    Text('$rate%', style: const TextStyle(fontSize: 11)),
+                                                selected: isSel,
+                                                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                                                onSelected: (selected) {
+                                                  if (selected) {
+                                                    _gstPercentageController.text = rate;
+                                                    _recalculateGst();
+                                                  }
+                                                },
+                                              );
+                                            }).toList(),
                                           ),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(
-                                      flex: 4,
-                                      child: TextFormField(
-                                        controller: _gstAmountController,
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        decoration: const InputDecoration(
-                                          labelText: 'GST Amount (₹)',
-                                          prefixIcon: Padding(
-                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                            child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          TextFormField(
+                                            controller: _gstAmountController,
+                                            keyboardType:
+                                                const TextInputType.numberWithOptions(decimal: true),
+                                            decoration: const InputDecoration(
+                                              labelText: 'GST Amount (₹)',
+                                              prefixIcon: Padding(
+                                                padding:
+                                                    EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                                child: Text('₹',
+                                                    style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ),
+                                              prefixIconConstraints:
+                                                  BoxConstraints(minWidth: 0, minHeight: 0),
+                                              hintText: '0.00 (Optional)',
+                                            ),
+                                            validator: (v) {
+                                              if (v == null || v.trim().isEmpty) return null;
+                                              final n = double.tryParse(v.trim());
+                                              if (n == null || n < 0) return 'Invalid amount';
+                                              return null;
+                                            },
                                           ),
-                                          prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                          hintText: '0.00 (Optional)',
-                                        ),
-                                        validator: (v) {
-                                          if (v == null || v.trim().isEmpty) return null; // Optional
-                                          final n = double.tryParse(v.trim());
-                                          if (n == null || n < 0) return 'Invalid amount';
-                                          return null;
-                                        },
+                                          const SizedBox(height: 6),
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 4),
+                                            child: Text(
+                                              _calcHintText(),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primary,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],

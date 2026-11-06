@@ -42,6 +42,7 @@ class ChallanProvider extends ChangeNotifier {
   String _companyTagline = 'Khata Book Desktop';
   String _adminName = 'OM Mavtar Admin';
   String _adminRole = 'Administrator';
+  bool _isSidebarCollapsed = false;
 
   ChallanProvider(this._storage);
 
@@ -77,6 +78,13 @@ class ChallanProvider extends ChangeNotifier {
   String get companyTagline => _companyTagline;
   String get adminName => _adminName;
   String get adminRole => _adminRole;
+  bool get isSidebarCollapsed => _isSidebarCollapsed;
+
+  void toggleSidebar() {
+    _isSidebarCollapsed = !_isSidebarCollapsed;
+    _storage.setSidebarCollapsed(_isSidebarCollapsed);
+    notifyListeners();
+  }
 
   void setAppLogoBase64(String base64) {
     _appLogoBase64 = base64;
@@ -164,6 +172,7 @@ class ChallanProvider extends ChangeNotifier {
     _companyTagline = _storage.companyTagline;
     _adminName = _storage.adminName;
     _adminRole = _storage.adminRole;
+    _isSidebarCollapsed = _storage.isSidebarCollapsed;
 
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
@@ -376,35 +375,10 @@ class SettingsView extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.primary.withValues(alpha: 0.2),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: provider.appLogoBase64.isNotEmpty
-                                            ? Image.memory(
-                                                base64Decode(provider.appLogoBase64),
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) => Image.asset(
-                                                  'assets/logo/app_logo.png',
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : Image.asset(
-                                                'assets/logo/app_logo.png',
-                                                fit: BoxFit.cover,
-                                              ),
-                                      ),
+                                    AppLogoWidget(
+                                      size: 48,
+                                      showEditBadge: true,
+                                      onTap: () => BrandingDialogs.showAppBrandingDialog(context),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -464,24 +438,10 @@ class SettingsView extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    CircleAvatar(
+                                    ProfileAvatarWidget(
                                       radius: 24,
-                                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                                      backgroundImage: provider.profileLogoBase64.isNotEmpty
-                                          ? MemoryImage(base64Decode(provider.profileLogoBase64))
-                                          : null,
-                                      child: provider.profileLogoBase64.isEmpty
-                                          ? Text(
-                                              provider.adminName.isNotEmpty
-                                                  ? provider.adminName[0].toUpperCase()
-                                                  : 'O',
-                                              style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.primary,
-                                              ),
-                                            )
-                                          : null,
+                                      showEditBadge: true,
+                                      onTap: () => BrandingDialogs.showProfileDialog(context),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(

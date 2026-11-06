@@ -220,6 +220,15 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
               ),
             ),
             actions: [
+              TextButton.icon(
+                icon: const Icon(Icons.person, size: 16),
+                label: const Text('Edit Admin Profile'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  showProfileDialog(context);
+                },
+              ),
+              const Spacer(),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('Cancel'),
@@ -415,6 +424,15 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
               ),
             ),
             actions: [
+              TextButton.icon(
+                icon: const Icon(Icons.business_center, size: 16),
+                label: const Text('Edit App Logo'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  showAppBrandingDialog(context);
+                },
+              ),
+              const Spacer(),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('Cancel'),
@@ -449,5 +467,177 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         },
       ),
     );
+  }
+}
+
+/// A reactive App Logo widget that always displays the up-to-date custom or default app logo across the entire app.
+class AppLogoWidget extends StatelessWidget {
+  final double size;
+  final double borderRadius;
+  final VoidCallback? onTap;
+  final bool showEditBadge;
+
+  const AppLogoWidget({
+    super.key,
+    this.size = 44,
+    this.borderRadius = 12,
+    this.onTap,
+    this.showEditBadge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ChallanProvider>();
+    final logoBase64 = provider.appLogoBase64;
+
+    Widget imageWidget;
+    if (logoBase64.isNotEmpty) {
+      try {
+        imageWidget = Image.memory(
+          base64Decode(logoBase64),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Image.asset(
+            'assets/logo/app_logo.png',
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+          ),
+        );
+      } catch (e) {
+        imageWidget = Image.asset(
+          'assets/logo/app_logo.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        );
+      }
+    } else {
+      imageWidget = Image.asset(
+        'assets/logo/app_logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      );
+    }
+
+    Widget content = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.22),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: imageWidget,
+      ),
+    );
+
+    if (showEditBadge) {
+      content = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          content,
+          Positioned(
+            bottom: -2,
+            right: -2,
+            child: Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary, width: 1),
+              ),
+              child: const Icon(Icons.edit, size: 9, color: AppColors.primary),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: content,
+      );
+    }
+    return content;
+  }
+}
+
+/// A reactive Profile Avatar widget that always displays the up-to-date custom photo or initials across the entire app.
+class ProfileAvatarWidget extends StatelessWidget {
+  final double radius;
+  final VoidCallback? onTap;
+  final bool showEditBadge;
+
+  const ProfileAvatarWidget({
+    super.key,
+    this.radius = 17,
+    this.onTap,
+    this.showEditBadge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ChallanProvider>();
+    final profileBase64 = provider.profileLogoBase64;
+    final initial = provider.adminName.isNotEmpty ? provider.adminName[0].toUpperCase() : 'O';
+
+    Widget avatarWidget = CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+      foregroundColor: AppColors.primary,
+      backgroundImage: profileBase64.isNotEmpty ? MemoryImage(base64Decode(profileBase64)) : null,
+      child: profileBase64.isEmpty
+          ? Text(
+              initial,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: radius * 0.8,
+              ),
+            )
+          : null,
+    );
+
+    if (showEditBadge) {
+      avatarWidget = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatarWidget,
+          Positioned(
+            bottom: -1,
+            right: -1,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary, width: 0.8),
+              ),
+              child: const Icon(Icons.edit, size: 7, color: AppColors.primary),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(radius),
+        child: avatarWidget,
+      );
+    }
+    return avatarWidget;
   }
 }

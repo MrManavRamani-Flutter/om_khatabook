@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/challan_provider.dart';
@@ -73,13 +72,16 @@ class _MainLayoutState extends State<MainLayout> {
 
     final warningCount = provider.unpaidWarningCount;
     final recycleBinCount = provider.recycleBinCount;
+    final isCollapsed = provider.isSidebarCollapsed;
 
     return Scaffold(
       body: Row(
         children: [
-          // DESKTOP SIDEBAR
-          Container(
-            width: 260,
+          // DESKTOP SIDEBAR (COLLAPSIBLE ANIMATED DRAWER)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            width: isCollapsed ? 74 : 260,
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               border: Border(
@@ -91,116 +93,94 @@ class _MainLayoutState extends State<MainLayout> {
             ),
             child: Column(
               children: [
-                // LOGO / BRANDING (CLICKABLE TO EDIT)
-                InkWell(
-                  onTap: () => BrandingDialogs.showAppBrandingDialog(context),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-                    child: Row(
-                      children: [
-                        Stack(
-                          clipBehavior: Clip.none,
+                // TOP HEADER: LOGO & PROFILE (CLICKING TOP-LEFT ICON OPENS PROFILE)
+                isCollapsed
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Column(
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.25),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: provider.appLogoBase64.isNotEmpty
-                                    ? Image.memory(
-                                        base64Decode(provider.appLogoBase64),
-                                        width: 44,
-                                        height: 44,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Image.asset(
-                                          'assets/logo/app_logo.png',
-                                          width: 44,
-                                          height: 44,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    : Image.asset(
-                                        'assets/logo/app_logo.png',
-                                        width: 44,
-                                        height: 44,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          color: AppColors.primary,
-                                          child: const Center(
-                                            child: Icon(Icons.account_balance_wallet,
-                                                color: Colors.white, size: 24),
-                                          ),
-                                        ),
-                                      ),
+                            Tooltip(
+                              message: 'OM Mavtar Admin (Click to edit Profile & Logo)',
+                              child: AppLogoWidget(
+                                size: 40,
+                                showEditBadge: true,
+                                onTap: () => BrandingDialogs.showProfileDialog(context),
                               ),
                             ),
-                            Positioned(
-                              bottom: -2,
-                              right: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(2.5),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.primary, width: 1),
-                                ),
-                                child: const Icon(Icons.edit, size: 9, color: AppColors.primary),
-                              ),
+                            const SizedBox(height: 10),
+                            IconButton(
+                              icon: const Icon(Icons.menu, size: 20),
+                              tooltip: 'Expand Sidebar',
+                              onPressed: () => provider.toggleSidebar(),
                             ),
                           ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                provider.companyName,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                      )
+                    : Container(
+                        padding: const EdgeInsets.fromLTRB(14, 16, 8, 14),
+                        child: Row(
+                          children: [
+                            // TOP LEFT ICON: CLICK OPENS PROFILE DIALOG
+                            Tooltip(
+                              message: 'Click to edit Profile & Logo',
+                              child: AppLogoWidget(
+                                size: 42,
+                                showEditBadge: true,
+                                onTap: () => BrandingDialogs.showProfileDialog(context),
                               ),
-                              Text(
-                                provider.companyTagline,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.color
-                                      ?.withValues(alpha: 0.7),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => BrandingDialogs.showAppBrandingDialog(context),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        provider.companyName,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: -0.2,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        provider.companyTagline,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.color
+                                              ?.withValues(alpha: 0.7),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.menu_open, size: 20),
+                              tooltip: 'Collapse Sidebar',
+                              onPressed: () => provider.toggleSidebar(),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
                 const Divider(height: 1),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
-                // NAV MENU
+                // NAV MENU ITEMS
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
                     children: [
                       _buildNavItem(
                         index: 0,
@@ -209,6 +189,7 @@ class _MainLayoutState extends State<MainLayout> {
                         label: 'Challan Ledger',
                         badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
                         isWarningBadge: warningCount > 0,
+                        isCollapsed: isCollapsed,
                       ),
                       _buildNavItem(
                         index: 1,
@@ -216,12 +197,14 @@ class _MainLayoutState extends State<MainLayout> {
                         activeIcon: Icons.people,
                         label: 'Parties Directory',
                         badge: '${provider.parties.length}',
+                        isCollapsed: isCollapsed,
                       ),
                       _buildNavItem(
                         index: 2,
                         icon: Icons.bar_chart_outlined,
                         activeIcon: Icons.bar_chart,
                         label: 'Financial Reports',
+                        isCollapsed: isCollapsed,
                       ),
                       _buildNavItem(
                         index: 3,
@@ -230,12 +213,14 @@ class _MainLayoutState extends State<MainLayout> {
                         label: 'Recycle Bin',
                         badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
                         isWarningBadge: false,
+                        isCollapsed: isCollapsed,
                       ),
                       _buildNavItem(
                         index: 4,
                         icon: Icons.settings_outlined,
                         activeIcon: Icons.settings,
                         label: 'Settings & Backup',
+                        isCollapsed: isCollapsed,
                       ),
                     ],
                   ),
@@ -243,119 +228,131 @@ class _MainLayoutState extends State<MainLayout> {
 
                 // PRIMARY ACTION BUTTON IN SIDEBAR
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  padding: EdgeInsets.all(isCollapsed ? 8 : 14),
+                  child: isCollapsed
+                      ? Tooltip(
+                          message: 'New Challan Entry',
+                          child: IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add, size: 20),
+                            onPressed: () => _openAddChallan(context),
+                          ),
+                        )
+                      : SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text(
+                              'New Challan Entry',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () => _openAddChallan(context),
+                          ),
                         ),
-                      ),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text(
-                        'New Challan Entry',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () => _openAddChallan(context),
-                    ),
-                  ),
                 ),
 
                 const Divider(height: 1),
 
-                // FOOTER: USER & THEME TOGGLE (CLICKABLE TO EDIT PROFILE)
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      InkWell(
-                        onTap: () => BrandingDialogs.showProfileDialog(context),
-                        borderRadius: BorderRadius.circular(20),
+                // FOOTER: USER & THEME TOGGLE
+                isCollapsed
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
+                          children: [
+                            Tooltip(
+                              message: 'OM Mavtar Admin (Click to edit)',
+                              child: ProfileAvatarWidget(
+                                radius: 17,
+                                showEditBadge: true,
+                                onTap: () => BrandingDialogs.showProfileDialog(context),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            IconButton(
+                              icon: Icon(
+                                provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                                size: 18,
+                              ),
+                              tooltip: 'Toggle Theme',
+                              onPressed: () => provider.toggleTheme(),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(10),
                         child: Row(
                           children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                CircleAvatar(
-                                  radius: 17,
-                                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                                  foregroundColor: AppColors.primary,
-                                  backgroundImage: provider.profileLogoBase64.isNotEmpty
-                                      ? MemoryImage(base64Decode(provider.profileLogoBase64))
-                                      : null,
-                                  child: provider.profileLogoBase64.isEmpty
-                                      ? Text(
-                                          provider.adminName.isNotEmpty
-                                              ? provider.adminName[0].toUpperCase()
-                                              : 'O',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        )
-                                      : null,
-                                ),
-                                Positioned(
-                                  bottom: -1,
-                                  right: -1,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).cardColor,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: AppColors.primary, width: 0.8),
-                                    ),
-                                    child: const Icon(Icons.edit, size: 7, color: AppColors.primary),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 110,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                            InkWell(
+                              onTap: () => BrandingDialogs.showProfileDialog(context),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    provider.adminName,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                  ProfileAvatarWidget(
+                                    radius: 17,
+                                    showEditBadge: true,
+                                    onTap: () => BrandingDialogs.showProfileDialog(context),
                                   ),
-                                  Text(
-                                    provider.adminRole,
-                                    style: TextStyle(
-                                      fontSize: 9.5,
-                                      color: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.color
-                                          ?.withValues(alpha: 0.65),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 110,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          provider.adminName,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          provider.adminRole,
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color
+                                                ?.withValues(alpha: 0.65),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
                             ),
+                            const Spacer(),
+                            IconButton(
+                              icon: Icon(
+                                provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                                size: 18,
+                              ),
+                              tooltip: 'Toggle Theme',
+                              onPressed: () => provider.toggleTheme(),
+                            ),
                           ],
                         ),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        icon: Icon(
-                          provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                          size: 18,
-                        ),
-                        tooltip: 'Toggle Theme',
-                        onPressed: () => provider.toggleTheme(),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -374,8 +371,60 @@ class _MainLayoutState extends State<MainLayout> {
     required String label,
     String? badge,
     bool isWarningBadge = false,
+    bool isCollapsed = false,
   }) {
     final isSelected = _selectedIndex == index;
+
+    if (isCollapsed) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Tooltip(
+          message: label,
+          child: Material(
+            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              child: SizedBox(
+                height: 44,
+                child: Center(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        isSelected ? activeIcon : icon,
+                        color: isSelected
+                            ? AppColors.primary
+                            : Theme.of(context).iconTheme.color?.withValues(alpha: 0.7),
+                        size: 22,
+                      ),
+                      if (badge != null)
+                        Positioned(
+                          top: -3,
+                          right: -5,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isWarningBadge ? AppColors.warningText : AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),

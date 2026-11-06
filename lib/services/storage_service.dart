@@ -21,6 +21,7 @@ class StorageService {
   static const String _keyCompanyTagline = 'om_company_tagline_v2';
   static const String _keyAdminName = 'om_admin_name_v2';
   static const String _keyAdminRole = 'om_admin_role_v2';
+  static const String _keySidebarCollapsed = 'om_sidebar_collapsed_v2';
 
   late SharedPreferences _prefs;
 
@@ -55,6 +56,12 @@ class StorageService {
   String get partyViewMode => _prefs.getString(_keyPartyViewMode) ?? 'table';
   Future<void> setPartyViewMode(String mode) async {
     await _prefs.setString(_keyPartyViewMode, mode);
+  }
+
+  // --- COLLAPSIBLE SIDEBAR ---
+  bool get isSidebarCollapsed => _prefs.getBool(_keySidebarCollapsed) ?? false;
+  Future<void> setSidebarCollapsed(bool value) async {
+    await _prefs.setBool(_keySidebarCollapsed, value);
   }
 
   // --- TEXT CASING PREFERENCE (UPPERCASE DEFAULT) ---
