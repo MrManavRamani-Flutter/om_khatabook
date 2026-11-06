@@ -41,10 +41,39 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   final _notesController = TextEditingController();
 
   TextEditingController? _partyTextEditingController;
+  TextEditingController? _gstBillTextController;
+  String? _selectedGstPrefix;
   bool _hasGst = false;
   Party? _selectedParty;
   PaymentOption _paymentOption = PaymentOption.cash;
   CashPaymentMode _cashPaymentMode = CashPaymentMode.unpaid;
+
+  String? get _activePrefix {
+    final current = _gstBillNoController.text.trim().toUpperCase();
+    for (final p in ['JK', 'OMC', 'MK', 'KK']) {
+      if (current.startsWith(p)) return p;
+    }
+    return _selectedGstPrefix;
+  }
+
+  void _selectPrefix(String prefix) {
+    _selectedGstPrefix = prefix;
+    final current = _gstBillNoController.text.trim().toUpperCase();
+    String rest = current;
+    for (final p in ['JK', 'OMC', 'MK', 'KK']) {
+      if (current.startsWith(p)) {
+        rest = current.substring(p.length).replaceFirst(RegExp(r'^[-\s/]+'), '');
+        break;
+      }
+    }
+    final newText = rest.isEmpty ? '$prefix-' : '$prefix-$rest';
+    setState(() {
+      _gstBillNoController.text = newText;
+      if (_gstBillTextController != null) {
+        _gstBillTextController!.text = newText;
+      }
+    });
+  }
 
   // Cheque fields
   late DateTime _chequeDate;
@@ -67,6 +96,12 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _challanAmountController.text = e.challanAmount.toStringAsFixed(0);
       _finalAmountController.text = e.finalAmount.toStringAsFixed(0);
       _gstBillNoController.text = e.gstBillNo;
+      for (final p in ['JK', 'OMC', 'MK', 'KK']) {
+        if (e.gstBillNo.toUpperCase().startsWith(p)) {
+          _selectedGstPrefix = p;
+          break;
+        }
+      }
       _gstAmountController.text = e.gstAmount.toStringAsFixed(0);
       _hasGst = e.gstAmount > 0 || e.gstBillNo.isNotEmpty;
       if (_hasGst) {
@@ -658,52 +693,64 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                     Row(
                                       children: [
                                         const Text(
-                                          'GST Bill Prefix: ',
+                                          'Prefix (Choose 1): ',
                                           style: TextStyle(
                                               fontSize: 11.5,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.grey),
                                         ),
                                         ...['JK', 'OMC', 'MK', 'KK'].map((prefix) {
+                                          final isSelected = _activePrefix == prefix;
                                           return Padding(
                                             padding: const EdgeInsets.only(right: 6),
                                             child: InkWell(
-                                              onTap: () {
-                                                final current =
-                                                    _gstBillNoController.text.trim().toUpperCase();
-                                                String rest = current;
-                                                for (final p in ['JK', 'OMC', 'MK', 'KK']) {
-                                                  if (current.startsWith(p)) {
-                                                    rest = current
-                                                        .substring(p.length)
-                                                        .replaceFirst(RegExp(r'^[-\s/]+'), '');
-                                                    break;
-                                                  }
-                                                }
-                                                final newText =
-                                                    rest.isEmpty ? '$prefix-' : '$prefix-$rest';
-                                                setState(() {
-                                                  _gstBillNoController.text = newText;
-                                                });
-                                              },
+                                              onTap: () => _selectPrefix(prefix),
                                               borderRadius: BorderRadius.circular(6),
-                                              child: Container(
+                                              child: AnimatedContainer(
+                                                duration: const Duration(milliseconds: 150),
                                                 padding: const EdgeInsets.symmetric(
-                                                    horizontal: 9, vertical: 3),
+                                                    horizontal: 11, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.primary.withValues(alpha: 0.12),
+                                                  color: isSelected
+                                                      ? AppColors.primary
+                                                      : Theme.of(context).cardColor,
                                                   borderRadius: BorderRadius.circular(6),
                                                   border: Border.all(
-                                                    color: AppColors.primary.withValues(alpha: 0.4),
+                                                    color: isSelected
+                                                        ? AppColors.primary
+                                                        : AppColors.primary.withValues(alpha: 0.35),
+                                                    width: isSelected ? 1.5 : 1.0,
                                                   ),
+                                                  boxShadow: isSelected
+                                                      ? [
+                                                          BoxShadow(
+                                                            color: AppColors.primary
+                                                                .withValues(alpha: 0.25),
+                                                            blurRadius: 4,
+                                                            offset: const Offset(0, 1.5),
+                                                          ),
+                                                        ]
+                                                      : null,
                                                 ),
-                                                child: Text(
-                                                  prefix,
-                                                  style: const TextStyle(
-                                                    fontSize: 11.5,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppColors.primary,
-                                                  ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    if (isSelected) ...[
+                                                      const Icon(Icons.check,
+                                                          size: 12, color: Colors.white),
+                                                      const SizedBox(width: 4),
+                                                    ],
+                                                    Text(
+                                                      prefix,
+                                                      style: TextStyle(
+                                                        fontSize: 11.5,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: isSelected
+                                                            ? Colors.white
+                                                            : AppColors.primary,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),
@@ -722,14 +769,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                             .where((p) => p.startsWith(q) || q.startsWith(p));
                                       },
                                       onSelected: (String sel) {
-                                        setState(() {
-                                          _gstBillNoController.text = '$sel-';
-                                        });
+                                        _selectPrefix(sel);
                                       },
                                       fieldViewBuilder:
                                           (context, controller, focusNode, onEditingComplete) {
+                                        _gstBillTextController = controller;
                                         controller.addListener(() {
-                                          _gstBillNoController.text = controller.text;
+                                          if (_gstBillNoController.text != controller.text) {
+                                            _gstBillNoController.text = controller.text;
+                                            setState(() {});
+                                          }
                                         });
                                         if (_gstBillNoController.text.isNotEmpty &&
                                             controller.text.isEmpty) {
