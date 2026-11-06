@@ -131,6 +131,9 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
     // 1st Priority: Final Amount if > 0, else Challan Amount
     final baseAmt = finalAmt > 0 ? finalAmt : challanAmt;
+    if (baseAmt <= 0) {
+      return;
+    }
     final percent = double.tryParse(_gstPercentageController.text.trim()) ?? 5.0;
     final calculatedGst = (baseAmt * percent) / 100.0;
     _gstAmountController.text = calculatedGst.toStringAsFixed(calculatedGst % 1 == 0 ? 0 : 2);
@@ -222,8 +225,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     }
     _selectedParty = matchingParty;
 
-    final challanAmt = double.parse(_challanAmountController.text.trim());
-    final finalAmt = double.parse(_finalAmountController.text.trim());
+    final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
+    final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
     final gstAmt = _hasGst ? (double.tryParse(_gstAmountController.text.trim()) ?? 0.0) : 0.0;
     final formattedGstBillNo = _hasGst ? _gstBillNoController.text.trim().toUpperCase() : '';
 
@@ -500,7 +503,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                         ),
                         const SizedBox(height: 14),
 
-                        // ROW 3: CHALLAN AMOUNT & FINAL AMOUNT
+                        // ROW 3: CHALLAN AMOUNT & FINAL AMOUNT (OPTIONAL)
                         Row(
                           children: [
                             Expanded(
@@ -508,22 +511,22 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                 controller: _challanAmountController,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: const InputDecoration(
-                                  labelText: 'Challan Amount (₹) *',
+                                  labelText: 'Challan Amount (₹)',
                                   prefixIcon: Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                                     child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                   prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                  hintText: '0.00',
+                                  hintText: '0.00 (Optional)',
                                 ),
                                 validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Required';
+                                  if (v == null || v.trim().isEmpty) return null; // Optional
                                   final n = double.tryParse(v.trim());
                                   if (n == null || n < 0) return 'Invalid amount';
                                   return null;
                                 },
                                 onChanged: (val) {
-                                  if (_finalAmountController.text.isEmpty) {
+                                  if (_finalAmountController.text.isEmpty && val.isNotEmpty) {
                                     _finalAmountController.text = val;
                                     _onFinalAmountChanged(val);
                                   } else {
@@ -538,16 +541,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                 controller: _finalAmountController,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: const InputDecoration(
-                                  labelText: 'Final Amount (₹) *',
+                                  labelText: 'Final Amount (₹)',
                                   prefixIcon: Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                                     child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                   prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                  hintText: '0.00',
+                                  hintText: '0.00 (Optional)',
                                 ),
                                 validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Required';
+                                  if (v == null || v.trim().isEmpty) return null; // Optional
                                   final n = double.tryParse(v.trim());
                                   if (n == null || n < 0) return 'Invalid amount';
                                   return null;
@@ -787,8 +790,14 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                             child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
                                           ),
                                           prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                          hintText: '0.00',
+                                          hintText: '0.00 (Optional)',
                                         ),
+                                        validator: (v) {
+                                          if (v == null || v.trim().isEmpty) return null; // Optional
+                                          final n = double.tryParse(v.trim());
+                                          if (n == null || n < 0) return 'Invalid amount';
+                                          return null;
+                                        },
                                       ),
                                     ),
                                   ],

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:om_khatabook/models/challan_entry.dart';
 import 'package:om_khatabook/models/party.dart';
 import 'package:om_khatabook/providers/challan_provider.dart';
 import 'package:om_khatabook/services/storage_service.dart';
@@ -136,6 +137,71 @@ void main() {
         orElse: () => null,
       );
       expect(match, isNull);
+    });
+
+    test('ChallanEntry supports all 3 amounts being optional (0.0 defaults)', () async {
+      final manavFab = provider.parties.firstWhere((p) => p.name == 'Manav Fab');
+
+      // Test 1: All 3 amounts left empty/0.0
+      await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-OPT-001',
+        partyId: manavFab.id,
+        partyName: manavFab.name,
+        challanAmount: 0.0,
+        finalAmount: 0.0,
+        paidAmount: 0.0,
+        gstBillNo: '',
+        gstAmount: 0.0,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: false,
+      );
+
+      final entry1 = provider.challans.firstWhere((c) => c.challanNo == 'CH-OPT-001');
+      expect(entry1.challanAmount, 0.0);
+      expect(entry1.finalAmount, 0.0);
+      expect(entry1.gstAmount, 0.0);
+
+      // Test 2: Only Challan Amount provided
+      await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-OPT-002',
+        partyId: manavFab.id,
+        partyName: manavFab.name,
+        challanAmount: 25000.0,
+        finalAmount: 0.0,
+        paidAmount: 0.0,
+        gstBillNo: '',
+        gstAmount: 0.0,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: false,
+      );
+
+      final entry2 = provider.challans.firstWhere((c) => c.challanNo == 'CH-OPT-002');
+      expect(entry2.challanAmount, 25000.0);
+      expect(entry2.finalAmount, 0.0);
+      expect(entry2.gstAmount, 0.0);
+
+      // Test 3: Only Final Amount & GST Amount provided
+      await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-OPT-003',
+        partyId: manavFab.id,
+        partyName: manavFab.name,
+        challanAmount: 0.0,
+        finalAmount: 50000.0,
+        paidAmount: 50000.0,
+        gstBillNo: 'JK-2026-09',
+        gstAmount: 2500.0,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: true,
+      );
+
+      final entry3 = provider.challans.firstWhere((c) => c.challanNo == 'CH-OPT-003');
+      expect(entry3.challanAmount, 0.0);
+      expect(entry3.finalAmount, 50000.0);
+      expect(entry3.gstAmount, 2500.0);
+      expect(entry3.gstBillNo, 'JK-2026-09');
     });
   });
 }
