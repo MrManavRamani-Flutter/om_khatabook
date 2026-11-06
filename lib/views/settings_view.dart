@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/branding_dialogs.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -323,6 +325,206 @@ class SettingsView extends StatelessWidget {
                         ),
                       );
                     }),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // APP BRANDING & PROFILE LOGOS CARD
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.branding_watermark_outlined, color: AppColors.primary),
+                        SizedBox(width: 10),
+                        Text(
+                          'App Branding & Profile Identity',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Customize the company logo, business name, and admin avatar. Stored automatically in JSON backups.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // APP LOGO SECTION
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primary.withValues(alpha: 0.2),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: provider.appLogoBase64.isNotEmpty
+                                            ? Image.memory(
+                                                base64Decode(provider.appLogoBase64),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) => Image.asset(
+                                                  'assets/logo/app_logo.png',
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                'assets/logo/app_logo.png',
+                                                fit: BoxFit.cover,
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            provider.companyName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            provider.companyTagline,
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color
+                                                  ?.withValues(alpha: 0.7),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.edit, size: 16),
+                                    label: const Text('Edit App Logo & Name'),
+                                    onPressed: () => BrandingDialogs.showAppBrandingDialog(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // PROFILE LOGO SECTION
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                                      backgroundImage: provider.profileLogoBase64.isNotEmpty
+                                          ? MemoryImage(base64Decode(provider.profileLogoBase64))
+                                          : null,
+                                      child: provider.profileLogoBase64.isEmpty
+                                          ? Text(
+                                              provider.adminName.isNotEmpty
+                                                  ? provider.adminName[0].toUpperCase()
+                                                  : 'O',
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            provider.adminName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            provider.adminRole,
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color
+                                                  ?.withValues(alpha: 0.7),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.badge, size: 16),
+                                    label: const Text('Edit Profile & Avatar'),
+                                    onPressed: () => BrandingDialogs.showProfileDialog(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

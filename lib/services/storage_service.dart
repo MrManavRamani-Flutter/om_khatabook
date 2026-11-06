@@ -15,6 +15,12 @@ class StorageService {
   static const String _keyPartyViewMode = 'om_party_view_mode_v2';
   static const String _keyTextCasingRule = 'om_text_casing_rule_v2';
   static const String _keyCleanMigration = 'om_clean_parties_v3';
+  static const String _keyAppLogoBase64 = 'om_app_logo_base64_v2';
+  static const String _keyProfileLogoBase64 = 'om_profile_logo_base64_v2';
+  static const String _keyCompanyName = 'om_company_name_v2';
+  static const String _keyCompanyTagline = 'om_company_tagline_v2';
+  static const String _keyAdminName = 'om_admin_name_v2';
+  static const String _keyAdminRole = 'om_admin_role_v2';
 
   late SharedPreferences _prefs;
 
@@ -55,6 +61,37 @@ class StorageService {
   String get textCasingStyle => _prefs.getString(_keyTextCasingRule) ?? 'uppercase';
   Future<void> setTextCasingStyle(String style) async {
     await _prefs.setString(_keyTextCasingRule, style);
+  }
+
+  // --- BRANDING & LOGOS (SIDEBAR & PROFILE) ---
+  String get appLogoBase64 => _prefs.getString(_keyAppLogoBase64) ?? '';
+  Future<void> setAppLogoBase64(String base64) async {
+    await _prefs.setString(_keyAppLogoBase64, base64);
+  }
+
+  String get profileLogoBase64 => _prefs.getString(_keyProfileLogoBase64) ?? '';
+  Future<void> setProfileLogoBase64(String base64) async {
+    await _prefs.setString(_keyProfileLogoBase64, base64);
+  }
+
+  String get companyName => _prefs.getString(_keyCompanyName) ?? 'OM Mavtar Group';
+  Future<void> setCompanyName(String name) async {
+    await _prefs.setString(_keyCompanyName, name);
+  }
+
+  String get companyTagline => _prefs.getString(_keyCompanyTagline) ?? 'Khata Book Desktop';
+  Future<void> setCompanyTagline(String tagline) async {
+    await _prefs.setString(_keyCompanyTagline, tagline);
+  }
+
+  String get adminName => _prefs.getString(_keyAdminName) ?? 'OM Mavtar Admin';
+  Future<void> setAdminName(String name) async {
+    await _prefs.setString(_keyAdminName, name);
+  }
+
+  String get adminRole => _prefs.getString(_keyAdminRole) ?? 'Administrator';
+  Future<void> setAdminRole(String role) async {
+    await _prefs.setString(_keyAdminRole, role);
   }
 
   // --- PARTIES ---
@@ -110,6 +147,17 @@ class StorageService {
       'exportedAt': DateTime.now().toIso8601String(),
       'parties': jsonDecode(partiesStr),
       'challans': jsonDecode(challansStr),
+      'branding': {
+        'companyName': companyName,
+        'companyTagline': companyTagline,
+        'adminName': adminName,
+        'adminRole': adminRole,
+        'appLogoBase64': appLogoBase64,
+        'profileLogoBase64': profileLogoBase64,
+        'textCasingStyle': textCasingStyle,
+        'ledgerViewMode': ledgerViewMode,
+        'partyViewMode': partyViewMode,
+      },
     };
     return const JsonEncoder.withIndent('  ').convert(data);
   }
@@ -132,6 +180,24 @@ class StorageService {
       }
       if (data.containsKey('challans')) {
         await _prefs.setString(_keyChallans, jsonEncode(data['challans']));
+      }
+      if (data.containsKey('branding') && data['branding'] is Map<String, dynamic>) {
+        final b = data['branding'] as Map<String, dynamic>;
+        if (b['companyName'] != null) await setCompanyName(b['companyName'] as String);
+        if (b['companyTagline'] != null) await setCompanyTagline(b['companyTagline'] as String);
+        if (b['adminName'] != null) await setAdminName(b['adminName'] as String);
+        if (b['adminRole'] != null) await setAdminRole(b['adminRole'] as String);
+        if (b['appLogoBase64'] != null) await setAppLogoBase64(b['appLogoBase64'] as String);
+        if (b['profileLogoBase64'] != null) await setProfileLogoBase64(b['profileLogoBase64'] as String);
+        if (b['textCasingStyle'] != null) await setTextCasingStyle(b['textCasingStyle'] as String);
+        if (b['ledgerViewMode'] != null) await setLedgerViewMode(b['ledgerViewMode'] as String);
+        if (b['partyViewMode'] != null) await setPartyViewMode(b['partyViewMode'] as String);
+      }
+      if (data.containsKey('appLogoBase64')) {
+        await setAppLogoBase64(data['appLogoBase64'] as String);
+      }
+      if (data.containsKey('profileLogoBase64')) {
+        await setProfileLogoBase64(data['profileLogoBase64'] as String);
       }
       return true;
     } catch (e) {

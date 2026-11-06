@@ -35,6 +35,14 @@ class ChallanProvider extends ChangeNotifier {
   // Text Casing Style (Uppercase default)
   TextCasingStyle _textCasingStyle = TextCasingStyle.uppercase;
 
+  // App Branding & Profile Logos
+  String _appLogoBase64 = '';
+  String _profileLogoBase64 = '';
+  String _companyName = 'OM Mavtar Group';
+  String _companyTagline = 'Khata Book Desktop';
+  String _adminName = 'OM Mavtar Admin';
+  String _adminRole = 'Administrator';
+
   ChallanProvider(this._storage);
 
   List<Party> get parties => _parties.where((p) => !p.isDeleted).toList();
@@ -62,6 +70,47 @@ class ChallanProvider extends ChangeNotifier {
   LedgerViewMode get viewMode => _viewMode;
   LedgerViewMode get partyViewMode => _partyViewMode;
   TextCasingStyle get textCasingStyle => _textCasingStyle;
+
+  String get appLogoBase64 => _appLogoBase64;
+  String get profileLogoBase64 => _profileLogoBase64;
+  String get companyName => _companyName;
+  String get companyTagline => _companyTagline;
+  String get adminName => _adminName;
+  String get adminRole => _adminRole;
+
+  void setAppLogoBase64(String base64) {
+    _appLogoBase64 = base64;
+    _storage.setAppLogoBase64(base64);
+    notifyListeners();
+  }
+
+  void setProfileLogoBase64(String base64) {
+    _profileLogoBase64 = base64;
+    _storage.setProfileLogoBase64(base64);
+    notifyListeners();
+  }
+
+  void setCompanyBranding({
+    required String name,
+    required String tagline,
+  }) {
+    _companyName = name;
+    _companyTagline = tagline;
+    _storage.setCompanyName(name);
+    _storage.setCompanyTagline(tagline);
+    notifyListeners();
+  }
+
+  void setAdminProfile({
+    required String name,
+    required String role,
+  }) {
+    _adminName = name;
+    _adminRole = role;
+    _storage.setAdminName(name);
+    _storage.setAdminRole(role);
+    notifyListeners();
+  }
 
   void setViewMode(LedgerViewMode mode) {
     if (_viewMode == mode) return;
@@ -108,6 +157,13 @@ class ChallanProvider extends ChangeNotifier {
       (e) => e.name == savedCasing,
       orElse: () => TextCasingStyle.uppercase,
     );
+
+    _appLogoBase64 = _storage.appLogoBase64;
+    _profileLogoBase64 = _storage.profileLogoBase64;
+    _companyName = _storage.companyName;
+    _companyTagline = _storage.companyTagline;
+    _adminName = _storage.adminName;
+    _adminRole = _storage.adminRole;
 
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
@@ -578,6 +634,27 @@ class ChallanProvider extends ChangeNotifier {
     if (ok) {
       _parties = await _storage.loadParties();
       _challans = await _storage.loadChallans();
+      _appLogoBase64 = _storage.appLogoBase64;
+      _profileLogoBase64 = _storage.profileLogoBase64;
+      _companyName = _storage.companyName;
+      _companyTagline = _storage.companyTagline;
+      _adminName = _storage.adminName;
+      _adminRole = _storage.adminRole;
+      final savedCasing = _storage.textCasingStyle;
+      _textCasingStyle = TextCasingStyle.values.firstWhere(
+        (e) => e.name == savedCasing,
+        orElse: () => TextCasingStyle.uppercase,
+      );
+      final savedMode = _storage.ledgerViewMode;
+      _viewMode = LedgerViewMode.values.firstWhere(
+        (e) => e.name == savedMode,
+        orElse: () => LedgerViewMode.table,
+      );
+      final savedPartyMode = _storage.partyViewMode;
+      _partyViewMode = LedgerViewMode.values.firstWhere(
+        (e) => e.name == savedPartyMode,
+        orElse: () => LedgerViewMode.table,
+      );
       notifyListeners();
     }
     return ok;

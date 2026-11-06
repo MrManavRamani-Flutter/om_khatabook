@@ -37,8 +37,11 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   final _paidAmountController = TextEditingController();
   final _gstBillNoController = TextEditingController();
   final _gstAmountController = TextEditingController(text: '0');
+  final _gstPercentageController = TextEditingController(text: '5');
   final _notesController = TextEditingController();
 
+  TextEditingController? _partyTextEditingController;
+  bool _hasGst = false;
   Party? _selectedParty;
   PaymentOption _paymentOption = PaymentOption.cash;
   CashPaymentMode _cashPaymentMode = CashPaymentMode.unpaid;
@@ -65,6 +68,14 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _finalAmountController.text = e.finalAmount.toStringAsFixed(0);
       _gstBillNoController.text = e.gstBillNo;
       _gstAmountController.text = e.gstAmount.toStringAsFixed(0);
+      _hasGst = e.gstAmount > 0 || e.gstBillNo.isNotEmpty;
+      if (_hasGst) {
+        final base = e.finalAmount > 0 ? e.finalAmount : e.challanAmount;
+        if (base > 0 && e.gstAmount > 0) {
+          final pct = (e.gstAmount / base) * 100;
+          _gstPercentageController.text = pct.toStringAsFixed(pct % 1 == 0 ? 0 : 1);
+        }
+      }
       _notesController.text = e.notes;
       _paymentOption = e.paymentOption;
       if (e.paymentOption == PaymentOption.cash) {
@@ -103,11 +114,26 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     _paidAmountController.dispose();
     _gstBillNoController.dispose();
     _gstAmountController.dispose();
+    _gstPercentageController.dispose();
     _notesController.dispose();
     _chequeNoController.dispose();
     _bankNameController.dispose();
     _chequeAmountController.dispose();
     super.dispose();
+  }
+
+  void _recalculateGst() {
+    if (!_hasGst) {
+      _gstAmountController.text = '0';
+      return;
+    }
+    final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
+    final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
+    // 1st Priority: Final Amount if > 0, else Challan Amount
+    final baseAmt = finalAmt > 0 ? finalAmt : challanAmt;
+    final percent = double.tryParse(_gstPercentageController.text.trim()) ?? 5.0;
+    final calculatedGst = (baseAmt * percent) / 100.0;
+    _gstAmountController.text = calculatedGst.toStringAsFixed(calculatedGst % 1 == 0 ? 0 : 2);
   }
 
   Future<void> _pickDate() async {
@@ -141,6 +167,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     if (_cashPaymentMode == CashPaymentMode.fullyPaid) {
       _paidAmountController.text = val;
     }
+    _recalculateGst();
     setState(() {});
   }
 
@@ -153,6 +180,9 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       setState(() {
         _selectedParty = newParty;
         _partySearchController.text = newParty.name;
+        if (_partyTextEditingController != null) {
+          _partyTextEditingController!.text = newParty.name;
+        }
       });
     }
   }
@@ -171,9 +201,31 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       return;
     }
 
+    final provider = context.read<ChallanProvider>();
+    final formattedPartyName = provider.formatCasedText(partyName);
+
+    // Validate party exists in registered parties (Prevent invalid/unregistered party saving)
+    final matchingParty = provider.parties.cast<Party?>().firstWhere(
+      (p) =>
+          p?.name.trim().toLowerCase() == partyName.toLowerCase() ||
+          p?.name.trim().toLowerCase() == formattedPartyName.toLowerCase(),
+      orElse: () => null,
+    );
+    if (matchingParty == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid party name. Please select an existing party or click "+" to add new party.'),
+          backgroundColor: AppColors.warningText,
+        ),
+      );
+      return;
+    }
+    _selectedParty = matchingParty;
+
     final challanAmt = double.parse(_challanAmountController.text.trim());
     final finalAmt = double.parse(_finalAmountController.text.trim());
-    final gstAmt = double.tryParse(_gstAmountController.text.trim()) ?? 0.0;
+    final gstAmt = _hasGst ? (double.tryParse(_gstAmountController.text.trim()) ?? 0.0) : 0.0;
+    final formattedGstBillNo = _hasGst ? _gstBillNoController.text.trim().toUpperCase() : '';
 
     double paidAmt = 0.0;
     bool cashPaidBool = false;
@@ -200,10 +252,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       }
     }
 
-    final provider = context.read<ChallanProvider>();
-    final formattedPartyName = provider.formatCasedText(partyName);
     final formattedChallanNo = _challanNoController.text.trim().toUpperCase();
-    final formattedGstBillNo = _gstBillNoController.text.trim().toUpperCase();
     final formattedNotes = provider.formatCasedText(_notesController.text.trim());
     final formattedBankName = provider.formatCasedText(_bankNameController.text.trim());
 
@@ -362,10 +411,12 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                   if (textEditingValue.text.isEmpty) {
                                     return parties;
                                   }
-                                  final q = textEditingValue.text.toLowerCase();
-                                  return parties.where((p) =>
-                                      p.name.toLowerCase().contains(q) ||
-                                      p.phone.contains(q));
+                                  final q = textEditingValue.text.trim().toLowerCase();
+                                  final startsWith = parties.where((p) => p.name.toLowerCase().startsWith(q));
+                                  final contains = parties.where((p) =>
+                                      !p.name.toLowerCase().startsWith(q) &&
+                                      (p.name.toLowerCase().contains(q) || p.phone.contains(q)));
+                                  return [...startsWith, ...contains];
                                 },
                                 onSelected: (Party selection) {
                                   setState(() {
@@ -374,6 +425,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                   });
                                 },
                                 fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                                  _partyTextEditingController = controller;
                                   // Keep text sync
                                   controller.addListener(() {
                                     _partySearchController.text = controller.text;
@@ -395,11 +447,45 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                     decoration: InputDecoration(
                                       labelText: 'Party / Business Name *',
                                       prefixIcon: const Icon(Icons.business, size: 18),
-                                      hintText: casingStyle.apply('Type to search or enter party...'),
+                                      hintText: casingStyle.apply('Type to search or select party...'),
                                     ),
-                                    validator: (v) => v == null || v.trim().isEmpty
-                                        ? 'Party name is required'
-                                        : null,
+                                    onFieldSubmitted: (val) {
+                                      final q = val.trim().toLowerCase();
+                                      if (q.isNotEmpty) {
+                                        // Pick first matching suggestion on Enter
+                                        final match = parties.cast<Party?>().firstWhere(
+                                          (p) => p?.name.trim().toLowerCase() == q,
+                                          orElse: () => parties.cast<Party?>().firstWhere(
+                                            (p) => p?.name.trim().toLowerCase().startsWith(q) ?? false,
+                                            orElse: () => parties.cast<Party?>().firstWhere(
+                                              (p) =>
+                                                  (p?.name.trim().toLowerCase().contains(q) ?? false) ||
+                                                  (p?.phone.contains(q) ?? false),
+                                              orElse: () => null,
+                                            ),
+                                          ),
+                                        );
+                                        if (match != null) {
+                                          setState(() {
+                                            _selectedParty = match;
+                                            controller.text = match.name;
+                                            _partySearchController.text = match.name;
+                                          });
+                                        }
+                                      }
+                                      onEditingComplete();
+                                    },
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return 'Party name is required';
+                                      }
+                                      final q = v.trim().toLowerCase();
+                                      final exists = parties.any((p) => p.name.trim().toLowerCase() == q);
+                                      if (!exists) {
+                                        return 'Invalid party name. Select from suggestions or click "+" to add party.';
+                                      }
+                                      return null;
+                                    },
                                   );
                                 },
                               ),
@@ -440,6 +526,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                   if (_finalAmountController.text.isEmpty) {
                                     _finalAmountController.text = val;
                                     _onFinalAmountChanged(val);
+                                  } else {
+                                    _recalculateGst();
                                   }
                                 },
                               ),
@@ -471,40 +559,243 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                         ),
                         const SizedBox(height: 14),
 
-                        // ROW 4: GST BILL NO & GST AMOUNT
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: TextFormField(
-                                controller: _gstBillNoController,
-                                inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
-                                textCapitalization: TextCapitalization.characters,
-                                decoration: const InputDecoration(
-                                  labelText: 'GST Bill No.',
-                                  prefixIcon: Icon(Icons.receipt, size: 18),
-                                  hintText: 'e.g. GST-2026-052',
-                                ),
-                              ),
+                        // ROW 4: GST BILL SECTION WITH CHECKBOX, AUTO-CALCULATION & 4 PREFIXES
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _hasGst
+                                ? AppColors.primary.withValues(alpha: 0.05)
+                                : Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _hasGst
+                                  ? AppColors.primary.withValues(alpha: 0.35)
+                                  : Theme.of(context).dividerColor.withValues(alpha: 0.25),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              flex: 4,
-                              child: TextFormField(
-                                controller: _gstAmountController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(
-                                  labelText: 'GST Amount (₹)',
-                                  prefixIcon: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                    child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: Checkbox(
+                                      value: _hasGst,
+                                      activeColor: AppColors.primary,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _hasGst = val ?? false;
+                                          if (_hasGst) {
+                                            _recalculateGst();
+                                          } else {
+                                            _gstAmountController.text = '0';
+                                            _gstBillNoController.clear();
+                                          }
+                                        });
+                                      },
+                                    ),
                                   ),
-                                  prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                  hintText: '0.00',
-                                ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _hasGst = !_hasGst;
+                                        if (_hasGst) {
+                                          _recalculateGst();
+                                        } else {
+                                          _gstAmountController.text = '0';
+                                          _gstBillNoController.clear();
+                                        }
+                                      });
+                                    },
+                                    child: const Text(
+                                      'Apply GST Bill',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (_hasGst)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'Auto-calc (Priority: Final Amt > Challan Amt)',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
-                            ),
-                          ],
+                              if (_hasGst) ...[
+                                const SizedBox(height: 12),
+                                // GST Rate % input & Quick Percentage chips
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 140,
+                                      child: TextFormField(
+                                        controller: _gstPercentageController,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        decoration: const InputDecoration(
+                                          labelText: 'GST Rate %',
+                                          suffixText: '%',
+                                          prefixIcon: Icon(Icons.percent, size: 16),
+                                          isDense: true,
+                                        ),
+                                        onChanged: (_) => _recalculateGst(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Wrap(
+                                      spacing: 6,
+                                      children: ['5', '12', '18', '28'].map((rate) {
+                                        final isSel = _gstPercentageController.text == rate;
+                                        return ChoiceChip(
+                                          label: Text('$rate%', style: const TextStyle(fontSize: 11.5)),
+                                          selected: isSel,
+                                          selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                                          onSelected: (selected) {
+                                            if (selected) {
+                                              _gstPercentageController.text = rate;
+                                              _recalculateGst();
+                                            }
+                                          },
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // GST Bill No (with 4 Prefixes) & GST Amount
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 5,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Autocomplete<String>(
+                                            initialValue: TextEditingValue(text: _gstBillNoController.text),
+                                            optionsBuilder: (TextEditingValue textVal) {
+                                              const prefixes = ['JK', 'OMC', 'MK', 'KK'];
+                                              final q = textVal.text.trim().toUpperCase();
+                                              if (q.isEmpty) return prefixes;
+                                              return prefixes.where((p) => p.startsWith(q) || q.startsWith(p));
+                                            },
+                                            onSelected: (String sel) {
+                                              setState(() {
+                                                _gstBillNoController.text = '$sel-';
+                                              });
+                                            },
+                                            fieldViewBuilder:
+                                                (context, controller, focusNode, onEditingComplete) {
+                                              controller.addListener(() {
+                                                _gstBillNoController.text = controller.text;
+                                              });
+                                              if (_gstBillNoController.text.isNotEmpty &&
+                                                  controller.text.isEmpty) {
+                                                controller.text = _gstBillNoController.text;
+                                              }
+                                              return TextFormField(
+                                                controller: controller,
+                                                focusNode: focusNode,
+                                                inputFormatters: const [
+                                                  DynamicCaseTextInputFormatter(TextCasingStyle.uppercase),
+                                                ],
+                                                textCapitalization: TextCapitalization.characters,
+                                                decoration: const InputDecoration(
+                                                  labelText: 'GST Bill No.',
+                                                  prefixIcon: Icon(Icons.receipt_long, size: 18),
+                                                  hintText: 'JK, OMC, MK, KK...',
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(height: 6),
+                                          // 4 Fixed Prefix Quick Chips: JK, OMC, MK, KK
+                                          Row(
+                                            children: [
+                                              const Text('Prefix: ',
+                                                  style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                              ...['JK', 'OMC', 'MK', 'KK'].map((prefix) {
+                                                return Padding(
+                                                  padding: const EdgeInsets.only(right: 6),
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      final current = _gstBillNoController.text.trim().toUpperCase();
+                                                      String rest = current;
+                                                      for (final p in ['JK', 'OMC', 'MK', 'KK']) {
+                                                        if (current.startsWith(p)) {
+                                                          rest = current
+                                                              .substring(p.length)
+                                                              .replaceFirst(RegExp(r'^[-\s/]+'), '');
+                                                          break;
+                                                        }
+                                                      }
+                                                      final newText = rest.isEmpty ? '$prefix-' : '$prefix-$rest';
+                                                      setState(() {
+                                                        _gstBillNoController.text = newText;
+                                                      });
+                                                    },
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                          horizontal: 7, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.primary.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(
+                                                          color: AppColors.primary.withValues(alpha: 0.3),
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        prefix,
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: AppColors.primary,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              }),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      flex: 4,
+                                      child: TextFormField(
+                                        controller: _gstAmountController,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        decoration: const InputDecoration(
+                                          labelText: 'GST Amount (₹)',
+                                          prefixIcon: Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                            child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          ),
+                                          prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                                          hintText: '0.00',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 18),
 
