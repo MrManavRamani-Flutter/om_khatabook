@@ -6,11 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
+import '../models/party.dart';
 import '../utils/formatters.dart';
 
 class ExportService {
-  /// Generates a PDF document for the given challans
+  /// Generates a PDF document for the given challans (Multi-row Report)
   static Future<Uint8List> generatePdfData({
     required List<ChallanEntry> entries,
     String title = 'OM Mavtar Group',
@@ -107,6 +109,974 @@ class ExportService {
     return file.path;
   }
 
+  // =========================================================================
+  // SINGLE-PAGE COMMERCIAL GST TAX INVOICE PRINTING (A4 / A5)
+  // =========================================================================
+
+  /// Generates a Single-Page Commercial GST Tax Invoice PDF (in A4 or A5 format)
+  static Future<Uint8List> generateSingleInvoicePdfData({
+    required ChallanEntry entry,
+    Party? party,
+    PdfPageFormat pageFormat = PdfPageFormat.a4,
+    String? companyName,
+    String? companyTagline,
+    String? companyAddress,
+    String? companyGstin,
+    String? companyPhone,
+    String? companyEmail,
+    String? bankName,
+    String? bankAccountNo,
+    String? bankIfsc,
+    String? bankBranch,
+    Uint8List? customLogoBytes,
+  }) async {
+    final pdf = pw.Document();
+    final isA5 = pageFormat == PdfPageFormat.a5;
+
+    // Load logo image if available
+    pw.MemoryImage? logoImage;
+    if (customLogoBytes != null && customLogoBytes.isNotEmpty) {
+      try {
+        logoImage = pw.MemoryImage(customLogoBytes);
+      } catch (e) {
+        debugPrint('Custom logo image parse error: $e');
+      }
+    }
+    if (logoImage == null) {
+      try {
+        final logoAsset = await rootBundle.load('assets/logo/app_logo.png');
+        logoImage = pw.MemoryImage(logoAsset.buffer.asUint8List());
+      } catch (e) {
+        debugPrint('Default logo asset load error: $e');
+      }
+    }
+
+    final cName = (companyName != null && companyName.isNotEmpty)
+        ? companyName
+        : 'OM MAVTAR GROUP';
+    final cTagline = (companyTagline != null && companyTagline.isNotEmpty)
+        ? companyTagline
+        : 'Commercial Textile Trading & Challan Ledger';
+    final cAddress = companyAddress ?? 'Ring Road, Surat, Gujarat - 395002';
+    final cGstin = companyGstin ?? '24AAAFO8899M1Z3';
+    final cPhone = companyPhone ?? '+91 98250 12345';
+    final cEmail = companyEmail ?? 'om.mavtar.group@gmail.com';
+
+    final bBankName = bankName ?? 'State Bank of India';
+    final bAccount = bankAccountNo ?? '39820011002233';
+    final bIfsc = bankIfsc ?? 'SBIN0001234';
+    final bBranch = bankBranch ?? 'Ring Road Branch, Surat';
+
+    final buyerName = (party != null && party.name.isNotEmpty)
+        ? party.name
+        : entry.partyName;
+    final buyerAddress = (party != null && party.address.isNotEmpty)
+        ? party.address
+        : 'Ring Road, Surat, Gujarat';
+    final buyerPhone = (party != null && party.phone.isNotEmpty)
+        ? party.phone
+        : '-';
+    final buyerGstin = (party != null && party.gstNumber.isNotEmpty)
+        ? party.gstNumber
+        : 'URP (Unregistered)';
+
+    final baseAmount =
+        entry.finalAmount > 0 ? entry.finalAmount : entry.challanAmount;
+    final taxableValue = baseAmount;
+    final gstAmount = entry.gstAmount;
+    final hasGst = gstAmount > 0 || entry.gstBillNo.isNotEmpty;
+
+    // Determine GST rate %
+    double effectiveGstRate = 0.0;
+    if (taxableValue > 0 && gstAmount > 0) {
+      effectiveGstRate = (gstAmount / taxableValue) * 100.0;
+    }
+
+    final cgstRate = effectiveGstRate / 2.0;
+    final sgstRate = effectiveGstRate / 2.0;
+    final cgstAmount = gstAmount / 2.0;
+    final sgstAmount = gstAmount / 2.0;
+    final totalInvoiceAmount = taxableValue + (hasGst ? gstAmount : 0.0);
+    final paidAmount = entry.paidAmount;
+    final remainingDue =
+        (totalInvoiceAmount - paidAmount).clamp(0.0, double.infinity);
+    final amountInWords = Formatters.numberToWords(totalInvoiceAmount);
+    final invoiceNumber = entry.gstBillNo.isNotEmpty
+        ? entry.gstBillNo
+        : 'INV-${entry.challanNo}';
+
+    // Real QR Code data string for verification
+    final qrData =
+        'GSTIN:$cGstin|INV:$invoiceNumber|DATE:${Formatters.shortDate(entry.date)}|VAL:${totalInvoiceAmount.toStringAsFixed(2)}|TAX:${gstAmount.toStringAsFixed(2)}|BUYER:${buyerGstin.startsWith('URP') ? 'URP' : buyerGstin}';
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: pageFormat,
+        margin: isA5
+            ? const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 12)
+            : const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        build: (pw.Context context) {
+          return pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(
+                color: PdfColors.grey800,
+                width: isA5 ? 0.75 : 1.0,
+              ),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                // 1. TOP HEADER BANNER
+                _buildInvoiceHeaderBanner(isA5),
+
+                // 2. SUPPLIER & INVOICE META
+                _buildSupplierAndInvoiceMeta(
+                  isA5: isA5,
+                  logoImage: logoImage,
+                  companyName: cName,
+                  companyTagline: cTagline,
+                  companyAddress: cAddress,
+                  companyGstin: cGstin,
+                  companyPhone: cPhone,
+                  companyEmail: cEmail,
+                  invoiceNumber: invoiceNumber,
+                  challanNo: entry.challanNo,
+                  date: entry.date,
+                ),
+
+                // DIVIDER
+                pw.Container(height: 1, color: PdfColors.grey700),
+
+                // 3. BUYER (BILL TO) & TRANSPORT / PAYMENT PARTICULARS
+                _buildBuyerAndPaymentMeta(
+                  isA5: isA5,
+                  buyerName: buyerName,
+                  buyerAddress: buyerAddress,
+                  buyerPhone: buyerPhone,
+                  buyerGstin: buyerGstin,
+                  entry: entry,
+                ),
+
+                // DIVIDER
+                pw.Container(height: 1, color: PdfColors.grey700),
+
+                // 4. ITEMS & TAX CALCULATION TABLE
+                _buildInvoiceItemsTable(
+                  isA5: isA5,
+                  challanNo: entry.challanNo,
+                  taxableValue: taxableValue,
+                  hasGst: hasGst,
+                  effectiveGstRate: effectiveGstRate,
+                  cgstRate: cgstRate,
+                  sgstRate: sgstRate,
+                  cgstAmount: cgstAmount,
+                  sgstAmount: sgstAmount,
+                  gstAmount: gstAmount,
+                  totalInvoiceAmount: totalInvoiceAmount,
+                ),
+
+                // DIVIDER
+                pw.Container(height: 1, color: PdfColors.grey700),
+
+                // 5. AMOUNT IN WORDS & SETTLEMENT SUMMARY
+                _buildAmountInWordsAndSettlement(
+                  isA5: isA5,
+                  amountInWords: amountInWords,
+                  totalInvoiceAmount: totalInvoiceAmount,
+                  paidAmount: paidAmount,
+                  remainingDue: remainingDue,
+                  entry: entry,
+                ),
+
+                // DIVIDER
+                pw.Container(height: 1, color: PdfColors.grey700),
+
+                // 6. LOWER GRID: BANK DETAILS, QR CODE, TERMS & SIGNATURES
+                _buildInvoiceFooterGrid(
+                  isA5: isA5,
+                  companyName: cName,
+                  bankName: bBankName,
+                  bankAccount: bAccount,
+                  bankIfsc: bIfsc,
+                  bankBranch: bBranch,
+                  qrData: qrData,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  /// Print or preview single tax invoice using native OS print dialog
+  static Future<void> printOrPreviewSingleInvoice({
+    required ChallanEntry entry,
+    Party? party,
+    PdfPageFormat pageFormat = PdfPageFormat.a4,
+    String? companyName,
+    String? companyTagline,
+    Uint8List? customLogoBytes,
+  }) async {
+    final bytes = await generateSingleInvoicePdfData(
+      entry: entry,
+      party: party,
+      pageFormat: pageFormat,
+      companyName: companyName,
+      companyTagline: companyTagline,
+      customLogoBytes: customLogoBytes,
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => bytes,
+      name: 'Tax_Invoice_${entry.challanNo}.pdf',
+    );
+  }
+
+  /// Saves single tax invoice PDF to the user's Documents folder
+  static Future<String> saveSingleInvoicePdfToDocuments({
+    required ChallanEntry entry,
+    Party? party,
+    PdfPageFormat pageFormat = PdfPageFormat.a4,
+    String? companyName,
+    String? companyTagline,
+    Uint8List? customLogoBytes,
+  }) async {
+    final bytes = await generateSingleInvoicePdfData(
+      entry: entry,
+      party: party,
+      pageFormat: pageFormat,
+      companyName: companyName,
+      companyTagline: companyTagline,
+      customLogoBytes: customLogoBytes,
+    );
+
+    final dir = await getApplicationDocumentsDirectory();
+    final cleanParty = entry.partyName
+        .replaceAll(RegExp(r'[^\w\s]+'), '')
+        .replaceAll(' ', '_');
+    final filename =
+        'Tax_Invoice_${entry.challanNo}_${cleanParty}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes);
+    return file.path;
+  }
+
+  // --- SUB-WIDGETS FOR SINGLE-PAGE TAX INVOICE ---
+
+  static pw.Widget _buildInvoiceHeaderBanner(bool isA5) {
+    return pw.Container(
+      padding: pw.EdgeInsets.symmetric(
+        horizontal: isA5 ? 6 : 10,
+        vertical: isA5 ? 3 : 5,
+      ),
+      decoration: const pw.BoxDecoration(color: PdfColors.teal900),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'COMMERCIAL TAX INVOICE',
+            style: pw.TextStyle(
+              fontSize: isA5 ? 9.0 : 12.0,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
+            ),
+          ),
+          pw.Container(
+            padding: pw.EdgeInsets.symmetric(
+              horizontal: isA5 ? 4 : 6,
+              vertical: isA5 ? 1 : 2,
+            ),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.white, width: 0.5),
+              borderRadius: pw.BorderRadius.circular(2),
+            ),
+            child: pw.Text(
+              'ORIGINAL FOR RECIPIENT',
+              style: pw.TextStyle(
+                fontSize: isA5 ? 6.0 : 7.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildSupplierAndInvoiceMeta({
+    required bool isA5,
+    pw.MemoryImage? logoImage,
+    required String companyName,
+    required String companyTagline,
+    required String companyAddress,
+    required String companyGstin,
+    required String companyPhone,
+    required String companyEmail,
+    required String invoiceNumber,
+    required String challanNo,
+    required DateTime date,
+  }) {
+    final pad = isA5 ? 4.0 : 6.0;
+    final labelSize = isA5 ? 6.5 : 8.0;
+    final titleSize = isA5 ? 10.0 : 13.0;
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Left: Seller Details
+        pw.Expanded(
+          flex: 3,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (logoImage != null) ...[
+                      pw.Container(
+                        width: isA5 ? 26 : 36,
+                        height: isA5 ? 26 : 36,
+                        child: pw.Image(logoImage),
+                      ),
+                      pw.SizedBox(width: isA5 ? 5 : 8),
+                    ],
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            companyName,
+                            style: pw.TextStyle(
+                              fontSize: titleSize,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.teal900,
+                            ),
+                          ),
+                          pw.Text(
+                            companyTagline,
+                            style: pw.TextStyle(
+                              fontSize: labelSize,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: isA5 ? 2 : 4),
+                pw.Text(
+                  companyAddress,
+                  style: pw.TextStyle(
+                      fontSize: labelSize, color: PdfColors.grey800),
+                ),
+                pw.SizedBox(height: 1),
+                pw.Row(
+                  children: [
+                    pw.Text('GSTIN: ',
+                        style: pw.TextStyle(
+                            fontSize: labelSize,
+                            fontWeight: pw.FontWeight.bold)),
+                    pw.Text(companyGstin,
+                        style: pw.TextStyle(
+                            fontSize: labelSize,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.teal900)),
+                    pw.SizedBox(width: 8),
+                    pw.Text('State Code: 24 (Gujarat)',
+                        style: pw.TextStyle(fontSize: labelSize)),
+                  ],
+                ),
+                pw.Text(
+                  'Phone: $companyPhone | Email: $companyEmail',
+                  style: pw.TextStyle(
+                      fontSize: labelSize, color: PdfColors.grey700),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Vertical Divider
+        pw.Container(width: 1, color: PdfColors.grey700),
+        // Right: Invoice Metadata
+        pw.Expanded(
+          flex: 2,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _buildMetaRow('Invoice No.:', invoiceNumber, isA5,
+                    isBoldVal: true),
+                _buildMetaRow('Invoice Date:', Formatters.date(date), isA5),
+                _buildMetaRow('Challan No.:', challanNo, isA5, isBoldVal: true),
+                _buildMetaRow('Challan Date:', Formatters.date(date), isA5),
+                _buildMetaRow('Place of Supply:', 'Gujarat (24)', isA5),
+                _buildMetaRow('Reverse Charge:', 'No', isA5),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildBuyerAndPaymentMeta({
+    required bool isA5,
+    required String buyerName,
+    required String buyerAddress,
+    required String buyerPhone,
+    required String buyerGstin,
+    required ChallanEntry entry,
+  }) {
+    final pad = isA5 ? 4.0 : 6.0;
+    final labelSize = isA5 ? 6.5 : 8.0;
+    final headerSize = isA5 ? 7.5 : 9.0;
+    final titleSize = isA5 ? 8.5 : 10.5;
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Left: Buyer (Bill To)
+        pw.Expanded(
+          flex: 3,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'BILLED TO / BUYER DETAILS:',
+                  style: pw.TextStyle(
+                    fontSize: headerSize,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.teal900,
+                  ),
+                ),
+                pw.SizedBox(height: isA5 ? 2 : 3),
+                pw.Text(
+                  buyerName,
+                  style: pw.TextStyle(
+                    fontSize: titleSize,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  buyerAddress,
+                  style: pw.TextStyle(
+                      fontSize: labelSize, color: PdfColors.grey800),
+                ),
+                pw.Text(
+                  'Contact: $buyerPhone',
+                  style: pw.TextStyle(
+                      fontSize: labelSize, color: PdfColors.grey800),
+                ),
+                pw.Row(
+                  children: [
+                    pw.Text('Buyer GSTIN: ',
+                        style: pw.TextStyle(
+                            fontSize: labelSize,
+                            fontWeight: pw.FontWeight.bold)),
+                    pw.Text(buyerGstin,
+                        style: pw.TextStyle(
+                            fontSize: labelSize,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.teal900)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Vertical Divider
+        pw.Container(width: 1, color: PdfColors.grey700),
+        // Right: Dispatch / Payment
+        pw.Expanded(
+          flex: 2,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'PAYMENT & DISPATCH PARTICULARS:',
+                  style: pw.TextStyle(
+                    fontSize: headerSize,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.teal900,
+                  ),
+                ),
+                pw.SizedBox(height: isA5 ? 2 : 3),
+                _buildMetaRow(
+                    'Payment Mode:', entry.paymentOption.label, isA5,
+                    isBoldVal: true),
+                _buildMetaRow('Payment Status:', entry.statusDisplay, isA5),
+                if (entry.paymentOption == PaymentOption.cheque &&
+                    entry.chequeDetails != null) ...[
+                  _buildMetaRow(
+                      'Cheque #:', entry.chequeDetails!.chequeNo, isA5),
+                  _buildMetaRow(
+                      'Bank:', entry.chequeDetails!.bankName, isA5),
+                ],
+                _buildMetaRow(
+                    'Remarks:',
+                    entry.notes.isNotEmpty
+                        ? entry.notes
+                        : 'Goods Delivered via Challan',
+                    isA5),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildInvoiceItemsTable({
+    required bool isA5,
+    required String challanNo,
+    required double taxableValue,
+    required bool hasGst,
+    required double effectiveGstRate,
+    required double cgstRate,
+    required double sgstRate,
+    required double cgstAmount,
+    required double sgstAmount,
+    required double gstAmount,
+    required double totalInvoiceAmount,
+  }) {
+    final headerPad = isA5
+        ? const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3)
+        : const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5);
+    final cellPad = isA5
+        ? const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3)
+        : const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4);
+
+    final hSize = isA5 ? 6.5 : 8.0;
+    final dSize = isA5 ? 6.5 : 8.0;
+
+    return pw.Table(
+      border: pw.TableBorder.all(
+          color: PdfColors.grey700, width: isA5 ? 0.5 : 0.75),
+      columnWidths: isA5
+          ? const {
+              0: pw.FixedColumnWidth(16),
+              1: pw.FlexColumnWidth(3.0),
+              2: pw.FixedColumnWidth(32),
+              3: pw.FixedColumnWidth(26),
+              4: pw.FixedColumnWidth(48),
+              5: pw.FixedColumnWidth(48),
+              6: pw.FixedColumnWidth(48),
+              7: pw.FixedColumnWidth(52),
+            }
+          : const {
+              0: pw.FixedColumnWidth(22),
+              1: pw.FlexColumnWidth(3.5),
+              2: pw.FixedColumnWidth(42),
+              3: pw.FixedColumnWidth(34),
+              4: pw.FixedColumnWidth(68),
+              5: pw.FixedColumnWidth(68),
+              6: pw.FixedColumnWidth(68),
+              7: pw.FixedColumnWidth(74),
+            },
+      children: [
+        // HEADER ROW
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('Sr.',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('Description of Goods / Fabrics',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold))),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('HSN/SAC',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('Qty',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('Taxable (Rs.)',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('CGST',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('SGST',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: headerPad,
+                child: pw.Text('Total (Rs.)',
+                    style: pw.TextStyle(
+                        fontSize: hSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+          ],
+        ),
+        // ITEM ROW
+        pw.TableRow(
+          children: [
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('1',
+                    style: pw.TextStyle(fontSize: dSize),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+              padding: cellPad,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('COMMERCIAL TEXTILE FABRICS',
+                      style: pw.TextStyle(
+                          fontSize: dSize, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('Dispatched as per Delivery Challan #$challanNo',
+                      style: pw.TextStyle(
+                          fontSize: isA5 ? 5.5 : 7.0,
+                          color: PdfColors.grey700)),
+                ],
+              ),
+            ),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('5407',
+                    style: pw.TextStyle(fontSize: dSize),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('1 LOT',
+                    style: pw.TextStyle(fontSize: dSize),
+                    textAlign: pw.TextAlign.center)),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text(Formatters.currency(taxableValue),
+                    style: pw.TextStyle(fontSize: dSize),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+              padding: cellPad,
+              child: pw.Text(
+                hasGst
+                    ? '${cgstRate.toStringAsFixed(1)}%\n${Formatters.currency(cgstAmount)}'
+                    : '0.0%',
+                style: pw.TextStyle(fontSize: dSize),
+                textAlign: pw.TextAlign.right,
+              ),
+            ),
+            pw.Padding(
+              padding: cellPad,
+              child: pw.Text(
+                hasGst
+                    ? '${sgstRate.toStringAsFixed(1)}%\n${Formatters.currency(sgstAmount)}'
+                    : '0.0%',
+                style: pw.TextStyle(fontSize: dSize),
+                textAlign: pw.TextAlign.right,
+              ),
+            ),
+            pw.Padding(
+              padding: cellPad,
+              child: pw.Text(
+                Formatters.currency(totalInvoiceAmount),
+                style: pw.TextStyle(
+                    fontSize: dSize, fontWeight: pw.FontWeight.bold),
+                textAlign: pw.TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+        // TOTAL SUMMARY ROW
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+          children: [
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('', style: pw.TextStyle(fontSize: dSize))),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('TOTAL AMOUNT',
+                    style: pw.TextStyle(
+                        fontSize: dSize, fontWeight: pw.FontWeight.bold))),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('', style: pw.TextStyle(fontSize: dSize))),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text('', style: pw.TextStyle(fontSize: dSize))),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text(Formatters.currency(taxableValue),
+                    style: pw.TextStyle(
+                        fontSize: dSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text(Formatters.currency(cgstAmount),
+                    style: pw.TextStyle(
+                        fontSize: dSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text(Formatters.currency(sgstAmount),
+                    style: pw.TextStyle(
+                        fontSize: dSize, fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.right)),
+            pw.Padding(
+                padding: cellPad,
+                child: pw.Text(Formatters.currency(totalInvoiceAmount),
+                    style: pw.TextStyle(
+                        fontSize: dSize,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.teal900),
+                    textAlign: pw.TextAlign.right)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildAmountInWordsAndSettlement({
+    required bool isA5,
+    required String amountInWords,
+    required double totalInvoiceAmount,
+    required double paidAmount,
+    required double remainingDue,
+    required ChallanEntry entry,
+  }) {
+    final pad = isA5 ? 3.0 : 5.0;
+    final fontSize = isA5 ? 6.5 : 8.0;
+
+    return pw.Padding(
+      padding: pw.EdgeInsets.all(pad),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            children: [
+              pw.Text(
+                'Amount in Words: ',
+                style: pw.TextStyle(
+                    fontSize: fontSize, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  amountInWords,
+                  style: pw.TextStyle(
+                      fontSize: fontSize, fontStyle: pw.FontStyle.italic),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: isA5 ? 2 : 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Gross Invoice: ${Formatters.currency(totalInvoiceAmount)}',
+                style: pw.TextStyle(
+                    fontSize: fontSize, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.Text(
+                'Amount Received: ${Formatters.currency(paidAmount)}',
+                style: pw.TextStyle(
+                    fontSize: fontSize,
+                    color: PdfColors.green800,
+                    fontWeight: pw.FontWeight.bold),
+              ),
+              pw.Text(
+                'Balance Due: ${Formatters.currency(remainingDue)}',
+                style: pw.TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: pw.FontWeight.bold,
+                  color: remainingDue > 0 ? PdfColors.red800 : PdfColors.teal800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildInvoiceFooterGrid({
+    required bool isA5,
+    required String companyName,
+    required String bankName,
+    required String bankAccount,
+    required String bankIfsc,
+    required String bankBranch,
+    required String qrData,
+  }) {
+    final pad = isA5 ? 4.0 : 6.0;
+    final labelSize = isA5 ? 6.0 : 7.5;
+    final headerSize = isA5 ? 7.0 : 8.5;
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Left: Bank Details & Terms
+        pw.Expanded(
+          flex: 3,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'BANK ACCOUNT DETAILS:',
+                  style: pw.TextStyle(
+                      fontSize: headerSize,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.teal900),
+                ),
+                pw.SizedBox(height: 1),
+                pw.Text('Bank: $bankName',
+                    style: pw.TextStyle(fontSize: labelSize)),
+                pw.Text('A/C No.: $bankAccount',
+                    style: pw.TextStyle(
+                        fontSize: labelSize, fontWeight: pw.FontWeight.bold)),
+                pw.Text('IFSC: $bankIfsc | Branch: $bankBranch',
+                    style: pw.TextStyle(fontSize: labelSize)),
+                pw.SizedBox(height: isA5 ? 2 : 4),
+                pw.Text(
+                  'TERMS & CONDITIONS:',
+                  style: pw.TextStyle(
+                      fontSize: headerSize,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.teal900),
+                ),
+                pw.Text('1. Goods once sold will not be taken back.',
+                    style: pw.TextStyle(
+                        fontSize: isA5 ? 5.5 : 7.0, color: PdfColors.grey700)),
+                pw.Text('2. Subject to Surat jurisdiction only.',
+                    style: pw.TextStyle(
+                        fontSize: isA5 ? 5.5 : 7.0, color: PdfColors.grey700)),
+              ],
+            ),
+          ),
+        ),
+        // Vertical Divider
+        pw.Container(width: 1, color: PdfColors.grey700),
+        // Center: Real QR Code
+        pw.Padding(
+          padding: pw.EdgeInsets.all(pad),
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.BarcodeWidget(
+                barcode: pw.Barcode.qrCode(),
+                data: qrData,
+                width: isA5 ? 42 : 56,
+                height: isA5 ? 42 : 56,
+              ),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Official GST Verification',
+                style: pw.TextStyle(
+                    fontSize: isA5 ? 5.0 : 6.5, color: PdfColors.grey700),
+              ),
+            ],
+          ),
+        ),
+        // Vertical Divider
+        pw.Container(width: 1, color: PdfColors.grey700),
+        // Right: Signatures
+        pw.Expanded(
+          flex: 2,
+          child: pw.Padding(
+            padding: pw.EdgeInsets.all(pad),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'Customer / Receiver Signature',
+                  style: pw.TextStyle(
+                      fontSize: labelSize, color: PdfColors.grey700),
+                ),
+                pw.SizedBox(height: isA5 ? 18 : 28),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'For $companyName',
+                      style: pw.TextStyle(
+                          fontSize: labelSize, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      '[ Authorized Signatory ]',
+                      style: pw.TextStyle(
+                          fontSize: labelSize,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.teal900),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildMetaRow(String label, String value, bool isA5,
+      {bool isBoldVal = false}) {
+    final fontSize = isA5 ? 6.5 : 8.0;
+    return pw.Padding(
+      padding: pw.EdgeInsets.symmetric(vertical: isA5 ? 0.75 : 1.25),
+      child: pw.Row(
+        children: [
+          pw.SizedBox(
+            width: isA5 ? 55 : 75,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(fontSize: fontSize, color: PdfColors.grey700),
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(
+                fontSize: fontSize,
+                fontWeight:
+                    isBoldVal ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // EXCEL (.XLSX) GENERATION
+  // =========================================================================
+
   /// Generates and saves a Microsoft Excel (.xlsx) file in Documents folder
   static Future<String> generateAndSaveExcel({
     required List<ChallanEntry> entries,
@@ -166,7 +1136,9 @@ class ExportService {
       sumPaid += c.paidAmount;
       final due = c.paymentOption == PaymentOption.cash
           ? c.remainingAmount
-          : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0);
+          : (c.chequeDetails?.status != ChequeStatus.cleared
+              ? c.finalAmount
+              : 0.0);
       sumDue += due;
       sumGst += c.gstAmount;
 
@@ -238,7 +1210,8 @@ class ExportService {
     return file.path;
   }
 
-  // --- PDF PRIVATE HELPERS ---
+  // --- PDF PRIVATE HELPERS FOR MULTI-ROW REPORT ---
+
   static pw.Widget _buildPdfHeader(
     String title,
     String subtitle,
@@ -269,7 +1242,8 @@ class ExportService {
               pw.SizedBox(height: 2),
               pw.Text(
                 subtitle,
-                style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                style:
+                    const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
               ),
             ],
           ),
@@ -278,11 +1252,13 @@ class ExportService {
             children: [
               pw.Text(
                 'Filter: $filterSummary',
-                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                style:
+                    pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
               ),
               pw.Text(
                 'Date: ${Formatters.date(DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                style:
+                    const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
               ),
             ],
           ),
@@ -334,9 +1310,11 @@ class ExportService {
         children: [
           _buildPdfKpiItem('Total Entries', '$count'),
           _buildPdfKpiItem('Challan Gross', Formatters.currency(totalChallan)),
-          _buildPdfKpiItem('Final Billed', Formatters.currency(totalFinal), isBold: true),
+          _buildPdfKpiItem('Final Billed', Formatters.currency(totalFinal),
+              isBold: true),
           _buildPdfKpiItem('Total GST', Formatters.currency(totalGst)),
-          _buildPdfKpiItem('Unpaid Dues', Formatters.currency(totalUnpaid), isWarning: totalUnpaid > 0),
+          _buildPdfKpiItem('Unpaid Dues', Formatters.currency(totalUnpaid),
+              isWarning: totalUnpaid > 0),
         ],
       ),
     );
@@ -391,7 +1369,8 @@ class ExportService {
       } else if (c.isCashPaid) {
         details = 'PAID IN FULL';
       } else {
-        details = 'WARNING: UNPAID (Due ${Formatters.currency(c.finalAmount)})';
+        details =
+            'WARNING: UNPAID (Due ${Formatters.currency(c.finalAmount)})';
       }
 
       return [
@@ -434,5 +1413,52 @@ class ExportService {
       },
     );
   }
-}
 
+  /// Exports full audit trail history to Microsoft Excel (.xlsx) file
+  static Future<String> exportAuditLogsToExcel({
+    required List<AuditLogEntry> logs,
+  }) async {
+    final excel = Excel.createExcel();
+    final Sheet sheet = excel[excel.getDefaultSheet() ?? 'Audit Trail'];
+
+    sheet.appendRow([
+      TextCellValue('OM Mavtar Group - Audit Trail & Activity Log'),
+      TextCellValue(''),
+      TextCellValue('Generated: ${Formatters.date(DateTime.now())}'),
+      TextCellValue('Total Records: ${logs.length}'),
+    ]);
+    sheet.appendRow([TextCellValue('')]);
+
+    sheet.appendRow([
+      TextCellValue('Timestamp'),
+      TextCellValue('Action'),
+      TextCellValue('Entity Type'),
+      TextCellValue('Entity / Reference'),
+      TextCellValue('User Name'),
+      TextCellValue('User Role'),
+      TextCellValue('Activity Description'),
+    ]);
+
+    for (var l in logs) {
+      sheet.appendRow([
+        TextCellValue(Formatters.dateTime(l.timestamp)),
+        TextCellValue(l.action.label),
+        TextCellValue(l.entityType.label),
+        TextCellValue(l.entityTitle),
+        TextCellValue(l.performedBy),
+        TextCellValue(l.userRole),
+        TextCellValue(l.description),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final filename =
+        'OM_Mavtar_Audit_Trail_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final file = File('${dir.path}/$filename');
+    final bytes = excel.save();
+    if (bytes != null) {
+      await file.writeAsBytes(bytes);
+    }
+    return file.path;
+  }
+}

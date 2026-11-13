@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
+import '../models/party.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/export_report_dialog.dart';
+import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/view_challan_dialog.dart';
 
 class ChallanListView extends StatelessWidget {
@@ -23,6 +25,28 @@ class ChallanListView extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => ViewChallanDialog(entry: entry),
+    );
+  }
+
+  void _openInvoiceDialog(BuildContext context, ChallanEntry entry) {
+    final provider = context.read<ChallanProvider>();
+    Party? party;
+    try {
+      party = provider.parties.firstWhere(
+        (p) =>
+            p.id == entry.partyId ||
+            p.name.trim().toUpperCase() == entry.partyName.trim().toUpperCase(),
+      );
+    } catch (_) {
+      party = null;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => InvoicePreviewDialog(
+        entry: entry,
+        party: party,
+      ),
     );
   }
 
@@ -778,6 +802,11 @@ class ChallanListView extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                    tooltip: 'Print Tax Invoice (A4/A5)',
+                    onPressed: () => _openInvoiceDialog(context, item),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
                     onPressed: () => _openViewDialog(context, item),
@@ -1081,7 +1110,7 @@ class ChallanListView extends StatelessWidget {
                 Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 80, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
               ],
             ),
           ),
@@ -1251,10 +1280,17 @@ class ChallanListView extends StatelessWidget {
                         ),
                         // ACTIONS
                         SizedBox(
-                          width: 80,
+                          width: 106,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              _buildActionIcon(
+                                icon: Icons.receipt_long_outlined,
+                                tooltip: 'Print Tax Invoice (A4/A5)',
+                                color: AppColors.primary,
+                                onTap: () => _openInvoiceDialog(context, item),
+                              ),
+                              const SizedBox(width: 2),
                               _buildActionIcon(
                                 icon: Icons.visibility_outlined,
                                 tooltip: 'View Full Details',
@@ -1474,6 +1510,13 @@ class ChallanListView extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        _buildActionIcon(
+                          icon: Icons.receipt_long_outlined,
+                          tooltip: 'Print Tax Invoice (A4/A5)',
+                          color: AppColors.primary,
+                          onTap: () => _openInvoiceDialog(context, item),
+                        ),
+                        const SizedBox(width: 2),
                         _buildActionIcon(
                           icon: Icons.visibility_outlined,
                           tooltip: 'View Full Details',

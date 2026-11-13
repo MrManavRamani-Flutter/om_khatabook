@@ -9,6 +9,7 @@ import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/add_edit_party_dialog.dart';
 import '../widgets/export_report_dialog.dart';
+import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/view_challan_dialog.dart';
 
 class PartyLedgerDetailView extends StatefulWidget {
@@ -47,6 +48,24 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     showDialog(
       context: context,
       builder: (_) => ViewChallanDialog(entry: entry),
+    );
+  }
+
+  void _openInvoiceDialog(BuildContext context, ChallanEntry entry) {
+    final provider = context.read<ChallanProvider>();
+    Party? party;
+    try {
+      party = provider.parties.firstWhere((p) => p.id == widget.partyId);
+    } catch (_) {
+      party = null;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => InvoicePreviewDialog(
+        entry: entry,
+        party: party,
+      ),
     );
   }
 
@@ -954,6 +973,11 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                    tooltip: 'Print Tax Invoice (A4/A5)',
+                    onPressed: () => _openInvoiceDialog(context, item),
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
                     onPressed: () => _openViewChallan(context, item),
@@ -1250,7 +1274,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                 Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 80, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
               ],
             ),
           ),
@@ -1424,10 +1448,17 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         ),
                         // ACTIONS
                         SizedBox(
-                          width: 80,
+                          width: 106,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              _buildActionIcon(
+                                icon: Icons.receipt_long_outlined,
+                                tooltip: 'Print Tax Invoice (A4/A5)',
+                                color: AppColors.primary,
+                                onTap: () => _openInvoiceDialog(context, item),
+                              ),
+                              const SizedBox(width: 2),
                               _buildActionIcon(
                                 icon: Icons.visibility_outlined,
                                 tooltip: 'View Full Details',
@@ -1646,6 +1677,13 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        _buildActionIcon(
+                          icon: Icons.receipt_long_outlined,
+                          tooltip: 'Print Tax Invoice (A4/A5)',
+                          color: AppColors.primary,
+                          onTap: () => _openInvoiceDialog(context, item),
+                        ),
+                        const SizedBox(width: 2),
                         _buildActionIcon(
                           icon: Icons.visibility_outlined,
                           tooltip: 'View Full Details',

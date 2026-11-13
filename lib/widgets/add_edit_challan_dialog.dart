@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -326,6 +327,10 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
             )
             .id;
 
+    final auth = context.read<AuthProvider>();
+    final uName = auth.currentUser?.username ?? 'admin';
+    final uRole = auth.currentUser?.role.name.toUpperCase() ?? 'ADMIN';
+
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(
         date: _selectedDate,
@@ -342,7 +347,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         chequeDetails: cheque,
         notes: formattedNotes,
       );
-      await provider.updateChallan(updated);
+      await provider.updateChallan(updated, performedBy: uName, userRole: uRole);
     } else {
       await provider.addChallan(
         date: _selectedDate,
@@ -358,6 +363,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         isCashPaid: cashPaidBool,
         chequeDetails: cheque,
         notes: formattedNotes,
+        performedBy: uName,
+        userRole: uRole,
       );
     }
 

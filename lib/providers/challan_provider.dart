@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
 import '../services/storage_service.dart';
+import '../utils/formatters.dart';
 
 class ChallanProvider extends ChangeNotifier {
   final StorageService _storage;
@@ -43,6 +45,7 @@ class ChallanProvider extends ChangeNotifier {
   String _adminName = 'OM Mavtar Admin';
   String _adminRole = 'Administrator';
   bool _isSidebarCollapsed = false;
+  List<AuditLogEntry> _auditLogs = [];
 
   ChallanProvider(this._storage);
 
@@ -51,6 +54,7 @@ class ChallanProvider extends ChangeNotifier {
   List<ChallanEntry> get challans => _challans.where((c) => !c.isDeleted).toList();
   List<ChallanEntry> get deletedChallans => _challans.where((c) => c.isDeleted).toList();
   int get recycleBinCount => deletedChallans.length + deletedParties.length;
+  List<AuditLogEntry> get auditLogs => List.unmodifiable(_auditLogs);
 
   bool get isDarkMode => _isDarkMode;
   bool get isLoading => _isLoading;
@@ -176,6 +180,7 @@ class ChallanProvider extends ChangeNotifier {
 
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
+    _auditLogs = await _storage.loadAuditLogs();
 
     if (!_storage.isCleanDataMigrated) {
       await _cleanAndSeedRealParties();
@@ -464,12 +469,55 @@ class ChallanProvider extends ChangeNotifier {
   int get unpaidWarningCount =>
       filteredChallans.where((c) => c.hasWarning).length;
 
+  // --- AUDIT TRAIL & HISTORY LOGGING ---
+  Future<void> addAuditLog(AuditLogEntry entry) async {
+    _auditLogs.insert(0, entry);
+    if (_auditLogs.length > 2000) {
+      _auditLogs = _auditLogs.sublist(0, 2000);
+    }
+    await _storage.saveAuditLogs(_auditLogs);
+    notifyListeners();
+  }
+
+  Future<void> logAction({
+    required AuditAction action,
+    required AuditEntityType entityType,
+    required String entityId,
+    required String entityTitle,
+    String performedBy = 'admin',
+    String userRole = 'ADMIN',
+    required String description,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    final entry = AuditLogEntry(
+      id: _uuid.v4(),
+      timestamp: DateTime.now(),
+      action: action,
+      entityType: entityType,
+      entityId: entityId,
+      entityTitle: entityTitle,
+      performedBy: performedBy,
+      userRole: userRole,
+      description: description,
+      metadata: metadata,
+    );
+    await addAuditLog(entry);
+  }
+
+  Future<void> clearAuditLogs() async {
+    _auditLogs.clear();
+    await _storage.saveAuditLogs(_auditLogs);
+    notifyListeners();
+  }
+
   // --- CRUD & RECYCLE BIN: PARTIES ---
   Future<Party> addParty({
     required String name,
     String phone = '',
     String address = '',
     String gstNumber = '',
+    String performedBy = 'admin',
+    String userRole = 'ADMIN',
   }) async {
     final party = Party(
       id: _uuid.v4(),
@@ -481,11 +529,22 @@ class ChallanProvider extends ChangeNotifier {
     );
     _parties.add(party);
     await _storage.saveParties(_parties);
+
+    await logAction(
+      action: AuditAction.create,
+      entityType: AuditEntityType.party,
+      entityId: party.id,
+      entityTitle: party.name,
+      performedBy: performedBy,
+      userRole: userRole,
+      description: 'Registered new commercial party: ${party.name}',
+    );
+
     notifyListeners();
     return party;
   }
 
-  Future<void> updateParty(Party updated) async {
+  Future<void> updateParty(Party updated, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _parties.indexWhere((p) => p.id == updated.id);
     if (idx != -1) {
       _parties[idx] = updated;
@@ -496,39 +555,87 @@ class ChallanProvider extends ChangeNotifier {
       }
       await _storage.saveParties(_parties);
       await _storage.saveChallans(_challans);
+
+      await logAction(
+        action: AuditAction.update,
+        entityType: AuditEntityType.party,
+        entityId: updated.id,
+        entityTitle: updated.name,
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Updated party profile details for ${updated.name}',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> moveToBinParty(String partyId) async {
+  Future<void> moveToBinParty(String partyId, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _parties.indexWhere((p) => p.id == partyId);
     if (idx != -1) {
-      _parties[idx] = _parties[idx].copyWith(
+      final p = _parties[idx];
+      _parties[idx] = p.copyWith(
         isDeleted: true,
         deletedAt: DateTime.now(),
       );
       _selectedPartyIds.remove(partyId);
       await _storage.saveParties(_parties);
+
+      await logAction(
+        action: AuditAction.softDelete,
+        entityType: AuditEntityType.party,
+        entityId: p.id,
+        entityTitle: p.name,
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Moved party ${p.name} to Recycle Bin',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> restoreParty(String partyId) async {
+  Future<void> restoreParty(String partyId, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _parties.indexWhere((p) => p.id == partyId);
     if (idx != -1) {
-      _parties[idx] = _parties[idx].copyWith(
+      final p = _parties[idx];
+      _parties[idx] = p.copyWith(
         isDeleted: false,
         clearDeletedAt: true,
       );
       await _storage.saveParties(_parties);
+
+      await logAction(
+        action: AuditAction.restore,
+        entityType: AuditEntityType.party,
+        entityId: p.id,
+        entityTitle: p.name,
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Restored party ${p.name} from Recycle Bin to active directory',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> deletePermanentlyParty(String partyId) async {
+  Future<void> deletePermanentlyParty(String partyId, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
+    final idx = _parties.indexWhere((p) => p.id == partyId);
+    final partyName = idx != -1 ? _parties[idx].name : partyId;
     _parties.removeWhere((p) => p.id == partyId);
     _selectedPartyIds.remove(partyId);
     await _storage.saveParties(_parties);
+
+    await logAction(
+      action: AuditAction.permanentDelete,
+      entityType: AuditEntityType.party,
+      entityId: partyId,
+      entityTitle: partyName,
+      performedBy: performedBy,
+      userRole: userRole,
+      description: 'Permanently purged party record for $partyName from database',
+    );
+
     notifyListeners();
   }
 
@@ -550,6 +657,8 @@ class ChallanProvider extends ChangeNotifier {
     bool isCashPaid = true,
     ChequeDetails? chequeDetails,
     String notes = '',
+    String performedBy = 'admin',
+    String userRole = 'ADMIN',
   }) async {
     final entry = ChallanEntry(
       id: _uuid.v4(),
@@ -571,46 +680,105 @@ class ChallanProvider extends ChangeNotifier {
 
     _challans.insert(0, entry);
     await _storage.saveChallans(_challans);
+
+    await logAction(
+      action: AuditAction.create,
+      entityType: AuditEntityType.challan,
+      entityId: entry.id,
+      entityTitle: 'Challan #${entry.challanNo} (${entry.partyName})',
+      performedBy: performedBy,
+      userRole: userRole,
+      description: 'Created delivery challan #${entry.challanNo} for ${entry.partyName} (Final Amt: ₹${Formatters.currency(entry.finalAmount)})',
+    );
+
     notifyListeners();
     return entry;
   }
 
-  Future<void> updateChallan(ChallanEntry updated) async {
+  Future<void> updateChallan(ChallanEntry updated, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _challans.indexWhere((c) => c.id == updated.id);
     if (idx != -1) {
       _challans[idx] = updated;
       await _storage.saveChallans(_challans);
+
+      await logAction(
+        action: AuditAction.update,
+        entityType: AuditEntityType.challan,
+        entityId: updated.id,
+        entityTitle: 'Challan #${updated.challanNo} (${updated.partyName})',
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Updated challan #${updated.challanNo} details (Final Amt: ₹${Formatters.currency(updated.finalAmount)})',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> moveToBinChallan(String id) async {
+  Future<void> moveToBinChallan(String id, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _challans.indexWhere((c) => c.id == id);
     if (idx != -1) {
-      _challans[idx] = _challans[idx].copyWith(
+      final c = _challans[idx];
+      _challans[idx] = c.copyWith(
         isDeleted: true,
         deletedAt: DateTime.now(),
       );
       await _storage.saveChallans(_challans);
+
+      await logAction(
+        action: AuditAction.softDelete,
+        entityType: AuditEntityType.challan,
+        entityId: c.id,
+        entityTitle: 'Challan #${c.challanNo} (${c.partyName})',
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Moved challan #${c.challanNo} to Recycle Bin',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> restoreChallan(String id) async {
+  Future<void> restoreChallan(String id, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _challans.indexWhere((c) => c.id == id);
     if (idx != -1) {
-      _challans[idx] = _challans[idx].copyWith(
+      final c = _challans[idx];
+      _challans[idx] = c.copyWith(
         isDeleted: false,
         clearDeletedAt: true,
       );
       await _storage.saveChallans(_challans);
+
+      await logAction(
+        action: AuditAction.restore,
+        entityType: AuditEntityType.challan,
+        entityId: c.id,
+        entityTitle: 'Challan #${c.challanNo} (${c.partyName})',
+        performedBy: performedBy,
+        userRole: userRole,
+        description: 'Restored challan #${c.challanNo} from Recycle Bin to active ledger',
+      );
+
       notifyListeners();
     }
   }
 
-  Future<void> deletePermanentlyChallan(String id) async {
+  Future<void> deletePermanentlyChallan(String id, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
+    final idx = _challans.indexWhere((c) => c.id == id);
+    final title = idx != -1 ? 'Challan #${_challans[idx].challanNo} (${_challans[idx].partyName})' : 'Challan ID $id';
     _challans.removeWhere((c) => c.id == id);
     await _storage.saveChallans(_challans);
+
+    await logAction(
+      action: AuditAction.permanentDelete,
+      entityType: AuditEntityType.challan,
+      entityId: id,
+      entityTitle: title,
+      performedBy: performedBy,
+      userRole: userRole,
+      description: 'Permanently purged challan record ($title) from database',
+    );
+
     notifyListeners();
   }
 
@@ -618,11 +786,23 @@ class ChallanProvider extends ChangeNotifier {
   Future<void> deleteChallan(String id) => moveToBinChallan(id);
 
   // --- EMPTY RECYCLE BIN ---
-  Future<void> emptyRecycleBin() async {
+  Future<void> emptyRecycleBin({String performedBy = 'admin', String userRole = 'ADMIN'}) async {
+    final count = deletedChallans.length + deletedParties.length;
     _challans.removeWhere((c) => c.isDeleted);
     _parties.removeWhere((p) => p.isDeleted);
     await _storage.saveChallans(_challans);
     await _storage.saveParties(_parties);
+
+    await logAction(
+      action: AuditAction.permanentDelete,
+      entityType: AuditEntityType.settings,
+      entityId: 'recycle_bin',
+      entityTitle: 'Recycle Bin',
+      performedBy: performedBy,
+      userRole: userRole,
+      description: 'Emptied Recycle Bin: permanently purged $count soft-deleted records',
+    );
+
     notifyListeners();
   }
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/branding_dialogs.dart';
+import '../widgets/user_management_dialog.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -153,6 +155,7 @@ class SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -536,6 +539,112 @@ class SettingsView extends StatelessWidget {
                             '${provider.recycleBinCount}',
                             Icons.delete_outline,
                             color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ROLE-BASED ACCESS CONTROL (RBAC) & USER ACCOUNTS CARD
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary),
+                            SizedBox(width: 10),
+                            Text(
+                              'User Authentication & Roles (RBAC)',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Active: ${auth.currentUser?.username ?? "admin"} [${auth.currentRole.name.toUpperCase()}]',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Configure authorized system users and permission profiles (Admin, Manager, and Data Entry Clerk).',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+                            ),
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: AppColors.primary,
+                                  child: Icon(Icons.person, color: Colors.white, size: 18),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        auth.currentUser?.displayName ?? 'OM Mavtar Admin',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      ),
+                                      Text(
+                                        'Role: ${auth.currentRole.label} • ${auth.users.length} Users Registered',
+                                        style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  ),
+                                  icon: const Icon(Icons.manage_accounts, size: 18),
+                                  label: const Text('Manage Users & Permissions'),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => const UserManagementDialog(),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],

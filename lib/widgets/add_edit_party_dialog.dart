@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -51,6 +52,10 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     final phone = _phoneController.text.trim();
     final gstin = _gstController.text.trim().toUpperCase();
 
+    final auth = context.read<AuthProvider>();
+    final uName = auth.currentUser?.username ?? 'admin';
+    final uRole = auth.currentUser?.role.name.toUpperCase() ?? 'ADMIN';
+
     if (widget.partyToEdit != null) {
       final updated = widget.partyToEdit!.copyWith(
         name: formattedName,
@@ -58,7 +63,7 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
         address: formattedAddress,
         gstNumber: gstin,
       );
-      await provider.updateParty(updated);
+      await provider.updateParty(updated, performedBy: uName, userRole: uRole);
       if (mounted) Navigator.of(context).pop(updated);
     } else {
       final created = await provider.addParty(
@@ -66,6 +71,8 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
         phone: phone,
         address: formattedAddress,
         gstNumber: gstin,
+        performedBy: uName,
+        userRole: uRole,
       );
       if (mounted) Navigator.of(context).pop(created);
     }

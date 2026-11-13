@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'providers/challan_provider.dart';
 import 'services/storage_service.dart';
 import 'theme/app_theme.dart';
+import 'views/login_view.dart';
 import 'views/main_layout.dart';
 
 void main() async {
@@ -11,12 +13,19 @@ void main() async {
   final storageService = StorageService();
   await storageService.init();
 
+  final challanProvider = ChallanProvider(storageService)..initialize();
+  final authProvider = AuthProvider(storageService);
+
+  // Wire audit logs from AuthProvider to ChallanProvider
+  authProvider.onAuditLog = (entry) => challanProvider.addAuditLog(entry);
+  await authProvider.initialize();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ChallanProvider(storageService)..initialize(),
-        ),
+        Provider<StorageService>.value(value: storageService),
+        ChangeNotifierProvider<ChallanProvider>.value(value: challanProvider),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
       ],
       child: const OmKhataBookApp(),
     ),
@@ -36,7 +45,20 @@ class OmKhataBookApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: const MainLayout(),
+      home: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (auth.isLoading) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          return auth.isAuthenticated
+              ? const MainLayout()
+              : const LoginView();
+        },
+      ),
     );
   }
 }

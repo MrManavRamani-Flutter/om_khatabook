@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
+import '../models/party.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'add_edit_challan_dialog.dart';
+import 'invoice_preview_dialog.dart';
 
 class ViewChallanDialog extends StatelessWidget {
   final ChallanEntry entry;
@@ -49,8 +51,32 @@ class ViewChallanDialog extends StatelessWidget {
     );
   }
 
+  void _openInvoiceDialog(BuildContext context) {
+    final provider = context.read<ChallanProvider>();
+    Party? party;
+    try {
+      party = provider.parties.firstWhere(
+        (p) =>
+            p.id == entry.partyId ||
+            p.name.trim().toUpperCase() == entry.partyName.trim().toUpperCase(),
+      );
+    } catch (_) {
+      party = null;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => InvoicePreviewDialog(
+        entry: entry,
+        party: party,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ChallanProvider>();
+    final challanLogs = provider.auditLogs.where((l) => l.entityId == entry.id).toList();
     final hasWarning = entry.hasWarning;
     final isCash = entry.paymentOption == PaymentOption.cash;
 
@@ -223,6 +249,46 @@ class ViewChallanDialog extends StatelessWidget {
                       const Divider(height: 16),
                       _buildRow('Notes', entry.notes),
                     ],
+                    if (challanLogs.isNotEmpty) ...[
+                      const Divider(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.history, size: 14, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Modification History (${challanLogs.length}):',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ...challanLogs.take(4).map((l) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 3),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    Formatters.dateTime(l.timestamp),
+                                    style: const TextStyle(fontSize: 10.5, color: Colors.grey),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${l.description} by ${l.performedBy} [${l.userRole}]',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -243,6 +309,16 @@ class ViewChallanDialog extends StatelessWidget {
                   ),
                   Row(
                     children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
+                        icon: const Icon(Icons.receipt_long, size: 18),
+                        label: const Text('Tax Invoice (A4/A5)'),
+                        onPressed: () => _openInvoiceDialog(context),
+                      ),
+                      const SizedBox(width: 8),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
                         child: const Text('Close'),

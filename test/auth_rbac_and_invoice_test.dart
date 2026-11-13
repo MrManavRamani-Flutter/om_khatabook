@@ -1,0 +1,230 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:om_khatabook/models/app_user.dart';
+import 'package:om_khatabook/models/audit_log_entry.dart';
+import 'package:om_khatabook/models/challan_entry.dart';
+import 'package:om_khatabook/models/party.dart';
+import 'package:om_khatabook/providers/auth_provider.dart';
+import 'package:om_khatabook/providers/challan_provider.dart';
+import 'package:om_khatabook/services/export_service.dart';
+import 'package:om_khatabook/services/storage_service.dart';
+import 'package:om_khatabook/utils/formatters.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('Authentication & RBAC Tests', () {
+    late StorageService storage;
+    late AuthProvider auth;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+      auth = AuthProvider(storage);
+      await auth.initialize();
+    });
+
+    test('Initial seeded accounts are admin, manager, and clerk', () {
+      expect(auth.users.length, equals(3));
+      final usernames = auth.users.map((u) => u.username).toList();
+      expect(usernames, containsAll(['admin', 'manager', 'clerk']));
+    });
+
+    test('Default login with admin/admin123 succeeds and grants full admin permissions', () async {
+      final success = await auth.login('admin', 'admin123');
+      expect(success, isTrue);
+      expect(auth.isAuthenticated, isTrue);
+      expect(auth.currentUser?.role, equals(UserRole.admin));
+
+      // RBAC Permission checks for Admin
+      expect(auth.canDelete, isTrue);
+      expect(auth.canPurgeRecycleBin, isTrue);
+      expect(auth.canManageUsers, isTrue);
+      expect(auth.canManageSettings, isTrue);
+      expect(auth.canViewAuditLogs, isTrue);
+      expect(auth.canClearAuditLogs, isTrue);
+    });
+
+    test('Manager role permissions allow edits & exports but prevent user management or log clearing', () async {
+      final success = await auth.login('manager', 'manager123');
+      expect(success, isTrue);
+      expect(auth.currentUser?.role, equals(UserRole.manager));
+
+      expect(auth.canDelete, isTrue);
+      expect(auth.canViewAuditLogs, isTrue);
+      expect(auth.canPurgeRecycleBin, isFalse);
+      expect(auth.canClearAuditLogs, isFalse);
+      expect(auth.canManageUsers, isFalse);
+      expect(auth.canManageSettings, isFalse);
+    });
+
+    test('Clerk role permissions allow entry/view only (no deletions, no user management)', () async {
+      final success = await auth.login('clerk', 'clerk123');
+      expect(success, isTrue);
+      expect(auth.currentUser?.role, equals(UserRole.clerk));
+
+      expect(auth.canDelete, isFalse);
+      expect(auth.canPurgeRecycleBin, isFalse);
+      expect(auth.canViewAuditLogs, isFalse);
+      expect(auth.canClearAuditLogs, isFalse);
+      expect(auth.canManageUsers, isFalse);
+      expect(auth.canManageSettings, isFalse);
+    });
+
+    test('Invalid login fails with false', () async {
+      final success = await auth.login('admin', 'wrong_pass');
+      expect(success, isFalse);
+      expect(auth.isAuthenticated, isFalse);
+      expect(auth.currentUser, isNull);
+    });
+
+    test('Logout clears session', () async {
+      await auth.login('admin', 'admin123');
+      expect(auth.isAuthenticated, isTrue);
+
+      await auth.logout();
+      expect(auth.isAuthenticated, isFalse);
+      expect(auth.currentUser, isNull);
+    });
+  });
+
+  group('Audit Trail Integrity Tests', () {
+    late StorageService storage;
+    late ChallanProvider provider;
+    late AuthProvider auth;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+      provider = ChallanProvider(storage);
+      await provider.initialize();
+      auth = AuthProvider(storage);
+      auth.onAuditLog = (entry) => provider.addAuditLog(entry);
+      await auth.initialize();
+      await auth.login('admin', 'admin123');
+    });
+
+    test('Login generates AuditAction.login entry', () {
+      final loginLogs = provider.auditLogs.where((l) => l.action == AuditAction.login);
+      expect(loginLogs.isNotEmpty, isTrue);
+      expect(loginLogs.first.performedBy, equals('admin'));
+    });
+
+    test('Adding a challan creates AuditAction.create log', () async {
+      final entry = await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-999',
+        partyId: 'party_1',
+        partyName: 'MANAV FAB',
+        challanAmount: 10000,
+        finalAmount: 10000,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: false,
+        performedBy: 'admin',
+      );
+
+      final createLogs = provider.auditLogs.where((l) => l.action == AuditAction.create && l.entityId == entry.id);
+      expect(createLogs.isNotEmpty, isTrue);
+      expect(createLogs.first.entityType, equals(AuditEntityType.challan));
+      expect(createLogs.first.entityTitle, contains('CH-999'));
+    });
+
+    test('Editing and soft deleting a challan appends to audit trail', () async {
+      final entry = await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-888',
+        partyId: 'party_1',
+        partyName: 'MANAV FAB',
+        challanAmount: 20000,
+        finalAmount: 20000,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: true,
+        performedBy: 'admin',
+      );
+
+      final updated = entry.copyWith(challanAmount: 55000);
+      await provider.updateChallan(updated, performedBy: 'admin');
+
+      final updateLogs = provider.auditLogs.where((l) => l.action == AuditAction.update && l.entityId == entry.id);
+      expect(updateLogs.isNotEmpty, isTrue);
+
+      await provider.moveToBinChallan(entry.id, performedBy: 'admin');
+      final deleteLogs = provider.auditLogs.where((l) => l.action == AuditAction.softDelete && l.entityId == entry.id);
+      expect(deleteLogs.isNotEmpty, isTrue);
+    });
+  });
+
+  group('Single-Page GST Tax Invoice & NumberToWords Tests', () {
+    test('Formatters.numberToWords correctly formats Indian currency', () {
+      expect(Formatters.numberToWords(0), equals('Rupees Zero Only'));
+      expect(Formatters.numberToWords(500), equals('Rupees Five Hundred Only'));
+      expect(Formatters.numberToWords(15420), equals('Rupees Fifteen Thousand Four Hundred Twenty Only'));
+      expect(Formatters.numberToWords(125000), equals('Rupees One Lakh Twenty Five Thousand Only'));
+      expect(Formatters.numberToWords(10000000), equals('Rupees One Crore Only'));
+      expect(Formatters.numberToWords(250.50), equals('Rupees Two Hundred Fifty and Fifty Paise Only'));
+    });
+
+    test('generateSingleInvoicePdfData generates non-empty A4 and A5 bytes', () async {
+      final challan = ChallanEntry(
+        id: 'TEST-INV-1',
+        challanNo: '101',
+        date: DateTime(2026, 11, 6),
+        partyId: 'p1',
+        partyName: 'MANAV FAB',
+        challanAmount: 20000,
+        finalAmount: 25000,
+        gstBillNo: 'JK-8899',
+        gstAmount: 1250,
+        paymentOption: PaymentOption.cheque,
+        chequeDetails: ChequeDetails(
+          chequeNo: '001245',
+          bankName: 'HDFC Bank',
+          chequeAmount: 25000,
+          chequeDate: DateTime(2026, 11, 6),
+          status: ChequeStatus.pending,
+        ),
+        createdAt: DateTime(2026, 11, 6),
+      );
+
+      final party = Party(
+        id: 'p1',
+        name: 'MANAV FAB',
+        phone: '9876543210',
+        address: 'Ring Road, Surat, Gujarat',
+        gstNumber: '24AAAAA0000A1Z5',
+        createdAt: DateTime(2026, 11, 6),
+      );
+
+      // A4 Test
+      final a4Bytes = await ExportService.generateSingleInvoicePdfData(
+        entry: challan,
+        party: party,
+        pageFormat: PdfPageFormat.a4,
+        companyName: 'OM Mavtar Group',
+        companyTagline: 'Textile Trading & Commercial Challan Management',
+        companyAddress: 'Surat Textile Market, Surat, Gujarat - 395002',
+        companyPhone: '+91 98250 12345',
+        companyGstin: '24AAFCO9080P1ZT',
+      );
+      expect(a4Bytes, isNotEmpty);
+      expect(a4Bytes.length, greaterThan(1000));
+
+      // A5 Test
+      final a5Bytes = await ExportService.generateSingleInvoicePdfData(
+        entry: challan,
+        party: party,
+        pageFormat: PdfPageFormat.a5,
+        companyName: 'OM Mavtar Group',
+        companyTagline: 'Textile Trading & Commercial Challan Management',
+        companyAddress: 'Surat Textile Market, Surat, Gujarat - 395002',
+        companyPhone: '+91 98250 12345',
+        companyGstin: '24AAFCO9080P1ZT',
+      );
+      expect(a5Bytes, isNotEmpty);
+      expect(a5Bytes.length, greaterThan(1000));
+    });
+  });
+}

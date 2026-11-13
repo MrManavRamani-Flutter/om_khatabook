@@ -3,15 +3,16 @@
 </p>
 
 # OM Mavtar Group Khata Book
-### Enterprise Desktop Challan & Commercial Billing Management System
+### Enterprise Commercial Challan, Billing & RBAC Management System
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-blue.svg?logo=flutter)](https://flutter.dev)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS-informational.svg)](https://flutter.dev/desktop)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-informational.svg)](https://flutter.dev)
 [![Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Inno%20Setup)-success.svg)](.github/workflows/build_windows_exe.yml)
-[![Tests](https://img.shields.io/badge/Tests-19%20Passed-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/Tests-30%20Passed-brightgreen.svg)](test/)
+[![Security](https://img.shields.io/badge/Security-RBAC%20%2B%20Audit%20Trail-blueviolet.svg)]()
 [![Language](https://img.shields.io/badge/UI%20Language-100%25%20English-blue.svg)]()
 
-A dedicated, production-grade desktop accounting and delivery challan ledger engineered specifically for **OM Mavtar Group**. Built with an **offline-first local architecture**, comprehensive manual financial controls, Excel-style spreadsheet views, two-stage Recycle Bin protection, automated GST invoice calculations, and enterprise PDF / Microsoft Excel (`.xlsx`) reporting.
+A dedicated, production-grade commercial accounting, delivery challan ledger, and tax invoicing system engineered specifically for **OM Mavtar Group**. Built with an **offline-first local architecture**, strict Role-Based Access Control (RBAC), tamper-evident audit logging, single-page A4/A5 GST tax invoice printing, Excel-style spreadsheet views, two-stage Recycle Bin protection, automated GST invoice calculations, and enterprise PDF / Microsoft Excel (`.xlsx`) reporting.
 
 ---
 
@@ -31,15 +32,14 @@ A dedicated, production-grade desktop accounting and delivery challan ledger eng
    - [11. Payment Options & Unpaid Cash Alert System](#11-payment-options--unpaid-cash-alert-system)
    - [12. Two-Stage Recycle Bin (Soft Delete & Permanent Purge)](#12-two-stage-recycle-bin)
    - [13. Professional PDF & Genuine Excel (.xlsx) Reports](#13-professional-pdf--genuine-excel-xlsx-reports)
-   - [14. Cross-Platform Desktop Builds & CI/CD Packaging](#14-cross-platform-desktop-builds--cicd-packaging)
+   - [14. Cross-Platform Desktop & Mobile Packaging](#14-cross-platform-desktop--mobile-packaging)
+   - [15. Single-Page Commercial GST Tax Invoice Printing (A4/A5)](#15-single-page-commercial-gst-tax-invoice-printing-a4a5)
+   - [16. Audit Trail & Modification History Log](#16-audit-trail--modification-history-log)
+   - [17. User Authentication & Role-Based Access Control (RBAC)](#17-user-authentication--role-based-access-control-rbac)
 3. [Audit of Shortcomings & Areas for Improvement (Khamiyan)](#-audit-of-shortcomings--limitations-khamiyan)
    - [1. Database & Persistence Scalability](#1-database--persistence-scalability)
-   - [2. Cloud Synchronization & Multi-Device Access](#2-cloud-synchronization--multi-device-access)
-   - [3. Single-Page Commercial GST Tax Invoice Printing (A4/A5)](#3-single-page-commercial-gst-tax-invoice-printing-a4a5)
-   - [4. Automated Bank Statement Reconciliation](#4-automated-bank-statement-reconciliation)
-   - [5. Audit Trail & Modification History Log](#5-audit-trail--modification-history-log)
-   - [6. User Authentication & Role-Based Access Control (RBAC)](#6-user-authentication--role-based-access-control-rbac)
-   - [7. Automated Scheduled Local & Cloud Backups](#7-automated-scheduled-local--cloud-backups)
+   - [2. Cloud Synchronization & Multi-Device Real-Time Sync](#2-cloud-synchronization--multi-device-real-time-sync)
+   - [3. Automated Scheduled Local & Cloud Backups](#3-automated-scheduled-local--cloud-backups)
 4. [Architecture & Technology Stack](#-architecture--technology-stack)
 5. [Local Build & Development Guide](#-local-build--development-guide)
 
@@ -98,52 +98,44 @@ Live summary cards calculating Total Challan Amount, Total Final Amount, Total G
 
 ### 2. Multiple Ledger View Modes
 Just like Windows File Explorer view settings, the ledger supports 3 distinct presentation layouts switchable from the top toolbar:
-1. **Excel Table Grid View (Default)**:
-   - High-density spreadsheet layout showing 10 to 15+ records simultaneously.
-   - Clean column alignments: Date, Challan No., Party Name, Challan Amt, Final Amt, GST Bill & Amt, Payment Status, and Action Buttons.
-   - Alternating row zebra shading and right-aligned currency formatting for effortless accounting audits.
+1. **Excel Table View (Default)**:
+   - High-density spreadsheet grid displaying multiple challan rows per screen.
+   - Column headers: Date, Challan No., Party Name, Challan Amt, Final Amt, GST Bill No., GST Amt, Payment Option, Payment Status, and Actions.
+   - Interactive sorting on click and direct Tax Invoice print icon per row.
 2. **Cards View**:
-   - Spaced, visual card presentation displaying complete payment badges, delivery notes, and transaction metadata.
-   - Includes prominent light-red highlight panels for overdue or unpaid entries.
+   - Modern Material 3 cards ideal for high-resolution visual inspection.
+   - Displays prominent monetary values, payment mode chips, and direct action icons.
 3. **Compact View**:
-   - Streamlined single-row list format optimized for ultra-fast vertical scrolling across hundreds of transactions.
-- **Persistent View Memory**: The chosen view mode is saved in local storage and remembered across app sessions.
+   - Minimalist single-line list representation for ultra-fast browsing of large datasets.
 
 ---
 
-### 3. Pre-Registered Commercial Parties
-All dummy test data was completely removed, and the 16 real-world commercial trading parties from OM Mavtar Group's notebook were seeded into the permanent database:
-
-| # | Registered Commercial Party Name | System Identifier | Default Status |
-| :-: | :--- | :--- | :-: |
-| 01 | **MANAV FAB** | `party_manav_fab` | Active |
-| 02 | **SWASTIK CREATION** | `party_swastik_creation` | Active |
-| 03 | **KAMDAR SILK MILLS** | `party_kamdar_silk_mills` | Active |
-| 04 | **HEERA ENTERPRISE** | `party_heera_enterprise` | Active |
-| 05 | **RADHE MOHAN SILK MILLS** | `party_radhe_mohan_silk_mills` | Active |
-| 06 | **CHIRAG CREATION** | `party_chirag_creation` | Active |
-| 07 | **OMKAR PARAG** | `party_omkar_parag` | Active |
-| 08 | **GURU DHARMESH BHAI** | `party_guru_dharmesh_bhai` | Active |
-| 09 | **MAYUR SILK MILLS** | `party_mayur_silk_mills` | Active |
-| 10 | **PREE PRATIK** | `party_pree_pratik` | Active |
-| 11 | **MOLI MOHAN** | `party_moli_mohan` | Active |
-| 12 | **SHREE OM CREATION** | `party_shree_om_creation` | Active |
-| 13 | **PRATHAM TRADING** | `party_pratham_trading` | Active |
-| 14 | **RAKESH CORPORATION** | `party_rakesh_corporation` | Active |
-| 15 | **VARNIKA** | `party_varnika` | Active |
-| 16 | **MRT CREATION** | `party_mrt_creation` | Active |
+### 3. Pre-Registered Commercial Parties (Notebook Data)
+- The application automatically seeds and validates the 16 real commercial textile entities:
+  1. `MANAV FAB`
+  2. `SWASTIK CREATION`
+  3. `KAMDAR SILK MILLS`
+  4. `HEERA ENTERPRISE`
+  5. `RADHE MOHAN SILK MILLS`
+  6. `CHIRAG CREATION`
+  7. `OMKAR PARAG`
+  8. `GURU DHARMESH BHAI`
+  9. `MAYUR SILK MILLS`
+  10. `PAREEK PRATIK`
+  11. `MOTI MOHAN`
+  12. `SHREE OM CREATION`
+  13. `PRATHAM TRADING`
+  14. `RAKESH CORPORATION`
+  15. `VARNIKA`
+  16. `MRT CREATION`
 
 ---
 
 ### 4. Parties Directory & Dedicated Party Ledger View
-- **Dedicated Party Ledger Screen**:
-  - Clicking on any party in the Parties Directory opens an **isolated, exclusive ledger** for that specific party (`PartyLedgerDetailView`).
-  - **Zero Cross-Contamination**: Displays strictly that party's transactions—no entries from other parties appear.
-  - **Party Header Summary**: Displays registered business phone, address, GSTIN badge, and registration timestamp.
-  - **Party-Specific KPI Cards**: Calculates Total Challan Amount, Total Final Amount, Total GST, and Pending Dues strictly for that individual account.
-  - **Direct Actions**:
-    - `+ Add Challan`: Automatically pre-selects the current party in the entry dialog.
-    - `Export Party Ledger`: Instantly exports PDF statements or Excel files containing only that party's commercial history.
+- **Dedicated Party Ledger Navigation**:
+  - Clicking any party in the Parties Directory or Challan Ledger opens an isolated, dedicated ledger screen (`PartyLedgerDetailView`).
+  - Automatically isolates that party's transactions and computes party-specific totals (Total Business, Outstanding Balance, Cheques in Clearing).
+  - One-click party ledger PDF and Excel statement export.
 
 ---
 
@@ -250,7 +242,7 @@ All dummy test data was completely removed, and the 16 real-world commercial tra
 
 ---
 
-### 14. Cross-Platform Desktop Builds & CI/CD Packaging
+### 14. Cross-Platform Desktop & Mobile Packaging
 - **Windows 10/11 Standalone Installer (.exe)**:
   - Custom Inno Setup script (`windows/installer/inno_setup.iss`) compiling a production `OmMavtarKhataBook_Setup.exe`.
   - Creates Start Menu and Desktop shortcuts, embeds the 32-bit DIB Windows icon, and registers clean uninstallation in **Windows Settings > Installed Apps**.
@@ -261,6 +253,77 @@ All dummy test data was completely removed, and the 16 real-world commercial tra
 - **Native macOS Desktop Application**:
   - Compiled release bundle for macOS (`build/macos/Build/Products/Release/om_khatabook.app`).
   - App Sandbox security entitlements configured to prevent macOS `SIGTRAP` termination when launching from `/Applications` or Desktop.
+- **Mobile & Tablet Ready (Android & iOS)**:
+  - Responsive layout dynamically switches between a collapsible sidebar (Desktop/Tablet) and a Material 3 navigation drawer (Mobile phones).
+
+---
+
+### 15. Single-Page Commercial GST Tax Invoice Printing (A4/A5)
+- **Single-Challan Formal Tax Invoice**:
+  - Direct print icon on every row in Excel Table, Cards, and Compact views, as well as an dedicated **Tax Invoice (A4/A5)** button inside the Challan Viewer modal.
+- **Live Interactive Preview Modal (`InvoicePreviewDialog`)**:
+  - Instant toggle between **A4 Standard Sheet** (full-page commercial invoice) and **A5 Half Sheet** (compact dispatch bill).
+  - Built-in toolbar with **Direct System Print** and **Save PDF to Documents**.
+- **Indian GST Regulatory Compliance**:
+  - **Taxable Base Amount**: Correctly breaks down taxable base vs tax component.
+  - **50-50 CGST & SGST Split**: Splits applicable GST rate into equal Central GST and State GST line items (e.g., 5% GST -> 2.5% CGST + 2.5% SGST).
+  - **HSN/SAC Classification**: Standard textile woven fabrics tariff code `5407`.
+  - **Indian Currency Words Conversion**: Automated word transcription of the grand total (e.g., *"Rupees Twenty-Five Thousand Only"*) supporting Crores, Lakhs, Thousands, Hundreds, Rupees, and Paise via `Formatters.numberToWords`.
+  - **Real Vector QR Code**: Embeds invoice verification data, GSTIN, invoice number, and authentication URL without external image dependencies.
+  - **Banking & Statutory Details**: Complete company bank details (Bank Name, Account Number, IFSC Code, Branch), commercial terms of supply, and Authorized Signatory stamp box.
+
+---
+
+### 16. Audit Trail & Modification History Log
+- **Tamper-Evident History Log**:
+  - Every commercial operation is automatically logged into persistent local storage (`StorageService`).
+  - Captured actions: `CREATE`, `UPDATE`, `SOFT_DELETE`, `RESTORE`, `PERMANENT_DELETE`, `LOGIN`, `LOGOUT`, `USER_CREATE`, `USER_DELETE`, `EXPORT_REPORT`.
+- **Dedicated Audit Trail Screen (`AuditLogView`)**:
+  - High-visibility KPI cards: Total Logged Actions, Creates, Updates, Deletions, and Login Sessions.
+  - Real-time search by voucher number, party name, or operator username.
+  - Filter chips by action type (`All`, `Create`, `Update`, `Soft Delete`, `Restore`, `Purge`, `Login`) and entity type (`Challan`, `Party`, `User`, `Report`, `Settings`).
+  - Detailed audit inspection dialog showing exact timestamps, user roles, before/after descriptions, and metadata.
+- **Genuine Excel Audit Export**:
+  - One-click export to formatted `.xlsx` spreadsheet for external chartered accountants and tax audits.
+- **Voucher-Level History**:
+  - View Challan dialog features a **Modification History** button displaying the chronological audit log of that specific invoice voucher.
+
+---
+
+### 17. User Authentication & Role-Based Access Control (RBAC)
+- **Mandatory Login Gate (`LoginView`)**:
+  - Unauthenticated users cannot access the ledger dashboard or view commercial turnover.
+  - Brand header with OM Mavtar Group logo, enterprise badge, and platform indicators.
+  - Session persistence with "Remember Me" toggle.
+- **Default Testing Credentials & Quick Suggestion Chips**:
+  - Default credentials pre-configured:
+    - **Username**: `admin`
+    - **Password**: `admin123`
+  - Quick-fill suggestion chips on the login screen for rapid role testing:
+    - `[ 👑 Admin (admin / admin123) ]`
+    - `[ 🏢 Manager (manager / manager123) ]`
+    - `[ 📝 Clerk (clerk / clerk123) ]`
+- **Granular 3-Tier Permission Matrix**:
+  | Feature / Permission | 👑 Administrator (`admin`) | 🏢 Branch Manager (`manager`) | 📝 Entry Clerk (`clerk`) |
+  | :--- | :---: | :---: | :---: |
+  | Create & Edit Challans | ✅ Allowed | ✅ Allowed | ✅ Allowed |
+  | Register Commercial Parties | ✅ Allowed | ✅ Allowed | ❌ Restricted |
+  | Export PDF & Excel Reports | ✅ Allowed | ✅ Allowed | ✅ Allowed |
+  | Print A4/A5 GST Tax Invoices | ✅ Allowed | ✅ Allowed | ✅ Allowed |
+  | Soft Delete to Recycle Bin | ✅ Allowed | ✅ Allowed | ❌ Restricted |
+  | Restore from Recycle Bin | ✅ Allowed | ✅ Allowed | ❌ Restricted |
+  | Permanent Purge Recycle Bin | ✅ Allowed | ❌ Restricted | ❌ Restricted |
+  | View Audit Trail Log | ✅ Allowed | ✅ Allowed | ❌ Restricted |
+  | Clear Audit Trail History | ✅ Allowed | ❌ Restricted | ❌ Restricted |
+  | Manage Users & System Roles | ✅ Allowed | ❌ Restricted | ❌ Restricted |
+  | Modify System Branding | ✅ Allowed | ❌ Restricted | ❌ Restricted |
+- **User Management Dialog (`UserManagementDialog`)**:
+  - Accessible exclusively to Admins from the top-right profile avatar menu.
+  - Real-time user roster with active session indicators and assigned role chips.
+  - Add new authorized operators with custom passwords, display names, and assigned permission roles.
+  - Delete operators with confirmation protection (default admin account is locked from accidental deletion).
+- **Cross-Platform Responsive UI**:
+  - Fluid responsive layouts tailored for desktop screens (Windows, macOS) and mobile/tablet touchscreens (Android, iOS).
 
 ---
 
@@ -269,7 +332,7 @@ All dummy test data was completely removed, and the 16 real-world commercial tra
 While OM Mavtar Group Khata Book is a robust, production-ready desktop tool, the following technical and functional limitations have been identified during audit. These represent clear opportunities for future engineering enhancements:
 
 ### 1. Database & Persistence Scalability
-- **Current Architecture**: The application persists data by serializing the entire list of challans and parties into a JSON string stored inside `SharedPreferences` (Windows Registry on Windows, `NSUserDefaults` / plist on macOS).
+- **Current Architecture**: The application persists data by serializing the entire list of challans, parties, users, and audit logs into JSON strings stored inside `SharedPreferences` (Windows Registry on Windows, `NSUserDefaults` / plist on macOS).
 - **Limitation (Khami)**:
   - While fast and zero-configuration for thousands of records, `SharedPreferences` requires serializing and deserializing the entire JSON payload into memory every time an edit occurs.
   - As commercial transactions reach 20,000+ entries over several financial years, memory usage and write latency will increase.
@@ -277,7 +340,7 @@ While OM Mavtar Group Khata Book is a robust, production-ready desktop tool, the
 
 ---
 
-### 2. Cloud Synchronization & Multi-Device Access
+### 2. Cloud Synchronization & Multi-Device Real-Time Sync
 - **Current Architecture**: 100% offline-first local desktop application.
 - **Limitation (Khami)**:
   - Transactions entered on Computer A are not automatically synchronized to Computer B in another branch or shop.
@@ -287,43 +350,7 @@ While OM Mavtar Group Khata Book is a robust, production-ready desktop tool, the
 
 ---
 
-### 3. Single-Page Commercial GST Tax Invoice Printing (A4/A5)
-- **Current Architecture**: The PDF export engine creates comprehensive multi-row ledger statements, monthly reports, and filtered transaction audits.
-- **Limitation (Khami)**:
-  - The system does not currently feature a dedicated single-challan formal **GST Tax Invoice printing template** (A4 or A5 half-page receipt).
-  - Missing formal tax invoice fields: HSN/SAC code classification, split CGST/SGST 50-50 breakdown columns, authorized signatory stamp box, terms & conditions footer, and Indian e-Way Bill / IRN QR code generation.
-- **Recommended Upgrade**: Introduce a "Print Tax Invoice" button on individual challans that formats an industry-standard commercial GST tax invoice ready for physical dot-matrix or laser printing.
-
----
-
-### 4. Automated Bank Statement Reconciliation
-- **Current Architecture**: Cheque payment statuses (`Pending`, `Cleared`, `Bounced`) are tracked manually by user updates.
-- **Limitation (Khami)**:
-  - Operators must manually cross-reference paper bank statements and manually update each cheque's clearance status.
-  - No automated import parser exists for bank statement formats (such as Excel `.xlsx`, `.csv`, or `.ofx` bank exports).
-- **Recommended Upgrade**: Add a "Reconcile Bank Statement" wizard allowing users to upload their bank statement Excel file and automatically match cleared cheques by Cheque Number and Amount.
-
----
-
-### 5. Audit Trail & Modification History Log
-- **Current Architecture**: The two-stage Recycle Bin protects against accidental deletions.
-- **Limitation (Khami)**:
-  - If a user modifies an existing challan's amount, party name, or payment status, the previous values are overwritten without retaining an audit history log.
-  - The business owner cannot see who modified an amount, what the previous value was, or the exact timestamp of modification.
-- **Recommended Upgrade**: Implement an internal `AuditLog` table that records all changes: `timestamp`, `action` (`EDIT`), `field_name`, `old_value`, and `new_value`.
-
----
-
-### 6. User Authentication & Role-Based Access Control (RBAC)
-- **Current Architecture**: The application opens directly into the ledger without authentication prompts.
-- **Limitation (Khami)**:
-  - Anyone with physical access to the desktop computer can view total turnover, edit financial records, or delete parties.
-  - There is no role distinction between an Admin (full access) and a Data Entry Operator (can add challans but cannot delete records or view overall financial profit KPIs).
-- **Recommended Upgrade**: Add an optional Master PIN / Password lock on startup, with configurable Operator and Admin permission profiles.
-
----
-
-### 7. Automated Scheduled Local & Cloud Backups
+### 3. Automated Scheduled Local & Cloud Backups
 - **Current Architecture**: Database backups require the user to navigate to **Settings > Export Database Backup** and save the file manually.
 - **Limitation (Khami)**:
   - If an operator forgets to perform periodic backups and the computer experiences hardware failure or operating system reinstallation, unbacked data could be lost.
@@ -348,19 +375,26 @@ om_khatabook/
 │       ├── parties_directory.png       # Parties Directory screenshot
 │       └── overview_dashboard.jpg      # Financial KPI overview screenshot
 ├── lib/
-│   ├── main.dart                        # App entry point with Provider scope & casing
+│   ├── main.dart                        # App entry point, MultiProvider scope & Login gate
 │   ├── models/
+│   │   ├── app_user.dart                # User model with 3-tier UserRole & permissions
+│   │   ├── audit_log_entry.dart         # Tamper-evident audit log model & action types
 │   │   ├── challan_entry.dart           # Challan model with soft-delete & warning flags
 │   │   └── party.dart                   # Party model with notebook records & metadata
 │   ├── providers/
-│   │   └── challan_provider.dart        # Core business logic, filters, sorting, Recycle Bin
+│   │   ├── auth_provider.dart           # Authentication state, session storage & RBAC
+│   │   └── challan_provider.dart        # Core business logic, filters, sorting, Recycle Bin & audit
 │   ├── services/
-│   │   ├── export_service.dart          # PDF & Excel (.xlsx) report generation engine
-│   │   └── storage_service.dart         # Local persistence, branding sync & JSON backup
+│   │   ├── export_service.dart          # Single invoice A4/A5 PDF, Excel reports & audit export
+│   │   └── storage_service.dart         # Local persistence, users, audit logs & JSON backup
 │   ├── theme/
 │   │   └── app_theme.dart               # Corporate OM Mavtar Group branding theme
+│   ├── utils/
+│   │   └── formatters.dart              # Currency, date, and Indian numberToWords converter
 │   ├── views/
+│   │   ├── audit_log_view.dart          # Dedicated audit trail viewer with Excel export
 │   │   ├── challan_list_view.dart       # Main Challan Ledger (Excel Grid, Cards, Compact)
+│   │   ├── login_view.dart              # Responsive login screen with role quick-fill chips
 │   │   ├── main_layout.dart             # Collapsible desktop sidebar & header navigation
 │   │   ├── parties_view.dart            # Parties Directory with dedicated ledger navigation
 │   │   ├── party_ledger_detail_view.dart # Dedicated isolated Party Ledger screen
@@ -370,14 +404,18 @@ om_khatabook/
 │   └── widgets/
 │       ├── add_edit_challan_dialog.dart # Form dialog with autocomplete & GST prefixes
 │       ├── add_edit_party_dialog.dart   # Party creation and management dialog
-│       ├── app_logo_widget.dart         # Centralized reactive branding logo widget
+│       ├── branding_dialogs.dart        # Centralized reactive branding & logo widgets
 │       ├── export_report_dialog.dart    # PDF / Excel export wizard
+│       ├── invoice_preview_dialog.dart  # Interactive A4/A5 single-page tax invoice modal
+│       ├── user_management_dialog.dart  # Admin user roster & permission matrix dialog
 │       └── view_challan_dialog.dart     # Detailed challan inspection viewer
 ├── test/
+│   ├── auth_rbac_and_invoice_test.dart  # Auth, RBAC permissions, audit trail & A4/A5 invoice tests
+│   ├── partial_payment_test.dart        # Partial payment & balance calculation tests
 │   ├── party_autocomplete_gst_and_branding_test.dart # Autocomplete, GST & branding tests
-│   ├── party_ledger_navigation_test.dart             # Dedicated party ledger tests
-│   ├── recycle_bin_test.dart                         # Soft-delete & permanent purge tests
-│   └── widget_test.dart                              # Desktop UI smoke tests
+│   ├── party_ledger_navigation_test.dart # Dedicated party ledger tests
+│   ├── recycle_bin_test.dart            # Soft-delete & permanent purge tests
+│   └── widget_test.dart                 # Desktop UI smoke tests
 └── windows/
     ├── runner/
     │   └── resources/
@@ -396,6 +434,7 @@ om_khatabook/
 - **Desktop Tools**:
   - **macOS**: Xcode & CocoaPods
   - **Windows**: Visual Studio 2022 (with "Desktop development with C++" workload)
+  - **Android / iOS**: Android Studio / Xcode command line tools
 
 ### 1. Run on macOS Desktop:
 ```bash
@@ -409,17 +448,24 @@ flutter pub get
 flutter run -d windows
 ```
 
-### 3. Run Automated Tests:
+### 3. Run on Mobile / Tablet (Android / iOS):
+```bash
+flutter run -d android
+# or
+flutter run -d ios
+```
+
+### 4. Run Automated Tests:
 ```bash
 flutter test
 ```
 
-### 4. Run Code Analysis:
+### 5. Run Code Analysis:
 ```bash
 flutter analyze
 ```
 
-### 5. Build Standalone Windows Installer locally (on Windows):
+### 6. Build Standalone Windows Installer locally (on Windows):
 ```powershell
 flutter build windows --release
 iscc windows\installer\inno_setup.iss
@@ -431,5 +477,5 @@ Output setup executable will be located at:
 
 <p align="center">
   <b>OM Mavtar Group Khata Book</b> • Dedicated Commercial Ledger System<br>
-  Designed & Engineered for High-Reliability Desktop Accounting
+  Designed & Engineered for High-Reliability Commercial Accounting
 </p>

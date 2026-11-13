@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/app_user.dart';
+import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
 
@@ -22,6 +24,9 @@ class StorageService {
   static const String _keyAdminName = 'om_admin_name_v2';
   static const String _keyAdminRole = 'om_admin_role_v2';
   static const String _keySidebarCollapsed = 'om_sidebar_collapsed_v2';
+  static const String _keyUsers = 'om_users_v2';
+  static const String _keyActiveSession = 'om_active_session_v2';
+  static const String _keyAuditLogs = 'om_audit_logs_v2';
 
   late SharedPreferences _prefs;
 
@@ -143,17 +148,85 @@ class StorageService {
     await _prefs.setString(_keyChallans, jsonEncode(list));
   }
 
+  // --- USERS & AUTHENTICATION (RBAC) ---
+  Future<List<AppUser>> loadUsers() async {
+    final str = _prefs.getString(_keyUsers);
+    if (str != null && str.isNotEmpty) {
+      try {
+        final list = jsonDecode(str) as List<dynamic>;
+        return list
+            .map((e) => AppUser.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        debugPrint('Error loading users: $e');
+      }
+    }
+    return [];
+  }
+
+  Future<void> saveUsers(List<AppUser> users) async {
+    final list = users.map((u) => u.toJson()).toList();
+    await _prefs.setString(_keyUsers, jsonEncode(list));
+  }
+
+  Future<AppUser?> loadActiveSessionUser() async {
+    final str = _prefs.getString(_keyActiveSession);
+    if (str != null && str.isNotEmpty) {
+      try {
+        return AppUser.fromJson(jsonDecode(str) as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('Error loading active session user: $e');
+      }
+    }
+    return null;
+  }
+
+  Future<void> saveActiveSessionUser(AppUser? user) async {
+    if (user == null) {
+      await _prefs.remove(_keyActiveSession);
+    } else {
+      await _prefs.setString(_keyActiveSession, jsonEncode(user.toJson()));
+    }
+  }
+
+  // --- AUDIT TRAIL & HISTORY LOGS ---
+  Future<List<AuditLogEntry>> loadAuditLogs() async {
+    final str = _prefs.getString(_keyAuditLogs);
+    if (str != null && str.isNotEmpty) {
+      try {
+        final list = jsonDecode(str) as List<dynamic>;
+        return list
+            .map((e) => AuditLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        debugPrint('Error loading audit logs: $e');
+      }
+    }
+    return [];
+  }
+
+  Future<void> saveAuditLogs(List<AuditLogEntry> logs) async {
+    // Keep up to 2000 most recent logs
+    final trimmed = logs.length > 2000 ? logs.sublist(0, 2000) : logs;
+    final list = trimmed.map((l) => l.toJson()).toList();
+    await _prefs.setString(_keyAuditLogs, jsonEncode(list));
+  }
+
   // --- BACKUP & RESTORE ---
   Future<String> exportBackupJson() async {
     final partiesStr = _prefs.getString(_keyParties) ?? '[]';
     final challansStr = _prefs.getString(_keyChallans) ?? '[]';
+    final usersStr = _prefs.getString(_keyUsers) ?? '[]';
+    final auditStr = _prefs.getString(_keyAuditLogs) ?? '[]';
 
     final data = {
       'app': 'OM Mavtar Group Khata Book',
-      'version': '2.0.0',
+      'version': '2.1.0',
       'exportedAt': DateTime.now().toIso8601String(),
       'parties': jsonDecode(partiesStr),
       'challans': jsonDecode(challansStr),
+      'users': jsonDecode(usersStr),
+      'auditLogs': jsonDecode(auditStr),
       'branding': {
         'companyName': companyName,
         'companyTagline': companyTagline,
@@ -188,7 +261,14 @@ class StorageService {
       if (data.containsKey('challans')) {
         await _prefs.setString(_keyChallans, jsonEncode(data['challans']));
       }
-      if (data.containsKey('branding') && data['branding'] is Map<String, dynamic>) {
+      if (data.containsKey('users')) {
+        await _prefs.setString(_keyUsers, jsonEncode(data['users']));
+      }
+      if (data.containsKey('auditLogs')) {
+        await _prefs.setString(_keyAuditLogs, jsonEncode(data['auditLogs']));
+      }
+      if (data.containsKey('branding') &&
+          data['branding'] is Map<String, dynamic>) {
         final b = data['branding'] as Map<String, dynamic>;
         if (b['companyName'] != null) await setCompanyName(b['companyName'] as String);
         if (b['companyTagline'] != null) await setCompanyTagline(b['companyTagline'] as String);
@@ -217,5 +297,8 @@ class StorageService {
     await _prefs.remove(_keyParties);
     await _prefs.remove(_keyChallans);
     await _prefs.remove(_keyFirstRun);
+    await _prefs.remove(_keyUsers);
+    await _prefs.remove(_keyActiveSession);
+    await _prefs.remove(_keyAuditLogs);
   }
 }

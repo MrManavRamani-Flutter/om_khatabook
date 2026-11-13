@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:om_khatabook/main.dart';
+import 'package:om_khatabook/providers/auth_provider.dart';
 import 'package:om_khatabook/providers/challan_provider.dart';
 import 'package:om_khatabook/services/storage_service.dart';
 import 'package:om_khatabook/views/party_ledger_detail_view.dart';
@@ -20,10 +21,16 @@ void main() {
     final provider = ChallanProvider(storageService);
     await provider.initialize();
 
+    final authProvider = AuthProvider(storageService);
+    await authProvider.initialize();
+    await authProvider.login('admin', 'admin123');
+
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          Provider<StorageService>.value(value: storageService),
           ChangeNotifierProvider<ChallanProvider>.value(value: provider),
+          ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ],
         child: const OmKhataBookApp(),
       ),
