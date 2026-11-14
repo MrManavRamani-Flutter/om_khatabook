@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -76,6 +77,7 @@ class ViewChallanDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
     final challanLogs = provider.auditLogs.where((l) => l.entityId == entry.id).toList();
     final hasWarning = entry.hasWarning;
     final isCash = entry.paymentOption == PaymentOption.cash;
@@ -298,41 +300,48 @@ class ViewChallanDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.warningText,
-                      side: const BorderSide(color: AppColors.warningBorder),
-                    ),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete'),
-                    onPressed: () => _showDeleteConfirm(context),
-                  ),
+                  if (auth.canDelete)
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.warningText,
+                        side: const BorderSide(color: AppColors.warningBorder),
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete'),
+                      onPressed: () => _showDeleteConfirm(context),
+                    )
+                  else
+                    const SizedBox.shrink(),
                   Row(
                     children: [
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
+                      if (auth.canPrintInvoice) ...[
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                          icon: const Icon(Icons.receipt_long, size: 18),
+                          label: const Text('Tax Invoice (A4/A5)'),
+                          onPressed: () => _openInvoiceDialog(context),
                         ),
-                        icon: const Icon(Icons.receipt_long, size: 18),
-                        label: const Text('Tax Invoice (A4/A5)'),
-                        onPressed: () => _openInvoiceDialog(context),
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
+                      ],
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
                         child: const Text('Close'),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                      if (auth.canEditChallan) ...[
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(Icons.edit, size: 18),
+                          label: const Text('Edit Entry'),
+                          onPressed: () => _openEdit(context),
                         ),
-                        icon: const Icon(Icons.edit, size: 18),
-                        label: const Text('Edit Entry'),
-                        onPressed: () => _openEdit(context),
-                      ),
+                      ],
                     ],
                   ),
                 ],

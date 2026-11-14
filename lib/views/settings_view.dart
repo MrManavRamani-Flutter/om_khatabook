@@ -628,20 +628,39 @@ class SettingsView extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  ),
-                                  icon: const Icon(Icons.manage_accounts, size: 18),
-                                  label: const Text('Manage Users & Permissions'),
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => const UserManagementDialog(),
-                                    );
-                                  },
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      ),
+                                      icon: const Icon(Icons.security, size: 16),
+                                      label: const Text('Role Permissions Matrix'),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => const UserManagementDialog(initialTabIndex: 1),
+                                        );
+                                      },
+                                    ),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      ),
+                                      icon: const Icon(Icons.manage_accounts, size: 18),
+                                      label: const Text('Manage Users & Permissions'),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => const UserManagementDialog(),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

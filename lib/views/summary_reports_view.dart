@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../services/export_service.dart';
 import '../theme/app_theme.dart';
@@ -60,6 +61,7 @@ class SummaryReportsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
     final challans = provider.challans;
 
     final totalChallan = provider.totalChallanAmount;
@@ -120,38 +122,39 @@ class SummaryReportsView extends StatelessWidget {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _quickExportPdf(context),
-                      icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-                      label: const Text('Quick PDF'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                if (auth.canExportReports)
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _quickExportPdf(context),
+                        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                        label: const Text('Quick PDF'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => _quickExportExcel(context),
-                      icon: const Icon(Icons.table_chart, color: Color(0xFF15803D), size: 18),
-                      label: const Text('Quick Excel'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _quickExportExcel(context),
+                        icon: const Icon(Icons.table_chart, color: Color(0xFF15803D), size: 18),
+                        label: const Text('Quick Excel'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _openCustomReportDialog(context),
-                      icon: const Icon(Icons.tune, size: 18),
-                      label: const Text('Custom Report Generator'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _openCustomReportDialog(context),
+                        icon: const Icon(Icons.tune, size: 18),
+                        label: const Text('Custom Report Generator'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 24),

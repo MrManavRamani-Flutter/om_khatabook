@@ -8,7 +8,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-blue.svg?logo=flutter)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-informational.svg)](https://flutter.dev)
 [![Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Inno%20Setup)-success.svg)](.github/workflows/build_windows_exe.yml)
-[![Tests](https://img.shields.io/badge/Tests-30%20Passed-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/Tests-34%20Passed-brightgreen.svg)](test/)
 [![Security](https://img.shields.io/badge/Security-RBAC%20%2B%20Audit%20Trail-blueviolet.svg)]()
 [![Language](https://img.shields.io/badge/UI%20Language-100%25%20English-blue.svg)]()
 
@@ -303,25 +303,29 @@ Just like Windows File Explorer view settings, the ledger supports 3 distinct pr
     - `[ 👑 Admin (admin / admin123) ]`
     - `[ 🏢 Manager (manager / manager123) ]`
     - `[ 📝 Clerk (clerk / clerk123) ]`
-- **Granular 3-Tier Permission Matrix**:
-  | Feature / Permission | 👑 Administrator (`admin`) | 🏢 Branch Manager (`manager`) | 📝 Entry Clerk (`clerk`) |
-  | :--- | :---: | :---: | :---: |
-  | Create & Edit Challans | ✅ Allowed | ✅ Allowed | ✅ Allowed |
-  | Register Commercial Parties | ✅ Allowed | ✅ Allowed | ❌ Restricted |
-  | Export PDF & Excel Reports | ✅ Allowed | ✅ Allowed | ✅ Allowed |
-  | Print A4/A5 GST Tax Invoices | ✅ Allowed | ✅ Allowed | ✅ Allowed |
-  | Soft Delete to Recycle Bin | ✅ Allowed | ✅ Allowed | ❌ Restricted |
-  | Restore from Recycle Bin | ✅ Allowed | ✅ Allowed | ❌ Restricted |
-  | Permanent Purge Recycle Bin | ✅ Allowed | ❌ Restricted | ❌ Restricted |
-  | View Audit Trail Log | ✅ Allowed | ✅ Allowed | ❌ Restricted |
-  | Clear Audit Trail History | ✅ Allowed | ❌ Restricted | ❌ Restricted |
-  | Manage Users & System Roles | ✅ Allowed | ❌ Restricted | ❌ Restricted |
-  | Modify System Branding | ✅ Allowed | ❌ Restricted | ❌ Restricted |
-- **User Management Dialog (`UserManagementDialog`)**:
-  - Accessible exclusively to Admins from the top-right profile avatar menu.
-  - Real-time user roster with active session indicators and assigned role chips.
-  - Add new authorized operators with custom passwords, display names, and assigned permission roles.
-  - Delete operators with confirmation protection (default admin account is locked from accidental deletion).
+- **Dynamic Database-Persisted Role Permissions Matrix (`RolePermissions`)**:
+  - Permissions are no longer hardcoded: Administrator can dynamically grant, toggle, or revoke every capability per role (`Admin`, `Manager`, `Clerk`) through an interactive matrix.
+  - **Database Persistence**: All permission modifications are immediately persisted in the local database (`StorageService`) and included in JSON backup export/restore (`.json`), persisting across app restarts.
+  - **12 Granular Permission Controls**:
+    1. *Create Delivery Challans* (`canCreateChallan`)
+    2. *Edit Existing Challans* (`canEditChallan`)
+    3. *Soft Delete to Recycle Bin* (`canDeleteChallan`)
+    4. *Restore from Recycle Bin* (`canRestoreChallan`)
+    5. *Permanent Purge Recycle Bin* (`canPurgeRecycleBin`)
+    6. *Register & Manage Parties* (`canManageParties`)
+    7. *Export Reports (PDF / Excel)* (`canExportReports`)
+    8. *Print Tax Invoices (A4/A5)* (`canPrintInvoice`)
+    9. *View System Audit Logs* (`canViewAuditLogs`)
+    10. *Clear Audit Trail History* (`canClearAuditLogs`)
+    11. *Manage Users & Dynamic Roles* (`canManageUsers`)
+    12. *Modify Settings & App Branding* (`canManageSettings`)
+  - **Admin Safety Lock**: Built-in protection prevents revoking `canManageUsers` on the Administrator role, guaranteeing the system can never be permanently locked out.
+  - **Reset to Factory Defaults**: Instant one-click restore button to revert permissions to recommended defaults with confirmation.
+  - **Audit Logging**: Every permission change or factory reset is automatically recorded with timestamp, operator, and action details in the Audit Trail.
+- **Dual-Tab Management Dialog (`UserManagementDialog`)**:
+  - Accessible to Administrators from the sidebar footer (`manage_accounts_outlined`), top avatar profile menu, or Settings.
+  - **Tab 1: 👥 Authorized Users**: Add operators, change passwords, assign roles, view active session indicators, and delete users safely.
+  - **Tab 2: 🛡️ Dynamic Role Permissions (Database)**: Interactive switch matrix to dynamically customize role capabilities with live database persistence.
 - **Cross-Platform Responsive UI**:
   - Fluid responsive layouts tailored for desktop screens (Windows, macOS) and mobile/tablet touchscreens (Android, iOS).
 
@@ -377,10 +381,11 @@ om_khatabook/
 ├── lib/
 │   ├── main.dart                        # App entry point, MultiProvider scope & Login gate
 │   ├── models/
-│   │   ├── app_user.dart                # User model with 3-tier UserRole & permissions
+│   │   ├── app_user.dart                # User model with 3-tier UserRole & dynamic RBAC
 │   │   ├── audit_log_entry.dart         # Tamper-evident audit log model & action types
 │   │   ├── challan_entry.dart           # Challan model with soft-delete & warning flags
-│   │   └── party.dart                   # Party model with notebook records & metadata
+│   │   ├── party.dart                   # Party model with notebook records & metadata
+│   │   └── role_permissions.dart        # Dynamic database-persisted RBAC permissions matrix
 │   ├── providers/
 │   │   ├── auth_provider.dart           # Authentication state, session storage & RBAC
 │   │   └── challan_provider.dart        # Core business logic, filters, sorting, Recycle Bin & audit

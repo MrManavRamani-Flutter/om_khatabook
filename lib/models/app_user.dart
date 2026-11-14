@@ -1,3 +1,5 @@
+export 'role_permissions.dart';
+
 enum UserRole {
   admin('Administrator', 'Full system access: create, edit, delete, restore, purge, users & audit'),
   manager('Branch Manager', 'Commercial access: create, edit, view, reports, restore (cannot purge or edit users)'),
@@ -101,3 +103,4 @@ class AppUser {
     );
   }
 }
+

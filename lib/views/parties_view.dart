@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -76,6 +77,7 @@ class _PartiesViewState extends State<PartiesView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
     final allParties = provider.parties;
     final challans = provider.challans;
 
@@ -130,17 +132,19 @@ class _PartiesViewState extends State<PartiesView> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _openAddParty(context),
-                  icon: const Icon(Icons.person_add, size: 20),
-                  label: const Text('Add New Party'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                if (auth.canManageParties) ...[
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _openAddParty(context),
+                    icon: const Icon(Icons.person_add, size: 20),
+                    label: const Text('Add New Party'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 20),
@@ -661,20 +665,22 @@ class _PartiesViewState extends State<PartiesView> {
                                   );
                                 },
                               ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.edit_outlined,
-                                tooltip: 'Edit Party Details',
-                                color: AppColors.primary,
-                                onTap: () => _openEditParty(context, party),
-                              ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.delete_outline,
-                                tooltip: 'Move to Bin',
-                                color: AppColors.warningText,
-                                onTap: () => _confirmDelete(context, party),
-                              ),
+                              if (context.watch<AuthProvider>().canManageParties) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Edit Party Details',
+                                  color: AppColors.primary,
+                                  onTap: () => _openEditParty(context, party),
+                                ),
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.delete_outline,
+                                  tooltip: 'Move to Bin',
+                                  color: AppColors.warningText,
+                                  onTap: () => _confirmDelete(context, party),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -861,19 +867,21 @@ class _PartiesViewState extends State<PartiesView> {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 12),
-                  _buildActionIcon(
-                    icon: Icons.edit_outlined,
-                    tooltip: 'Edit Party',
-                    color: AppColors.primary,
-                    onTap: () => _openEditParty(context, party),
-                  ),
-                  _buildActionIcon(
-                    icon: Icons.delete_outline,
-                    tooltip: 'Move to Bin',
-                    color: AppColors.warningText,
-                    onTap: () => _confirmDelete(context, party),
-                  ),
+                  if (context.watch<AuthProvider>().canManageParties) ...[
+                    const SizedBox(width: 12),
+                    _buildActionIcon(
+                      icon: Icons.edit_outlined,
+                      tooltip: 'Edit Party',
+                      color: AppColors.primary,
+                      onTap: () => _openEditParty(context, party),
+                    ),
+                    _buildActionIcon(
+                      icon: Icons.delete_outline,
+                      tooltip: 'Move to Bin',
+                      color: AppColors.warningText,
+                      onTap: () => _confirmDelete(context, party),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1018,17 +1026,19 @@ class _PartiesViewState extends State<PartiesView> {
                         ),
                       ],
                     ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: 'Edit Party',
-                      onPressed: () => _openEditParty(context, party),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                      tooltip: 'Delete Party',
-                      onPressed: () => _confirmDelete(context, party),
-                    ),
+                    if (context.watch<AuthProvider>().canManageParties) ...[
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        tooltip: 'Edit Party',
+                        onPressed: () => _openEditParty(context, party),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                        tooltip: 'Delete Party',
+                        onPressed: () => _confirmDelete(context, party),
+                      ),
+                    ],
                     const SizedBox(width: 4),
                     const Icon(
                       Icons.chevron_right,

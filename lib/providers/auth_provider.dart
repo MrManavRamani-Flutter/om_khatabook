@@ -9,6 +9,7 @@ class AuthProvider extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
 
   List<AppUser> _users = [];
+  Map<UserRole, RolePermissions> _rolePermissions = {};
   AppUser? _currentUser;
   bool _isLoading = true;
 
@@ -27,19 +28,38 @@ class AuthProvider extends ChangeNotifier {
   bool get isManager => currentRole == UserRole.manager;
   bool get isClerk => currentRole == UserRole.clerk;
 
-  // Permission shortcuts
-  bool get canDelete => currentRole.canDeleteEntries;
-  bool get canPurgeRecycleBin => currentRole.canPurgeRecycleBin;
-  bool get canManageUsers => currentRole.canManageUsers;
-  bool get canManageSettings => currentRole.canManageSettings;
-  bool get canViewAuditLogs => currentRole.canViewAuditLogs;
-  bool get canClearAuditLogs => currentRole.canClearAuditLogs;
+  // Dynamic Role Permissions (configured by Admin & persisted in storage)
+  RolePermissions get currentPermissions => permissionsFor(currentRole);
+  RolePermissions permissionsFor(UserRole role) =>
+      _rolePermissions[role] ?? RolePermissions.defaultFor(role);
+
+  bool get canCreateChallan => currentPermissions.canCreateChallan;
+  bool get canEditChallan => currentPermissions.canEditChallan;
+  bool get canDelete => currentPermissions.canDeleteChallan;
+  bool get canDeleteChallan => currentPermissions.canDeleteChallan;
+  bool get canRestoreFromBin => currentPermissions.canRestoreChallan;
+  bool get canPurgeRecycleBin => currentPermissions.canPurgeRecycleBin;
+  bool get canManageParties => currentPermissions.canManageParties;
+  bool get canExportReports => currentPermissions.canExportReports;
+  bool get canPrintInvoice => currentPermissions.canPrintInvoice;
+  bool get canViewAuditLogs => currentPermissions.canViewAuditLogs;
+  bool get canClearAuditLogs => currentPermissions.canClearAuditLogs;
+  bool get canManageUsers => currentPermissions.canManageUsers;
+  bool get canManageSettings => currentPermissions.canManageSettings;
 
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
     _users = await _storage.loadUsers();
+    _rolePermissions = await _storage.loadRolePermissions();
+
+    if (_rolePermissions.isEmpty) {
+      _rolePermissions = {
+        for (final r in UserRole.values) r: RolePermissions.defaultFor(r),
+      };
+      await _storage.saveRolePermissions(_rolePermissions);
+    }
 
     // Seed default users if first time
     if (_users.isEmpty) {
@@ -239,6 +259,43 @@ class AuthProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Dynamically update permissions for a role (Admin only)
+  Future<void> updateRolePermissions(UserRole role, RolePermissions newPermissions) async {
+    // Safety check: Admin always maintains canManageUsers so admin can never be permanently locked out
+    final safePermissions = role == UserRole.admin
+        ? newPermissions.copyWith(canManageUsers: true)
+        : newPermissions;
+
+    _rolePermissions[role] = safePermissions;
+    await _storage.saveRolePermissions(_rolePermissions);
+
+    _logEvent(
+      action: AuditAction.update,
+      entityType: AuditEntityType.settings,
+      entityId: 'rbac_${role.name}',
+      entityTitle: 'RBAC Permissions: ${role.label}',
+      description: 'Admin ${_currentUser?.username} dynamically updated permissions for role ${role.label}',
+    );
+
+    notifyListeners();
+  }
+
+  /// Reset permissions for a role to factory defaults
+  Future<void> resetRolePermissions(UserRole role) async {
+    _rolePermissions[role] = RolePermissions.defaultFor(role);
+    await _storage.saveRolePermissions(_rolePermissions);
+
+    _logEvent(
+      action: AuditAction.update,
+      entityType: AuditEntityType.settings,
+      entityId: 'rbac_${role.name}',
+      entityTitle: 'RBAC Permissions: ${role.label}',
+      description: 'Reset role permissions for ${role.label} to system defaults',
+    );
+
+    notifyListeners();
+  }
+
   void _logEvent({
     required AuditAction action,
     required AuditEntityType entityType,
@@ -262,3 +319,4 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 }
+

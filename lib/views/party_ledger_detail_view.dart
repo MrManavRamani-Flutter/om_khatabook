@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -213,6 +214,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
 
     // Retrieve the target party
     final partyList = provider.parties.where((p) => p.id == widget.partyId).toList();
@@ -373,25 +375,28 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           ],
         ),
         actions: [
-          OutlinedButton.icon(
-            onPressed: () => _openExportDialog(context),
-            icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-            label: const Text('Export Party Ledger'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          if (auth.canExportReports)
+            OutlinedButton.icon(
+              onPressed: () => _openExportDialog(context),
+              icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+              label: const Text('Export Party Ledger'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _openAddChallan(context, party),
-            icon: const Icon(Icons.add_circle, size: 18),
-            label: const Text('Add Challan'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          if (auth.canCreateChallan) ...[
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () => _openAddChallan(context, party),
+              icon: const Icon(Icons.add_circle, size: 18),
+              label: const Text('Add Challan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
-          ),
+          ],
           const SizedBox(width: 16),
         ],
       ),
@@ -817,12 +822,14 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                             color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => _openAddChallan(context, party),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Challan Entry'),
-                        ),
+                        if (auth.canCreateChallan) ...[
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _openAddChallan(context, party),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Challan Entry'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -972,26 +979,29 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
-                    tooltip: 'Print Tax Invoice (A4/A5)',
-                    onPressed: () => _openInvoiceDialog(context, item),
-                  ),
+                  if (context.watch<AuthProvider>().canPrintInvoice)
+                    IconButton(
+                      icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                      tooltip: 'Print Tax Invoice (A4/A5)',
+                      onPressed: () => _openInvoiceDialog(context, item),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
                     onPressed: () => _openViewChallan(context, item),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    tooltip: 'Edit Entry',
-                    onPressed: () => _openEditChallan(context, item),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                    tooltip: 'Delete Entry',
-                    onPressed: () => _confirmDeleteChallan(context, item),
-                  ),
+                  if (context.watch<AuthProvider>().canEditChallan)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: 'Edit Entry',
+                      onPressed: () => _openEditChallan(context, item),
+                    ),
+                  if (context.watch<AuthProvider>().canDelete)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                      tooltip: 'Delete Entry',
+                      onPressed: () => _confirmDeleteChallan(context, item),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1452,12 +1462,13 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildActionIcon(
-                                icon: Icons.receipt_long_outlined,
-                                tooltip: 'Print Tax Invoice (A4/A5)',
-                                color: AppColors.primary,
-                                onTap: () => _openInvoiceDialog(context, item),
-                              ),
+                              if (context.watch<AuthProvider>().canPrintInvoice)
+                                _buildActionIcon(
+                                  icon: Icons.receipt_long_outlined,
+                                  tooltip: 'Print Tax Invoice (A4/A5)',
+                                  color: AppColors.primary,
+                                  onTap: () => _openInvoiceDialog(context, item),
+                                ),
                               const SizedBox(width: 2),
                               _buildActionIcon(
                                 icon: Icons.visibility_outlined,
@@ -1465,20 +1476,24 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                 color: Theme.of(context).textTheme.bodySmall?.color,
                                 onTap: () => _openViewChallan(context, item),
                               ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.edit_outlined,
-                                tooltip: 'Edit Entry',
-                                color: AppColors.primary,
-                                onTap: () => _openEditChallan(context, item),
-                              ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.delete_outline,
-                                tooltip: 'Move to Bin',
-                                color: AppColors.warningText,
-                                onTap: () => _confirmDeleteChallan(context, item),
-                              ),
+                              if (context.watch<AuthProvider>().canEditChallan) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Edit Entry',
+                                  color: AppColors.primary,
+                                  onTap: () => _openEditChallan(context, item),
+                                ),
+                              ],
+                              if (context.watch<AuthProvider>().canDelete) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.delete_outline,
+                                  tooltip: 'Move to Bin',
+                                  color: AppColors.warningText,
+                                  onTap: () => _confirmDeleteChallan(context, item),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1677,12 +1692,13 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildActionIcon(
-                          icon: Icons.receipt_long_outlined,
-                          tooltip: 'Print Tax Invoice (A4/A5)',
-                          color: AppColors.primary,
-                          onTap: () => _openInvoiceDialog(context, item),
-                        ),
+                        if (context.watch<AuthProvider>().canPrintInvoice)
+                          _buildActionIcon(
+                            icon: Icons.receipt_long_outlined,
+                            tooltip: 'Print Tax Invoice (A4/A5)',
+                            color: AppColors.primary,
+                            onTap: () => _openInvoiceDialog(context, item),
+                          ),
                         const SizedBox(width: 2),
                         _buildActionIcon(
                           icon: Icons.visibility_outlined,
@@ -1690,18 +1706,24 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           color: Theme.of(context).textTheme.bodySmall?.color,
                           onTap: () => _openViewChallan(context, item),
                         ),
-                        _buildActionIcon(
-                          icon: Icons.edit_outlined,
-                          tooltip: 'Edit Entry',
-                          color: AppColors.primary,
-                          onTap: () => _openEditChallan(context, item),
-                        ),
-                        _buildActionIcon(
-                          icon: Icons.delete_outline,
-                          tooltip: 'Move to Bin',
-                          color: AppColors.warningText,
-                          onTap: () => _confirmDeleteChallan(context, item),
-                        ),
+                        if (context.watch<AuthProvider>().canEditChallan) ...[
+                          const SizedBox(width: 2),
+                          _buildActionIcon(
+                            icon: Icons.edit_outlined,
+                            tooltip: 'Edit Entry',
+                            color: AppColors.primary,
+                            onTap: () => _openEditChallan(context, item),
+                          ),
+                        ],
+                        if (context.watch<AuthProvider>().canDelete) ...[
+                          const SizedBox(width: 2),
+                          _buildActionIcon(
+                            icon: Icons.delete_outline,
+                            tooltip: 'Move to Bin',
+                            color: AppColors.warningText,
+                            onTap: () => _confirmDeleteChallan(context, item),
+                          ),
+                        ],
                       ],
                     ),
                   ],

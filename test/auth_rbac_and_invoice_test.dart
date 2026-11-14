@@ -90,6 +90,109 @@ void main() {
     });
   });
 
+  group('Dynamic Role Permissions & Database Persistence Tests', () {
+    late StorageService storage;
+    late AuthProvider auth;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+      auth = AuthProvider(storage);
+      await auth.initialize();
+    });
+
+    test('Admin dynamically grants new permissions to Clerk and it persists across app restart', () async {
+      // 1. Initial Clerk permissions
+      await auth.login('clerk', 'clerk123');
+      expect(auth.canManageParties, isFalse);
+      expect(auth.canDelete, isFalse);
+
+      // 2. Admin logs in and dynamically updates Clerk permissions
+      await auth.login('admin', 'admin123');
+      final currentClerkPerms = auth.permissionsFor(UserRole.clerk);
+      final updatedClerkPerms = currentClerkPerms.copyWith(
+        canManageParties: true,
+        canDeleteChallan: true,
+      );
+
+      await auth.updateRolePermissions(UserRole.clerk, updatedClerkPerms);
+
+      // 3. Verify in current session
+      expect(auth.permissionsFor(UserRole.clerk).canManageParties, isTrue);
+      expect(auth.permissionsFor(UserRole.clerk).canDeleteChallan, isTrue);
+
+      // 4. Simulate app restart: re-initialize AuthProvider from database storage
+      final newAuthProvider = AuthProvider(storage);
+      await newAuthProvider.initialize();
+      await newAuthProvider.login('clerk', 'clerk123');
+
+      // 5. Verify dynamic permissions survived persistence in database
+      expect(newAuthProvider.canManageParties, isTrue);
+      expect(newAuthProvider.canDelete, isTrue);
+    });
+
+    test('Admin role safety lock prevents revoking canManageUsers on Admin account', () async {
+      await auth.login('admin', 'admin123');
+      final adminPerms = auth.permissionsFor(UserRole.admin);
+
+      // Attempt to revoke user management on admin
+      await auth.updateRolePermissions(
+        UserRole.admin,
+        adminPerms.copyWith(canManageUsers: false),
+      );
+
+      // Verify safety lock enforced
+      expect(auth.permissionsFor(UserRole.admin).canManageUsers, isTrue);
+      expect(auth.canManageUsers, isTrue);
+    });
+
+    test('Reset permissions restores factory defaults in database', () async {
+      // Modify Clerk permission
+      await auth.login('admin', 'admin123');
+      final current = auth.permissionsFor(UserRole.clerk);
+      await auth.updateRolePermissions(
+        UserRole.clerk,
+        current.copyWith(canManageParties: true),
+      );
+      expect(auth.permissionsFor(UserRole.clerk).canManageParties, isTrue);
+
+      // Reset to defaults
+      await auth.resetRolePermissions(UserRole.clerk);
+      expect(auth.permissionsFor(UserRole.clerk).canManageParties, isFalse);
+
+      // Check database persistence
+      final savedInDb = await storage.loadRolePermissions();
+      expect(savedInDb[UserRole.clerk]?.canManageParties, isFalse);
+    });
+
+    test('Dynamic role permissions are preserved in backup JSON export/import', () async {
+      await auth.login('admin', 'admin123');
+      final current = auth.permissionsFor(UserRole.manager);
+      await auth.updateRolePermissions(
+        UserRole.manager,
+        current.copyWith(canPurgeRecycleBin: true),
+      );
+
+      // Export JSON
+      final backupJson = await storage.exportBackupJson();
+      expect(backupJson, contains('rolePermissions'));
+      expect(backupJson, contains('"canPurgeRecycleBin": true'));
+
+      // Clear all data
+      await storage.clearAllData();
+      final blankPermissions = await storage.loadRolePermissions();
+      expect(blankPermissions.isEmpty, isTrue);
+
+      // Import backup JSON
+      final importSuccess = await storage.importBackupJson(backupJson);
+      expect(importSuccess, isTrue);
+
+      final restored = await storage.loadRolePermissions();
+      expect(restored[UserRole.manager]?.canPurgeRecycleBin, isTrue);
+    });
+  });
+
   group('Audit Trail Integrity Tests', () {
     late StorageService storage;
     late ChallanProvider provider;

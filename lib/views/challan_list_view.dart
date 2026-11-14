@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -265,6 +266,7 @@ class ChallanListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
     final entries = provider.filteredChallans;
     final parties = provider.parties;
 
@@ -310,26 +312,29 @@ class ChallanListView extends StatelessWidget {
                 const SizedBox(width: 16),
                 Row(
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _openExportDialog(context),
-                      icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-                      label: const Text('Generate PDF / Excel'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        side: const BorderSide(color: AppColors.primary),
+                    if (auth.canExportReports)
+                      OutlinedButton.icon(
+                        onPressed: () => _openExportDialog(context),
+                        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                        label: const Text('Generate PDF / Excel'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: () => _openAddDialog(context),
-                      icon: const Icon(Icons.add_circle, size: 20),
-                      label: const Text('Add Challan Entry'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    if (auth.canExportReports && auth.canCreateChallan)
+                      const SizedBox(width: 10),
+                    if (auth.canCreateChallan)
+                      ElevatedButton.icon(
+                        onPressed: () => _openAddDialog(context),
+                        icon: const Icon(Icons.add_circle, size: 20),
+                        label: const Text('Add Challan Entry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -666,12 +671,14 @@ class ChallanListView extends StatelessWidget {
                             color: Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => _openAddDialog(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Challan Entry'),
-                        ),
+                        if (auth.canCreateChallan) ...[
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _openAddDialog(context),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Challan Entry'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -801,26 +808,29 @@ class ChallanListView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
-                    tooltip: 'Print Tax Invoice (A4/A5)',
-                    onPressed: () => _openInvoiceDialog(context, item),
-                  ),
+                  if (context.watch<AuthProvider>().canPrintInvoice)
+                    IconButton(
+                      icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                      tooltip: 'Print Tax Invoice (A4/A5)',
+                      onPressed: () => _openInvoiceDialog(context, item),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.visibility_outlined, size: 18),
                     tooltip: 'View Full Details',
                     onPressed: () => _openViewDialog(context, item),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    tooltip: 'Edit Entry',
-                    onPressed: () => _openEditDialog(context, item),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                    tooltip: 'Delete Entry',
-                    onPressed: () => _confirmDelete(context, item),
-                  ),
+                  if (context.watch<AuthProvider>().canEditChallan)
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: 'Edit Entry',
+                      onPressed: () => _openEditDialog(context, item),
+                    ),
+                  if (context.watch<AuthProvider>().canDelete)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                      tooltip: 'Delete Entry',
+                      onPressed: () => _confirmDelete(context, item),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1284,12 +1294,13 @@ class ChallanListView extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildActionIcon(
-                                icon: Icons.receipt_long_outlined,
-                                tooltip: 'Print Tax Invoice (A4/A5)',
-                                color: AppColors.primary,
-                                onTap: () => _openInvoiceDialog(context, item),
-                              ),
+                              if (context.watch<AuthProvider>().canPrintInvoice)
+                                _buildActionIcon(
+                                  icon: Icons.receipt_long_outlined,
+                                  tooltip: 'Print Tax Invoice (A4/A5)',
+                                  color: AppColors.primary,
+                                  onTap: () => _openInvoiceDialog(context, item),
+                                ),
                               const SizedBox(width: 2),
                               _buildActionIcon(
                                 icon: Icons.visibility_outlined,
@@ -1297,20 +1308,24 @@ class ChallanListView extends StatelessWidget {
                                 color: Theme.of(context).textTheme.bodySmall?.color,
                                 onTap: () => _openViewDialog(context, item),
                               ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.edit_outlined,
-                                tooltip: 'Edit Entry',
-                                color: AppColors.primary,
-                                onTap: () => _openEditDialog(context, item),
-                              ),
-                              const SizedBox(width: 2),
-                              _buildActionIcon(
-                                icon: Icons.delete_outline,
-                                tooltip: 'Move to Bin',
-                                color: AppColors.warningText,
-                                onTap: () => _confirmDelete(context, item),
-                              ),
+                              if (context.watch<AuthProvider>().canEditChallan) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Edit Entry',
+                                  color: AppColors.primary,
+                                  onTap: () => _openEditDialog(context, item),
+                                ),
+                              ],
+                              if (context.watch<AuthProvider>().canDelete) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.delete_outline,
+                                  tooltip: 'Move to Bin',
+                                  color: AppColors.warningText,
+                                  onTap: () => _confirmDelete(context, item),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1510,12 +1525,13 @@ class ChallanListView extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildActionIcon(
-                          icon: Icons.receipt_long_outlined,
-                          tooltip: 'Print Tax Invoice (A4/A5)',
-                          color: AppColors.primary,
-                          onTap: () => _openInvoiceDialog(context, item),
-                        ),
+                        if (context.watch<AuthProvider>().canPrintInvoice)
+                          _buildActionIcon(
+                            icon: Icons.receipt_long_outlined,
+                            tooltip: 'Print Tax Invoice (A4/A5)',
+                            color: AppColors.primary,
+                            onTap: () => _openInvoiceDialog(context, item),
+                          ),
                         const SizedBox(width: 2),
                         _buildActionIcon(
                           icon: Icons.visibility_outlined,
@@ -1523,18 +1539,24 @@ class ChallanListView extends StatelessWidget {
                           color: Theme.of(context).textTheme.bodySmall?.color,
                           onTap: () => _openViewDialog(context, item),
                         ),
-                        _buildActionIcon(
-                          icon: Icons.edit_outlined,
-                          tooltip: 'Edit Entry',
-                          color: AppColors.primary,
-                          onTap: () => _openEditDialog(context, item),
-                        ),
-                        _buildActionIcon(
-                          icon: Icons.delete_outline,
-                          tooltip: 'Move to Bin',
-                          color: AppColors.warningText,
-                          onTap: () => _confirmDelete(context, item),
-                        ),
+                        if (context.watch<AuthProvider>().canEditChallan) ...[
+                          const SizedBox(width: 2),
+                          _buildActionIcon(
+                            icon: Icons.edit_outlined,
+                            tooltip: 'Edit Entry',
+                            color: AppColors.primary,
+                            onTap: () => _openEditDialog(context, item),
+                          ),
+                        ],
+                        if (context.watch<AuthProvider>().canDelete) ...[
+                          const SizedBox(width: 2),
+                          _buildActionIcon(
+                            icon: Icons.delete_outline,
+                            tooltip: 'Move to Bin',
+                            color: AppColors.warningText,
+                            onTap: () => _confirmDelete(context, item),
+                          ),
+                        ],
                       ],
                     ),
                   ],

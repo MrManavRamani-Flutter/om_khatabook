@@ -5,6 +5,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/branding_dialogs.dart';
+import '../widgets/user_management_dialog.dart';
 import 'audit_log_view.dart';
 import 'challan_list_view.dart';
 import 'parties_view.dart';
@@ -156,12 +157,14 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
         body: contentBody,
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          onPressed: () => _openAddChallan(context),
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: auth.canCreateChallan
+            ? FloatingActionButton(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                onPressed: () => _openAddChallan(context),
+                child: const Icon(Icons.add),
+              )
+            : null,
       );
     }
 
@@ -360,48 +363,49 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
 
-        // PRIMARY ACTION BUTTON IN SIDEBAR
-        Padding(
-          padding: EdgeInsets.all(isCollapsed ? 8 : 14),
-          child: isCollapsed
-              ? Tooltip(
-                  message: 'New Challan Entry',
-                  child: IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+        // PRIMARY ACTION BUTTON IN SIDEBAR (GATED BY RBAC)
+        if (auth.canCreateChallan)
+          Padding(
+            padding: EdgeInsets.all(isCollapsed ? 8 : 14),
+            child: isCollapsed
+                ? Tooltip(
+                    message: 'New Challan Entry',
+                    child: IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                      icon: const Icon(Icons.add, size: 20),
+                      onPressed: () => _openAddChallan(context),
                     ),
-                    icon: const Icon(Icons.add, size: 20),
-                    onPressed: () => _openAddChallan(context),
-                  ),
-                )
-              : SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  )
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text(
+                        'New Challan Entry',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        if (isDrawer) Navigator.of(context).pop();
+                        _openAddChallan(context);
+                      },
                     ),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text(
-                      'New Challan Entry',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: () {
-                      if (isDrawer) Navigator.of(context).pop();
-                      _openAddChallan(context);
-                    },
                   ),
-                ),
-        ),
+          ),
 
         const Divider(height: 1),
 
@@ -420,6 +424,17 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    if (auth.canManageUsers) ...[
+                      IconButton(
+                        icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                        tooltip: 'Users & Dynamic RBAC Permissions',
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => const UserManagementDialog(),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     IconButton(
                       icon: Icon(
                         provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
@@ -438,22 +453,23 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               )
             : Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 child: Row(
                   children: [
                     InkWell(
                       onTap: () => BrandingDialogs.showProfileDialog(context),
                       borderRadius: BorderRadius.circular(20),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           ProfileAvatarWidget(
-                            radius: 17,
+                            radius: 16,
                             showEditBadge: true,
                             onTap: () => BrandingDialogs.showProfileDialog(context),
                           ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 100,
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 80),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
@@ -461,7 +477,7 @@ class _MainLayoutState extends State<MainLayout> {
                                 Text(
                                   userName,
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -475,7 +491,7 @@ class _MainLayoutState extends State<MainLayout> {
                                   child: Text(
                                     roleName,
                                     style: const TextStyle(
-                                      fontSize: 8.5,
+                                      fontSize: 8,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.primary,
                                     ),
@@ -488,7 +504,22 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     const Spacer(),
+                    if (auth.canManageUsers)
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                        tooltip: 'Users & Dynamic RBAC Permissions',
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => const UserManagementDialog(),
+                        ),
+                      ),
                     IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                       icon: Icon(
                         provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
                         size: 18,
@@ -497,6 +528,9 @@ class _MainLayoutState extends State<MainLayout> {
                       onPressed: () => provider.toggleTheme(),
                     ),
                     IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                       icon: const Icon(Icons.logout, size: 18, color: AppColors.warningText),
                       tooltip: 'Sign Out',
                       onPressed: () => _confirmLogout(context, auth),

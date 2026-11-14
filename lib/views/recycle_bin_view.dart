@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -147,6 +148,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
+    final auth = context.watch<AuthProvider>();
     final deletedChallans = provider.deletedChallans;
     final deletedParties = provider.deletedParties;
     final totalDeleted = deletedChallans.length + deletedParties.length;
@@ -176,7 +178,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
             ],
           ),
           actions: [
-            if (totalDeleted > 0)
+            if (totalDeleted > 0 && auth.canPurgeRecycleBin)
               Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: OutlinedButton.icon(
@@ -223,10 +225,10 @@ class _RecycleBinViewState extends State<RecycleBinView> {
         body: TabBarView(
           children: [
             // TAB 1: DELETED CHALLANS
-            _buildDeletedChallansTab(context, provider, deletedChallans),
+            _buildDeletedChallansTab(context, provider, auth, deletedChallans),
 
             // TAB 2: DELETED PARTIES
-            _buildDeletedPartiesTab(context, provider, deletedParties),
+            _buildDeletedPartiesTab(context, provider, auth, deletedParties),
           ],
         ),
       ),
@@ -236,6 +238,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
   Widget _buildDeletedChallansTab(
     BuildContext context,
     ChallanProvider provider,
+    AuthProvider auth,
     List<ChallanEntry> challans,
   ) {
     if (challans.isEmpty) {
@@ -378,35 +381,38 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
+                          if (auth.canRestoreFromBin)
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.restore_from_trash, size: 16),
+                              label: const Text('Restore'),
+                              onPressed: () async {
+                                await provider.restoreChallan(c.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Challan #${c.challanNo} restored successfully.'),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                            icon: const Icon(Icons.restore_from_trash, size: 16),
-                            label: const Text('Restore'),
-                            onPressed: () async {
-                              await provider.restoreChallan(c.id);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        'Challan #${c.challanNo} restored successfully.'),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.delete_forever,
-                                color: AppColors.warningText, size: 20),
-                            tooltip: 'Delete Permanently',
-                            onPressed: () =>
-                                _confirmPermanentDeleteChallan(c),
-                          ),
+                          if (auth.canPurgeRecycleBin) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete_forever,
+                                  color: AppColors.warningText, size: 20),
+                              tooltip: 'Delete Permanently',
+                              onPressed: () =>
+                                  _confirmPermanentDeleteChallan(c),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -423,6 +429,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
   Widget _buildDeletedPartiesTab(
     BuildContext context,
     ChallanProvider provider,
+    AuthProvider auth,
     List<Party> parties,
   ) {
     if (parties.isEmpty) {
@@ -569,35 +576,38 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
+                          if (auth.canRestoreFromBin)
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.restore_from_trash, size: 16),
+                              label: const Text('Restore'),
+                              onPressed: () async {
+                                await provider.restoreParty(p.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('${p.name} restored successfully.'),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
-                            icon: const Icon(Icons.restore_from_trash, size: 16),
-                            label: const Text('Restore'),
-                            onPressed: () async {
-                              await provider.restoreParty(p.id);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text('${p.name} restored successfully.'),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.delete_forever,
-                                color: AppColors.warningText, size: 20),
-                            tooltip: 'Delete Permanently',
-                            onPressed: () =>
-                                _confirmPermanentDeleteParty(p),
-                          ),
+                          if (auth.canPurgeRecycleBin) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete_forever,
+                                  color: AppColors.warningText, size: 20),
+                              tooltip: 'Delete Permanently',
+                              onPressed: () =>
+                                  _confirmPermanentDeleteParty(p),
+                            ),
+                          ],
                         ],
                       ),
                     ],
