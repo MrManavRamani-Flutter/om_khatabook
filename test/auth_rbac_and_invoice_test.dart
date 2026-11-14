@@ -379,6 +379,14 @@ void main() {
   });
 
   group('Single-Page GST Tax Invoice & NumberToWords Tests', () {
+    test('Formatters.currencyPdf uses ASCII Rs. prefix for safe, warning-free PDF rendering', () {
+      expect(Formatters.currencyPdf(500), equals('Rs. 500'));
+      expect(Formatters.currencyPdf(15420.50), equals('Rs. 15,420.50'));
+      expect(Formatters.currencyPdf(0), equals('Rs. 0'));
+      // Standard Formatters.currency uses ₹ for screen UI
+      expect(Formatters.currency(500), contains('₹'));
+    });
+
     test('Formatters.numberToWords correctly formats Indian currency', () {
       expect(Formatters.numberToWords(0), equals('Rupees Zero Only'));
       expect(Formatters.numberToWords(500), equals('Rupees Five Hundred Only'));

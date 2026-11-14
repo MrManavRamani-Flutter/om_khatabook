@@ -774,14 +774,14 @@ class ExportService {
                     textAlign: pw.TextAlign.center)),
             pw.Padding(
                 padding: cellPad,
-                child: pw.Text(Formatters.currency(taxableValue),
+                child: pw.Text(Formatters.currencyPdf(taxableValue),
                     style: pw.TextStyle(fontSize: dSize),
                     textAlign: pw.TextAlign.right)),
             pw.Padding(
               padding: cellPad,
               child: pw.Text(
                 hasGst
-                    ? '${cgstRate.toStringAsFixed(1)}%\n${Formatters.currency(cgstAmount)}'
+                    ? '${cgstRate.toStringAsFixed(1)}%\n${Formatters.currencyPdf(cgstAmount)}'
                     : '0.0%',
                 style: pw.TextStyle(fontSize: dSize),
                 textAlign: pw.TextAlign.right,
@@ -791,7 +791,7 @@ class ExportService {
               padding: cellPad,
               child: pw.Text(
                 hasGst
-                    ? '${sgstRate.toStringAsFixed(1)}%\n${Formatters.currency(sgstAmount)}'
+                    ? '${sgstRate.toStringAsFixed(1)}%\n${Formatters.currencyPdf(sgstAmount)}'
                     : '0.0%',
                 style: pw.TextStyle(fontSize: dSize),
                 textAlign: pw.TextAlign.right,
@@ -800,7 +800,7 @@ class ExportService {
             pw.Padding(
               padding: cellPad,
               child: pw.Text(
-                Formatters.currency(totalInvoiceAmount),
+                Formatters.currencyPdf(totalInvoiceAmount),
                 style: pw.TextStyle(
                     fontSize: dSize, fontWeight: pw.FontWeight.bold),
                 textAlign: pw.TextAlign.right,
@@ -828,25 +828,25 @@ class ExportService {
                 child: pw.Text('', style: pw.TextStyle(fontSize: dSize))),
             pw.Padding(
                 padding: cellPad,
-                child: pw.Text(Formatters.currency(taxableValue),
+                child: pw.Text(Formatters.currencyPdf(taxableValue),
                     style: pw.TextStyle(
                         fontSize: dSize, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.right)),
             pw.Padding(
                 padding: cellPad,
-                child: pw.Text(Formatters.currency(cgstAmount),
+                child: pw.Text(Formatters.currencyPdf(cgstAmount),
                     style: pw.TextStyle(
                         fontSize: dSize, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.right)),
             pw.Padding(
                 padding: cellPad,
-                child: pw.Text(Formatters.currency(sgstAmount),
+                child: pw.Text(Formatters.currencyPdf(sgstAmount),
                     style: pw.TextStyle(
                         fontSize: dSize, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.right)),
             pw.Padding(
                 padding: cellPad,
-                child: pw.Text(Formatters.currency(totalInvoiceAmount),
+                child: pw.Text(Formatters.currencyPdf(totalInvoiceAmount),
                     style: pw.TextStyle(
                         fontSize: dSize,
                         fontWeight: pw.FontWeight.bold,
@@ -895,19 +895,19 @@ class ExportService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'Gross Invoice: ${Formatters.currency(totalInvoiceAmount)}',
+                'Gross Invoice: ${Formatters.currencyPdf(totalInvoiceAmount)}',
                 style: pw.TextStyle(
                     fontSize: fontSize, fontWeight: pw.FontWeight.bold),
               ),
               pw.Text(
-                'Amount Received: ${Formatters.currency(paidAmount)}',
+                'Amount Received: ${Formatters.currencyPdf(paidAmount)}',
                 style: pw.TextStyle(
                     fontSize: fontSize,
                     color: PdfColors.green800,
                     fontWeight: pw.FontWeight.bold),
               ),
               pw.Text(
-                'Balance Due: ${Formatters.currency(remainingDue)}',
+                'Balance Due: ${Formatters.currencyPdf(remainingDue)}',
                 style: pw.TextStyle(
                   fontSize: fontSize,
                   fontWeight: pw.FontWeight.bold,
@@ -1309,11 +1309,11 @@ class ExportService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
           _buildPdfKpiItem('Total Entries', '$count'),
-          _buildPdfKpiItem('Challan Gross', Formatters.currency(totalChallan)),
-          _buildPdfKpiItem('Final Billed', Formatters.currency(totalFinal),
+          _buildPdfKpiItem('Challan Gross', Formatters.currencyPdf(totalChallan)),
+          _buildPdfKpiItem('Final Billed', Formatters.currencyPdf(totalFinal),
               isBold: true),
-          _buildPdfKpiItem('Total GST', Formatters.currency(totalGst)),
-          _buildPdfKpiItem('Unpaid Dues', Formatters.currency(totalUnpaid),
+          _buildPdfKpiItem('Total GST', Formatters.currencyPdf(totalGst)),
+          _buildPdfKpiItem('Unpaid Dues', Formatters.currencyPdf(totalUnpaid),
               isWarning: totalUnpaid > 0),
         ],
       ),
@@ -1365,22 +1365,22 @@ class ExportService {
             'Chk #${c.chequeDetails!.chequeNo} (${c.chequeDetails!.bankName}) - ${c.chequeDetails!.status.label}';
       } else if (c.isPartiallyPaid) {
         details =
-            'PARTIAL: Paid ${Formatters.currency(c.paidAmount)}, Due ${Formatters.currency(c.remainingAmount)}';
+            'PARTIAL: Paid ${Formatters.currencyPdf(c.paidAmount)}, Due ${Formatters.currencyPdf(c.remainingAmount)}';
       } else if (c.isCashPaid) {
         details = 'PAID IN FULL';
       } else {
         details =
-            'WARNING: UNPAID (Due ${Formatters.currency(c.finalAmount)})';
+            'WARNING: UNPAID (Due ${Formatters.currencyPdf(c.finalAmount)})';
       }
 
       return [
         Formatters.shortDate(c.date),
         c.challanNo,
         c.partyName,
-        Formatters.currency(c.challanAmount),
-        Formatters.currency(c.finalAmount),
+        Formatters.currencyPdf(c.challanAmount),
+        Formatters.currencyPdf(c.finalAmount),
         c.gstBillNo.isNotEmpty
-            ? '${c.gstBillNo}\n${Formatters.currency(c.gstAmount)}'
+            ? '${c.gstBillNo}\n${Formatters.currencyPdf(c.gstAmount)}'
             : '-',
         c.paymentOption.label,
         details,

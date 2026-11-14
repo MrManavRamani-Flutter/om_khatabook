@@ -13,11 +13,33 @@ class Formatters {
     decimalDigits: 2,
   );
 
+  static final NumberFormat _inrPdfFormatter = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: 'Rs. ',
+    decimalDigits: 0,
+  );
+
+  static final NumberFormat _inrPdfDecimalFormatter = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: 'Rs. ',
+    decimalDigits: 2,
+  );
+
   static String currency(double amount, {bool showDecimals = false}) {
     if (showDecimals || amount % 1 != 0) {
       return _inrDecimalFormatter.format(amount);
     }
     return _inrFormatter.format(amount);
+  }
+
+  /// ASCII-safe currency format specifically for PDF generation and document printing.
+  /// Uses 'Rs. ' prefix to guarantee 100% reliable rendering without Unicode glyph errors
+  /// on all operating systems, legacy PDF viewers, and printers.
+  static String currencyPdf(double amount, {bool showDecimals = false}) {
+    if (showDecimals || amount % 1 != 0) {
+      return _inrPdfDecimalFormatter.format(amount);
+    }
+    return _inrPdfFormatter.format(amount);
   }
 
   static String date(DateTime dt) {

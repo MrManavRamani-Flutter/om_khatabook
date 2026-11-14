@@ -8,7 +8,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-blue.svg?logo=flutter)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-informational.svg)](https://flutter.dev)
 [![Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Inno%20Setup)-success.svg)](.github/workflows/build_windows_exe.yml)
-[![Tests](https://img.shields.io/badge/Tests-38%20Passed-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/Tests-39%20Passed-brightgreen.svg)](test/)
 [![Security](https://img.shields.io/badge/Security-RBAC%20%2B%20Audit%20Trail-blueviolet.svg)]()
 [![Language](https://img.shields.io/badge/UI%20Language-100%25%20English-blue.svg)]()
 
