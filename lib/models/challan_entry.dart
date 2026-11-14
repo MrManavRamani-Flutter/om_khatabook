@@ -160,8 +160,12 @@ class ChallanEntry {
   final ChequeDetails? chequeDetails;
   final String notes;
   final DateTime createdAt; // Hidden from form, set to DateTime.now()
+  final String createdBy; // Username who added this record
+  final String? lastModifiedBy; // Username who last modified this record
+  final DateTime? lastModifiedAt; // Timestamp when last modified
   final bool isDeleted; // Recycle bin flag
   final DateTime? deletedAt; // Timestamp when moved to bin
+  final String? deletedBy; // Username who moved record to bin
 
   ChallanEntry({
     required this.id,
@@ -179,8 +183,12 @@ class ChallanEntry {
     this.chequeDetails,
     this.notes = '',
     required this.createdAt,
+    this.createdBy = 'admin',
+    this.lastModifiedBy,
+    this.lastModifiedAt,
     this.isDeleted = false,
     this.deletedAt,
+    this.deletedBy,
   }) : paidAmount = (paidAmount != null)
             ? paidAmount
             : (isCashPaid ? finalAmount : 0.0);
@@ -256,8 +264,12 @@ class ChallanEntry {
       'chequeDetails': chequeDetails?.toJson(),
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
+      'createdBy': createdBy,
+      'lastModifiedBy': lastModifiedBy,
+      'lastModifiedAt': lastModifiedAt?.toIso8601String(),
       'isDeleted': isDeleted,
       'deletedAt': deletedAt?.toIso8601String(),
+      'deletedBy': deletedBy,
     };
   }
 
@@ -291,10 +303,16 @@ class ChallanEntry {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      createdBy: json['createdBy'] as String? ?? 'admin',
+      lastModifiedBy: json['lastModifiedBy'] as String?,
+      lastModifiedAt: json['lastModifiedAt'] != null
+          ? DateTime.parse(json['lastModifiedAt'] as String)
+          : null,
       isDeleted: json['isDeleted'] as bool? ?? false,
       deletedAt: json['deletedAt'] != null
           ? DateTime.parse(json['deletedAt'] as String)
           : null,
+      deletedBy: json['deletedBy'] as String?,
     );
   }
 
@@ -312,8 +330,12 @@ class ChallanEntry {
     bool? isCashPaid,
     ChequeDetails? chequeDetails,
     String? notes,
+    String? createdBy,
+    String? lastModifiedBy,
+    DateTime? lastModifiedAt,
     bool? isDeleted,
     DateTime? deletedAt,
+    String? deletedBy,
     bool clearDeletedAt = false,
   }) {
     return ChallanEntry(
@@ -332,8 +354,12 @@ class ChallanEntry {
       chequeDetails: chequeDetails ?? this.chequeDetails,
       notes: notes ?? this.notes,
       createdAt: createdAt,
+      createdBy: createdBy ?? this.createdBy,
+      lastModifiedBy: lastModifiedBy ?? this.lastModifiedBy,
+      lastModifiedAt: lastModifiedAt ?? this.lastModifiedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 }

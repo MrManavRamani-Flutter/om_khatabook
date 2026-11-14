@@ -66,22 +66,30 @@ void main() {
       // RBAC Permission checks for Admin
       expect(auth.canDelete, isTrue);
       expect(auth.canPurgeRecycleBin, isTrue);
-      expect(auth.canManageUsers, isTrue);
+      expect(auth.canAddUsers, isTrue);
+      expect(auth.canEditUsers, isTrue);
+      expect(auth.canDeleteUsers, isTrue); // Admin can soft-delete users
+      expect(auth.canPermanentDeleteUsers, isFalse); // Admin CANNOT permanently purge
+      expect(auth.canBlockUsers, isFalse); // Admin CANNOT block users
       expect(auth.canManageSettings, isTrue);
-      expect(auth.canViewAuditLogs, isTrue);
-      expect(auth.canClearAuditLogs, isTrue);
+      expect(auth.canViewAuditLogs, isFalse); // Developer supervised by default
+      expect(auth.canClearAuditLogs, isFalse); // Developer only
     });
 
-    test('Manager role permissions allow edits & exports but prevent user management or log clearing', () async {
+    test('Manager role permissions allow adding/updating users, but strictly prevent deleting users', () async {
       final success = await auth.login('manager', 'manager123');
       expect(success, isTrue);
       expect(auth.currentUser?.role, equals(UserRole.manager));
 
       expect(auth.canDelete, isTrue);
-      expect(auth.canViewAuditLogs, isTrue);
+      expect(auth.canAddUsers, isTrue); // Manager CAN add users
+      expect(auth.canEditUsers, isTrue); // Manager CAN update users
+      expect(auth.canDeleteUsers, isFalse); // Manager CANNOT delete users
+      expect(auth.canPermanentDeleteUsers, isFalse);
+      expect(auth.canBlockUsers, isFalse);
       expect(auth.canPurgeRecycleBin, isFalse);
+      expect(auth.canViewAuditLogs, isFalse);
       expect(auth.canClearAuditLogs, isFalse);
-      expect(auth.canManageUsers, isFalse);
       expect(auth.canManageSettings, isFalse);
     });
 
@@ -91,10 +99,12 @@ void main() {
       expect(auth.currentUser?.role, equals(UserRole.clerk));
 
       expect(auth.canDelete, isFalse);
+      expect(auth.canAddUsers, isFalse);
+      expect(auth.canEditUsers, isFalse);
+      expect(auth.canDeleteUsers, isFalse);
       expect(auth.canPurgeRecycleBin, isFalse);
       expect(auth.canViewAuditLogs, isFalse);
       expect(auth.canClearAuditLogs, isFalse);
-      expect(auth.canManageUsers, isFalse);
       expect(auth.canManageSettings, isFalse);
     });
 
@@ -454,6 +464,185 @@ void main() {
       );
       expect(a5Bytes, isNotEmpty);
       expect(a5Bytes.length, greaterThan(1000));
+    });
+  });
+
+  group('Advanced RBAC, Soft Delete, Developer Master Tools & Audit Stamps Tests', () {
+    late StorageService storage;
+    late AuthProvider auth;
+    late ChallanProvider provider;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+      auth = AuthProvider(storage);
+      await auth.initialize();
+      provider = ChallanProvider(storage);
+      await provider.initialize();
+    });
+
+    test('Manager can add and update users, but CANNOT delete users', () async {
+      await auth.login('manager', 'manager123');
+
+      // Manager adds a new user
+      final added = await auth.addUser(
+        username: 'staff_1',
+        password: 'staffpassword',
+        displayName: 'Branch Staff',
+        roleId: AppRole.clerkId,
+      );
+      expect(added, isTrue);
+
+      final createdUser = auth.users.firstWhere((u) => u.username == 'staff_1');
+      expect(createdUser.createdBy, equals('manager'));
+
+      // Manager updates the user
+      final updated = createdUser.copyWith(displayName: 'Senior Branch Staff');
+      await auth.updateUser(updated);
+
+      final reloadedUser = auth.users.firstWhere((u) => u.username == 'staff_1');
+      expect(reloadedUser.displayName, equals('Senior Branch Staff'));
+      expect(reloadedUser.updatedBy, equals('manager'));
+
+      // Manager attempts to delete user -> MUST BE REJECTED (canDeleteUsers is false)
+      final deleteResult = await auth.deleteUser(createdUser.id);
+      expect(deleteResult, isFalse);
+
+      // Verify user is NOT deleted
+      final stillExists = auth.users.any((u) => u.id == createdUser.id && !u.isDeleted);
+      expect(stillExists, isTrue);
+    });
+
+    test('Admin soft-deletes a user: record is preserved in database, hidden from Admin visibleUsers', () async {
+      // 1. Admin adds user
+      await auth.login('admin', 'admin123');
+      await auth.addUser(
+        username: 'trainee_acc',
+        password: 'password123',
+        displayName: 'Trainee Accountant',
+        roleId: AppRole.clerkId,
+      );
+
+      final trainee = auth.users.firstWhere((u) => u.username == 'trainee_acc');
+
+      // 2. Admin soft-deletes user
+      final softDeleted = await auth.deleteUser(trainee.id);
+      expect(softDeleted, isTrue);
+
+      // 3. User MUST STILL EXIST in database (_users) with isDeleted: true and deletedBy: admin
+      final dbUser = auth.users.firstWhere((u) => u.id == trainee.id);
+      expect(dbUser.isDeleted, isTrue);
+      expect(dbUser.deletedBy, equals('admin'));
+      expect(dbUser.deletedAt, isNotNull);
+
+      // 4. Admin cannot see this soft-deleted user in visibleUsers
+      expect(auth.visibleUsers.any((u) => u.id == trainee.id), isFalse);
+
+      // 5. Admin CANNOT permanently purge user from database
+      final adminPurgeResult = await auth.permanentDeleteUser(trainee.id);
+      expect(adminPurgeResult, isFalse);
+      expect(auth.users.any((u) => u.id == trainee.id), isTrue);
+
+      // 6. Developer CAN see the soft-deleted user in visibleUsers
+      await auth.login('developer', 'developer123');
+      expect(auth.visibleUsers.any((u) => u.id == trainee.id), isTrue);
+
+      // 7. Developer permanently purges user from database
+      final devPurgeResult = await auth.permanentDeleteUser(trainee.id);
+      expect(devPurgeResult, isTrue);
+
+      // 8. Now user is completely purged from DB
+      expect(auth.users.any((u) => u.id == trainee.id), isFalse);
+    });
+
+    test('Developer can block/unblock users, and blocked users cannot login', () async {
+      await auth.login('developer', 'developer123');
+
+      // Create a clerk user
+      await auth.addUser(
+        username: 'cashier_user',
+        password: 'cashierpass123',
+        displayName: 'Billing Cashier',
+        roleId: AppRole.clerkId,
+      );
+      final cashier = auth.users.firstWhere((u) => u.username == 'cashier_user');
+
+      // Developer blocks the user
+      final blockResult = await auth.toggleBlockUser(cashier.id);
+      expect(blockResult, isTrue);
+
+      final blockedCashier = auth.users.firstWhere((u) => u.id == cashier.id);
+      expect(blockedCashier.isBlocked, isTrue);
+      expect(blockedCashier.blockedBy, equals('developer'));
+
+      // Blocked user tries to login -> MUST FAIL
+      final loginSuccess = await auth.login('cashier_user', 'cashierpass123');
+      expect(loginSuccess, isFalse);
+
+      // Non-developer (Admin) CANNOT toggle block status
+      await auth.login('admin', 'admin123');
+      final adminBlockAttempt = await auth.toggleBlockUser(cashier.id);
+      expect(adminBlockAttempt, isFalse);
+
+      // Developer unblocks user
+      await auth.login('developer', 'developer123');
+      final unblockResult = await auth.toggleBlockUser(cashier.id);
+      expect(unblockResult, isTrue);
+
+      // Now user CAN login successfully
+      final loginAfterUnblock = await auth.login('cashier_user', 'cashierpass123');
+      expect(loginAfterUnblock, isTrue);
+    });
+
+    test('Challan entries track createdBy, lastModifiedBy, and lastModifiedAt stamps', () async {
+      // 1. Clerk creates challan
+      final entry = await provider.addChallan(
+        date: DateTime.now(),
+        challanNo: 'CH-STAMP-01',
+        partyId: 'party_stamp_1',
+        partyName: 'RAMESH CLOTH',
+        challanAmount: 15000,
+        finalAmount: 15000,
+        paymentOption: PaymentOption.cash,
+        isCashPaid: false,
+        performedBy: 'clerk',
+      );
+
+      expect(entry.createdBy, equals('clerk'));
+      expect(entry.lastModifiedBy, isNull);
+
+      // 2. Admin edits challan
+      final updated = entry.copyWith(finalAmount: 16500, notes: 'Discount revised');
+      await provider.updateChallan(updated, performedBy: 'admin');
+
+      final fetched = provider.challans.firstWhere((c) => c.id == entry.id);
+      expect(fetched.createdBy, equals('clerk'));
+      expect(fetched.lastModifiedBy, equals('admin'));
+      expect(fetched.lastModifiedAt, isNotNull);
+    });
+
+    test('Party counterparty directory tracks createdBy and lastModifiedBy stamps', () async {
+      // 1. Manager adds party
+      final party = await provider.addParty(
+        name: 'GUJARAT TEXTILE MILLS',
+        phone: '9898012345',
+        address: 'GIDC Pandesara, Surat',
+        gstNumber: '24AAACT1234F1Z9',
+        performedBy: 'manager',
+      );
+
+      expect(party.createdBy, equals('manager'));
+      expect(party.lastModifiedBy, isNull);
+
+      // 2. Admin updates party
+      final updatedParty = party.copyWith(phone: '9898099999');
+      await provider.updateParty(updatedParty, performedBy: 'admin');
+
+      final fetchedParty = provider.parties.firstWhere((p) => p.id == party.id);
+      expect(fetchedParty.createdBy, equals('manager'));
+      expect(fetchedParty.lastModifiedBy, equals('admin'));
+      expect(fetchedParty.lastModifiedAt, isNotNull);
     });
   });
 }

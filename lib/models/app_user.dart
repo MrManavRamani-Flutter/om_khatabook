@@ -39,6 +39,21 @@ class AppUser {
   final DateTime? lastLogin;
   final bool isActive;
 
+  // Soft delete and deactivation tracking
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  final String? deletedBy;
+
+  // Developer block status (Blocked users cannot login)
+  final bool isBlocked;
+  final DateTime? blockedAt;
+  final String? blockedBy;
+
+  // Record audit metadata
+  final String createdBy;
+  final String? updatedBy;
+  final DateTime? updatedAt;
+
   AppUser({
     required this.id,
     required this.username,
@@ -51,6 +66,15 @@ class AppUser {
     required this.createdAt,
     this.lastLogin,
     this.isActive = true,
+    this.isDeleted = false,
+    this.deletedAt,
+    this.deletedBy,
+    this.isBlocked = false,
+    this.blockedAt,
+    this.blockedBy,
+    this.createdBy = 'system',
+    this.updatedBy,
+    this.updatedAt,
   })  : roleId = roleId ?? role?.name ?? 'clerk',
         role = role ?? _roleFromId(roleId ?? 'clerk');
 
@@ -74,6 +98,15 @@ class AppUser {
       'createdAt': createdAt.toIso8601String(),
       'lastLogin': lastLogin?.toIso8601String(),
       'isActive': isActive,
+      'isDeleted': isDeleted,
+      'deletedAt': deletedAt?.toIso8601String(),
+      'deletedBy': deletedBy,
+      'isBlocked': isBlocked,
+      'blockedAt': blockedAt?.toIso8601String(),
+      'blockedBy': blockedBy,
+      'createdBy': createdBy,
+      'updatedBy': updatedBy,
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -97,6 +130,21 @@ class AppUser {
           ? DateTime.parse(json['lastLogin'] as String)
           : null,
       isActive: json['isActive'] as bool? ?? true,
+      isDeleted: json['isDeleted'] as bool? ?? false,
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'] as String)
+          : null,
+      deletedBy: json['deletedBy'] as String?,
+      isBlocked: json['isBlocked'] as bool? ?? false,
+      blockedAt: json['blockedAt'] != null
+          ? DateTime.parse(json['blockedAt'] as String)
+          : null,
+      blockedBy: json['blockedBy'] as String?,
+      createdBy: json['createdBy'] as String? ?? 'system',
+      updatedBy: json['updatedBy'] as String?,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
     );
   }
 
@@ -110,6 +158,15 @@ class AppUser {
     String? phone,
     DateTime? lastLogin,
     bool? isActive,
+    bool? isDeleted,
+    DateTime? deletedAt,
+    String? deletedBy,
+    bool? isBlocked,
+    DateTime? blockedAt,
+    String? blockedBy,
+    String? createdBy,
+    String? updatedBy,
+    DateTime? updatedAt,
   }) {
     final effectiveRoleId = roleId ?? (role != null ? role.name : this.roleId);
     return AppUser(
@@ -124,6 +181,15 @@ class AppUser {
       createdAt: createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
       isActive: isActive ?? this.isActive,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
+      isBlocked: isBlocked ?? this.isBlocked,
+      blockedAt: blockedAt ?? this.blockedAt,
+      blockedBy: blockedBy ?? this.blockedBy,
+      createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

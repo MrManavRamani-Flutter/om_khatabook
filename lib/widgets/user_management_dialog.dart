@@ -204,6 +204,151 @@ class _UserManagementDialogState extends State<UserManagementDialog>
     );
   }
 
+  void _openEditUserDialog(
+      BuildContext context, AuthProvider auth, AppUser user) {
+    final displayNameCtrl = TextEditingController(text: user.displayName);
+    final passwordCtrl = TextEditingController();
+    String selectedRoleId = user.roleId;
+    String? errorText;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Row(
+            children: [
+              const Icon(Icons.edit_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Edit User: @${user.username}'),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (errorText != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).brightness == Brightness.dark
+                          ? AppColors.warningBgDark
+                          : AppColors.warningBgLight,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      errorText!,
+                      style: const TextStyle(
+                          color: AppColors.warningText, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  controller: displayNameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Display Name *',
+                    isDense: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Reset Password (Leave blank to keep current)',
+                    hintText: 'Minimum 6 characters',
+                    isDense: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('Role & Permissions Profile:',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: auth.visibleRoles.any((r) => r.id == selectedRoleId)
+                      ? selectedRoleId
+                      : auth.visibleRoles.first.id,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: auth.visibleRoles.map((r) {
+                    return DropdownMenuItem<String>(
+                      value: r.id,
+                      child: Text('${r.name} (${r.id.toUpperCase()})'),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setModalState(() => selectedRoleId = val);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final d = displayNameCtrl.text.trim();
+                final p = passwordCtrl.text.trim();
+                if (d.isEmpty) {
+                  setModalState(
+                      () => errorText = 'Display name cannot be empty.');
+                  return;
+                }
+                if (p.isNotEmpty && p.length < 6) {
+                  setModalState(() =>
+                      errorText = 'Password must be at least 6 characters.');
+                  return;
+                }
+
+                await auth.updateUser(
+                  user.copyWith(
+                    displayName: d,
+                    password: p.isNotEmpty ? p : user.password,
+                    roleId: selectedRoleId,
+                    role: RolePermissions.roleFromId(selectedRoleId),
+                  ),
+                );
+
+                if (ctx.mounted) {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                          Text('User @${user.username} updated successfully.'),
+                      backgroundColor: AppColors.primary,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openAddRoleDialog(BuildContext context, AuthProvider auth) {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -439,11 +584,14 @@ class _UserManagementDialogState extends State<UserManagementDialog>
           children: [
             const Icon(Icons.delete_outline, color: AppColors.warningText),
             const SizedBox(width: 8),
-            Text('Delete User "${user.username}"?'),
+            Text('Soft-Delete User "${user.username}"?'),
           ],
         ),
         content: Text(
-          'Are you sure you want to permanently delete authorized account "${user.displayName}"?\nThis action will be recorded in the audit trail.',
+          'Are you sure you want to deactivate authorized user "${user.displayName}" (@${user.username})?\n\n'
+          '🔒 Data Preservation Guarantee:\n'
+          'The account is soft-deleted and will NOT be erased from the database. '
+          'Records are safely preserved for Developer audit and can only be permanently purged by Developer.',
         ),
         actions: [
           TextButton(
@@ -462,15 +610,160 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(ok
-                        ? 'User "${user.username}" deleted.'
-                        : 'Cannot delete primary admin/developer account or current active session.'),
+                        ? 'User "${user.username}" soft-deleted (preserved in database).'
+                        : 'Cannot delete primary root account or current active session.'),
                     backgroundColor:
                         ok ? AppColors.primary : AppColors.warningText,
                   ),
                 );
               }
             },
-            child: const Text('Delete User'),
+            child: const Text('Deactivate / Soft Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmPermanentPurgeUser(
+      BuildContext context, AuthProvider auth, AppUser user) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Permanent Purge from DB?'),
+          ],
+        ),
+        content: Text(
+          '⚠️ DEVELOPER EXCLUSIVE ACTION:\n\n'
+          'Are you sure you want to permanently erase user account "${user.displayName}" (@${user.username}) from the database?\n\n'
+          'This action is irreversible and permanently removes the record from storage.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final ok = await auth.permanentDeleteUser(user.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok
+                        ? 'User "${user.username}" permanently purged from database.'
+                        : 'Could not purge user.'),
+                    backgroundColor: ok ? Colors.red : AppColors.warningText,
+                  ),
+                );
+              }
+            },
+            child: const Text('Permanent DB Purge'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRestoreUser(
+      BuildContext context, AuthProvider auth, AppUser user) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.restore, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Restore User Account?'),
+          ],
+        ),
+        content: Text(
+          'Restore previously deactivated account "${user.displayName}" (@${user.username}) back to active status?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final ok = await auth.restoreUser(user.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok
+                        ? 'User "${user.username}" restored to active status.'
+                        : 'Could not restore user.'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
+            },
+            child: const Text('Restore User'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmToggleBlockUser(
+      BuildContext context, AuthProvider auth, AppUser user) {
+    final willBlock = !user.isBlocked;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(willBlock ? Icons.block : Icons.lock_open,
+                color: willBlock ? AppColors.warningText : AppColors.primary),
+            const SizedBox(width: 8),
+            Text('${willBlock ? 'Block' : 'Unblock'} User "${user.username}"?'),
+          ],
+        ),
+        content: Text(
+          willBlock
+              ? 'Are you sure you want to block "${user.displayName}" (@${user.username}) from logging in? They will be denied entry until Developer unblocks them.'
+              : 'Are you sure you want to unblock "${user.displayName}" (@${user.username})? They will be allowed to log in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: willBlock ? AppColors.warningText : AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final ok = await auth.toggleBlockUser(user.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok
+                        ? 'User "${user.username}" ${willBlock ? 'blocked' : 'unblocked'}.'
+                        : 'Could not toggle block status.'),
+                    backgroundColor:
+                        willBlock ? AppColors.warningText : AppColors.primary,
+                  ),
+                );
+              }
+            },
+            child: Text(willBlock ? 'Block User' : 'Unblock User'),
           ),
         ],
       ),
@@ -538,7 +831,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 740),
+        constraints: const BoxConstraints(maxWidth: 860, maxHeight: 760),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -662,10 +955,10 @@ class _UserManagementDialogState extends State<UserManagementDialog>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Active System Accounts',
+              'Active System Accounts & Operators',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            if (auth.canManageUsers)
+            if (auth.canAddUsers)
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -702,7 +995,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF7C3AED))),
-                      Text('Master supervision & dev tools',
+                      Text('Master audit logs, user blocking & DB purge',
                           style: TextStyle(fontSize: 10.5, color: Colors.grey)),
                     ],
                   ),
@@ -717,7 +1010,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary)),
-                    Text('Full master control, user manager & purge',
+                    Text('Add/edit users & soft-deactivate (no final purge)',
                         style: TextStyle(fontSize: 10.5, color: Colors.grey)),
                   ],
                 ),
@@ -731,7 +1024,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0284C7))),
-                    Text('Commercial operations, audits & bin restore',
+                    Text('Add & edit users (NO delete rights permitted)',
                         style: TextStyle(fontSize: 10.5, color: Colors.grey)),
                   ],
                 ),
@@ -811,7 +1104,11 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                   border: Border.all(
                     color: isCurrent
                         ? AppColors.primary
-                        : Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                        : u.isDeleted
+                            ? AppColors.warningText.withValues(alpha: 0.5)
+                            : Theme.of(context)
+                                .dividerColor
+                                .withValues(alpha: 0.2),
                     width: isCurrent ? 1.5 : 1,
                   ),
                 ),
@@ -878,11 +1175,53 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                                   ),
                                 ),
                               ],
+                              if (u.isBlocked) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warningBgDark,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'BLOCKED',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (u.isDeleted) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'DELETED (IN DB)',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.deepOrange,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '@${u.username} • Created: ${Formatters.shortDate(u.createdAt)}${u.lastLogin != null ? ' • Last Login: ${Formatters.shortDate(u.lastLogin!)}' : ''}',
+                            '@${u.username} • Created by @${u.createdBy} on ${Formatters.shortDate(u.createdAt)}'
+                            '${u.updatedBy != null ? ' • Modified by @${u.updatedBy}' : ''}'
+                            '${u.deletedBy != null && u.isDeleted ? ' • Soft-deleted by @${u.deletedBy}' : ''}'
+                            '${u.blockedBy != null && u.isBlocked ? ' • Blocked by @${u.blockedBy}' : ''}'
+                            '${u.lastLogin != null ? ' • Last Login: ${Formatters.shortDate(u.lastLogin!)}' : ''}',
                             style: TextStyle(
                                 fontSize: 11,
                                 color: Theme.of(context)
@@ -893,18 +1232,83 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                         ],
                       ),
                     ),
-                    if (auth.canManageUsers &&
-                        !isDefaultAdmin &&
-                        !isDefaultDev &&
-                        !isCurrent &&
-                        (auth.isDeveloper ||
-                            u.roleId != AppRole.developerId))
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            size: 18, color: AppColors.warningText),
-                        tooltip: 'Delete User Account',
-                        onPressed: () => _confirmDeleteUser(context, auth, u),
-                      ),
+
+                    // ROW ACTIONS
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Soft-deleted user actions (Developer can restore or permanently purge)
+                        if (u.isDeleted) ...[
+                          if (auth.isDeveloper) ...[
+                            IconButton(
+                              icon: const Icon(Icons.restore_from_trash,
+                                  size: 19, color: AppColors.primary),
+                              tooltip: 'Restore User Account',
+                              onPressed: () =>
+                                  _confirmRestoreUser(context, auth, u),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_forever,
+                                  size: 19, color: Colors.red),
+                              tooltip:
+                                  'Irrevocable Permanent DB Purge (Developer Only)',
+                              onPressed: () =>
+                                  _confirmPermanentPurgeUser(context, auth, u),
+                            ),
+                          ],
+                        ] else ...[
+                          // Developer Exclusive: Block / Unblock user
+                          if (auth.isDeveloper &&
+                              !isDefaultDev &&
+                              !isDefaultAdmin &&
+                              !isCurrent) ...[
+                            IconButton(
+                              icon: Icon(
+                                u.isBlocked ? Icons.lock_open : Icons.block,
+                                size: 18,
+                                color: u.isBlocked
+                                    ? AppColors.successText
+                                    : AppColors.warningText,
+                              ),
+                              tooltip: u.isBlocked
+                                  ? 'Unblock User'
+                                  : 'Block User (Developer Only)',
+                              onPressed: () =>
+                                  _confirmToggleBlockUser(context, auth, u),
+                            ),
+                          ],
+
+                          // Edit User (Manager, Admin, Developer)
+                          if (auth.canEditUsers &&
+                              (!isDefaultDev || auth.isDeveloper)) ...[
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined,
+                                  size: 18, color: AppColors.primary),
+                              tooltip: 'Edit User & Credentials',
+                              onPressed: () =>
+                                  _openEditUserDialog(context, auth, u),
+                            ),
+                          ],
+
+                          // Soft-delete user (Admin or Developer only - Manager has canDeleteUsers: false)
+                          if (auth.canDeleteUsers &&
+                              !isDefaultAdmin &&
+                              !isDefaultDev &&
+                              !isCurrent &&
+                              (u.roleId != AppRole.developerId ||
+                                  auth.isDeveloper)) ...[
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  size: 18, color: AppColors.warningText),
+                              tooltip:
+                                  'Deactivate / Soft-Delete User (Preserves in DB)',
+                              onPressed: () =>
+                                  _confirmDeleteUser(context, auth, u),
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               );
@@ -915,7 +1319,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
     );
   }
 
-  // --- TAB 2: DYNAMIC PERMISSIONS MATRIX ---
+  // --- TAB 2: DYNAMIC PERMISSIONS MATRIX (5 CORE CAPABILITY PILLARS) ---
   Widget _buildDynamicPermissionsTab(
       BuildContext context, AuthProvider auth, bool isDark) {
     final visibleRoles = auth.visibleRoles;
@@ -1002,7 +1406,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                     ),
                     icon: const Icon(Icons.refresh, size: 16),
                     label: const Text('Reset Defaults',
-                        style: TextStyle(fontSize: 12)),
+                      style: TextStyle(fontSize: 12)),
                     onPressed: () => _confirmResetPermissions(context, auth,
                         currentRoleObj.id, currentRoleObj.name),
                   ),
@@ -1043,7 +1447,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Configuring dynamic permissions for "${currentRoleObj.name}". All switches save instantly to database and update active user permissions.',
+                  'Configuring dynamic 5-pillar permissions for "${currentRoleObj.name}". All changes save immediately to database.',
                   style: const TextStyle(fontSize: 11.5),
                 ),
               ),
@@ -1052,12 +1456,70 @@ class _UserManagementDialogState extends State<UserManagementDialog>
         ),
         const SizedBox(height: 12),
 
-        // SCROLLABLE PERMISSIONS LIST
+        // SCROLLABLE PERMISSIONS LIST GROUPED BY 5 CORE PILLARS
         Expanded(
           child: ListView(
             children: [
+              // 1. 👁️ VIEW PERMISSIONS
               _buildCategoryHeader(
-                  '📦 Commercial Delivery Challans & Invoicing'),
+                  '👁️ 1. VIEW PERMISSIONS (Commercial Ledgers, Reports & Invoicing)'),
+              _buildPermissionTile(
+                title: 'View Delivery Challans & Ledger',
+                description:
+                    'Allow operator to inspect delivery challan entries, dues, and payment statuses',
+                icon: Icons.receipt_long_outlined,
+                value: permissions.canViewChallans,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canViewChallans: val),
+                  'View Delivery Challans',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'View Counterparties Directory',
+                description:
+                    'Allow operator to search and view party profiles, contact details, and balances',
+                icon: Icons.people_outline,
+                value: permissions.canViewParties,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canViewParties: val),
+                  'View Counterparties Directory',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'View Financial Summary Reports',
+                description:
+                    'Allow viewing aggregate business stats, outstanding receivables, and monthly summaries',
+                icon: Icons.bar_chart_outlined,
+                value: permissions.canViewReports,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canViewReports: val),
+                  'View Financial Reports',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'Print Commercial Tax Invoices (A4/A5)',
+                description:
+                    'Allow generating and printing single-page commercial GST Tax Invoices',
+                icon: Icons.print_outlined,
+                value: permissions.canPrintInvoice,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canPrintInvoice: val),
+                  'Print Tax Invoices',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              // 2. ➕ ADD / CREATE PERMISSIONS
+              _buildCategoryHeader(
+                  '➕ 2. ADD / CREATE PERMISSIONS (Challans, Parties & Users)'),
               _buildPermissionTile(
                 title: 'Create Delivery Challans',
                 description:
@@ -1072,9 +1534,41 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                 ),
               ),
               _buildPermissionTile(
+                title: 'Register Counterparties',
+                description:
+                    'Allow registering new buyer and seller party accounts in the directory',
+                icon: Icons.person_add_alt_1_outlined,
+                value: permissions.canManageParties,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canManageParties: val),
+                  'Register Counterparties',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'Add / Create Authorized Users',
+                description:
+                    'Allow creating new authorized system operator accounts (Manager, Admin, Developer)',
+                icon: Icons.group_add_outlined,
+                value: permissions.canAddUsers,
+                isLockedForAdmin: currentRoleObj.isAdmin || currentRoleObj.isDeveloper,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canAddUsers: val),
+                  'Add Authorized Users',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              // 3. ✏️ EDIT / UPDATE PERMISSIONS
+              _buildCategoryHeader(
+                  '✏️ 3. EDIT / UPDATE PERMISSIONS (Challans, Users & Branding)'),
+              _buildPermissionTile(
                 title: 'Edit Delivery Challans',
                 description:
-                    'Allow operator to modify challan amounts, dates, notes, and statuses',
+                    'Allow operator to modify voucher amounts, dates, notes, and payment statuses',
                 icon: Icons.edit_note_outlined,
                 value: permissions.canEditChallan,
                 onChanged: (val) => _updatePermission(
@@ -1085,9 +1579,41 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                 ),
               ),
               _buildPermissionTile(
-                title: 'Delete Challans (Soft Delete to Bin)',
+                title: 'Update Authorized Users & Roles',
                 description:
-                    'Allow moving challans to Recycle Bin (can be restored later)',
+                    'Allow updating user display names, passwords, and assigned roles',
+                icon: Icons.manage_accounts_outlined,
+                value: permissions.canEditUsers,
+                isLockedForAdmin: currentRoleObj.isAdmin || currentRoleObj.isDeveloper,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canEditUsers: val),
+                  'Update Authorized Users',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'Modify Company Branding & Settings',
+                description:
+                    'Allow altering company name, tagline, app logos, and typography profile',
+                icon: Icons.tune_outlined,
+                value: permissions.canManageSettings,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canManageSettings: val),
+                  'Modify Company Branding',
+                ),
+              ),
+
+              const SizedBox(height: 12),
+              // 4. 🗑️ DELETE & DATA RECOVERY PERMISSIONS
+              _buildCategoryHeader(
+                  '🗑️ 4. DELETE & RECOVERY PERMISSIONS (Soft Delete, Recycle Bin & DB Purge)'),
+              _buildPermissionTile(
+                title: 'Soft-Delete Challans (Move to Recycle Bin)',
+                description:
+                    'Allow moving challans to Recycle Bin (can be recovered later)',
                 icon: Icons.delete_sweep_outlined,
                 value: permissions.canDeleteChallan,
                 isDanger: true,
@@ -1095,26 +1621,9 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                   auth,
                   currentRoleObj,
                   permissions.copyWith(canDeleteChallan: val),
-                  'Soft Delete Challans',
+                  'Soft-Delete Challans',
                 ),
               ),
-              _buildPermissionTile(
-                title: 'Print Tax Invoices (A4/A5)',
-                description:
-                    'Allow generating and printing commercial GST Tax Invoices',
-                icon: Icons.print_outlined,
-                value: permissions.canPrintInvoice,
-                onChanged: (val) => _updatePermission(
-                  auth,
-                  currentRoleObj,
-                  permissions.copyWith(canPrintInvoice: val),
-                  'Print Tax Invoices',
-                ),
-              ),
-
-              const SizedBox(height: 10),
-              _buildCategoryHeader(
-                  '♻️ Two-Stage Recycle Bin & Data Protection'),
               _buildPermissionTile(
                 title: 'Restore Challans from Recycle Bin',
                 description:
@@ -1125,13 +1634,13 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                   auth,
                   currentRoleObj,
                   permissions.copyWith(canRestoreChallan: val),
-                  'Restore from Recycle Bin',
+                  'Restore Challans',
                 ),
               ),
               _buildPermissionTile(
-                title: 'Permanent Purge Recycle Bin',
+                title: 'Permanently Purge Recycle Bin Vouchers',
                 description:
-                    'Irrevocably erase soft-deleted vouchers from disk permanently',
+                    'Irrevocably erase soft-deleted vouchers from storage permanently',
                 icon: Icons.delete_forever_outlined,
                 value: permissions.canPurgeRecycleBin,
                 isDanger: true,
@@ -1142,95 +1651,66 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                   'Permanent Purge Recycle Bin',
                 ),
               ),
+              _buildPermissionTile(
+                title: 'Deactivate / Soft-Delete Users',
+                description:
+                    'Soft-delete user accounts (Manager = false, Admin = true; record remains preserved in database)',
+                icon: Icons.person_remove_outlined,
+                value: permissions.canDeleteUsers,
+                isDanger: true,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canDeleteUsers: val),
+                  'Deactivate / Soft-Delete Users',
+                ),
+              ),
+              _buildPermissionTile(
+                title: 'Permanent Erase Users from Database (Developer Only)',
+                description:
+                    'Irrevocably purge user records permanently from database storage',
+                icon: Icons.highlight_off_outlined,
+                value: permissions.canPermanentDeleteUsers,
+                isDanger: true,
+                isLockedForAdmin: !currentRoleObj.isDeveloper,
+                onChanged: (val) => _updatePermission(
+                  auth,
+                  currentRoleObj,
+                  permissions.copyWith(canPermanentDeleteUsers: val),
+                  'Permanent Erase Users from DB',
+                ),
+              ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+              // 5. 📜 AUDIT TRAIL & LOG PERMISSIONS
               _buildCategoryHeader(
-                  '👥 Commercial Counterparties & Financial Reports'),
+                  '📜 5. AUDIT TRAIL & LOG PERMISSIONS (Supervision & Compliance)'),
               _buildPermissionTile(
-                title: 'Register & Manage Parties',
+                title: 'View System Audit Trail Logs & Record History',
                 description:
-                    'Allow creating new buyer/seller parties and modifying phone numbers',
-                icon: Icons.business_outlined,
-                value: permissions.canManageParties,
-                onChanged: (val) => _updatePermission(
-                  auth,
-                  currentRoleObj,
-                  permissions.copyWith(canManageParties: val),
-                  'Manage Parties',
-                ),
-              ),
-              _buildPermissionTile(
-                title: 'Export Reports (PDF / Excel .xlsx)',
-                description:
-                    'Allow downloading accounting reports and party balance sheets',
-                icon: Icons.file_download_outlined,
-                value: permissions.canExportReports,
-                onChanged: (val) => _updatePermission(
-                  auth,
-                  currentRoleObj,
-                  permissions.copyWith(canExportReports: val),
-                  'Export Reports',
-                ),
-              ),
-
-              const SizedBox(height: 10),
-              _buildCategoryHeader('🛡️ Audit Trail & Regulatory Compliance'),
-              _buildPermissionTile(
-                title: 'View System Audit Trail Logs',
-                description:
-                    'Allow inspecting modification history logs, user logins, and timestamps',
+                    'Developer supervised: view modification history, timestamps, and who changed/added records',
                 icon: Icons.history_edu_outlined,
                 value: permissions.canViewAuditLogs,
                 onChanged: (val) => _updatePermission(
                   auth,
                   currentRoleObj,
                   permissions.copyWith(canViewAuditLogs: val),
-                  'View Audit Logs',
+                  'View Audit Trail Logs',
                 ),
               ),
               _buildPermissionTile(
-                title: 'Clear Audit Trail History',
+                title: 'Clear Audit Trail History (Developer Only)',
                 description:
-                    'Allow erasing historical modification logs from database',
+                    'Irrevocably erase historical audit logs from database storage',
                 icon: Icons.cleaning_services_outlined,
                 value: permissions.canClearAuditLogs,
                 isDanger: true,
+                isLockedForAdmin: !currentRoleObj.isDeveloper,
                 onChanged: (val) => _updatePermission(
                   auth,
                   currentRoleObj,
                   permissions.copyWith(canClearAuditLogs: val),
                   'Clear Audit Trail History',
-                ),
-              ),
-
-              const SizedBox(height: 10),
-              _buildCategoryHeader(
-                  '⚙️ System Administration & Master Control'),
-              _buildPermissionTile(
-                title: 'Manage Users & Role Permissions',
-                description:
-                    'Allow adding/deleting users and dynamically altering role permissions',
-                icon: Icons.admin_panel_settings_outlined,
-                value: permissions.canManageUsers,
-                isLockedForAdmin: currentRoleObj.isAdmin || currentRoleObj.isDeveloper,
-                onChanged: (val) => _updatePermission(
-                  auth,
-                  currentRoleObj,
-                  permissions.copyWith(canManageUsers: val),
-                  'Manage Users & Role Permissions',
-                ),
-              ),
-              _buildPermissionTile(
-                title: 'Modify Company Branding & Settings',
-                description:
-                    'Allow altering company name, tagline, app logos, and typography',
-                icon: Icons.tune_outlined,
-                value: permissions.canManageSettings,
-                onChanged: (val) => _updatePermission(
-                  auth,
-                  currentRoleObj,
-                  permissions.copyWith(canManageSettings: val),
-                  'Modify Company Branding',
                 ),
               ),
               const SizedBox(height: 16),
@@ -1243,7 +1723,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
 
   Widget _buildCategoryHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 6, left: 4),
+      padding: const EdgeInsets.only(top: 10, bottom: 6, left: 4),
       child: Text(
         title,
         style: const TextStyle(
@@ -1292,7 +1772,7 @@ class _UserManagementDialogState extends State<UserManagementDialog>
                       const SizedBox(width: 6),
                       const Tooltip(
                         message:
-                            'Safety Lock: User management cannot be revoked from this role to prevent system lockout',
+                            'Restricted: This capability flag is strictly locked for this role category.',
                         child: Icon(Icons.lock, size: 13, color: Colors.grey),
                       ),
                     ],

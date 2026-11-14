@@ -5,8 +5,12 @@ class Party {
   final String address;
   final String gstNumber;
   final DateTime createdAt;
+  final String createdBy;
+  final String? lastModifiedBy;
+  final DateTime? lastModifiedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
+  final String? deletedBy;
 
   Party({
     required this.id,
@@ -15,8 +19,12 @@ class Party {
     this.address = '',
     this.gstNumber = '',
     required this.createdAt,
+    this.createdBy = 'admin',
+    this.lastModifiedBy,
+    this.lastModifiedAt,
     this.isDeleted = false,
     this.deletedAt,
+    this.deletedBy,
   });
 
   Map<String, dynamic> toJson() {
@@ -27,8 +35,12 @@ class Party {
       'address': address,
       'gstNumber': gstNumber,
       'createdAt': createdAt.toIso8601String(),
+      'createdBy': createdBy,
+      'lastModifiedBy': lastModifiedBy,
+      'lastModifiedAt': lastModifiedAt?.toIso8601String(),
       'isDeleted': isDeleted,
       'deletedAt': deletedAt?.toIso8601String(),
+      'deletedBy': deletedBy,
     };
   }
 
@@ -42,10 +54,16 @@ class Party {
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
+      createdBy: json['createdBy'] as String? ?? 'admin',
+      lastModifiedBy: json['lastModifiedBy'] as String?,
+      lastModifiedAt: json['lastModifiedAt'] != null
+          ? DateTime.parse(json['lastModifiedAt'] as String)
+          : null,
       isDeleted: json['isDeleted'] as bool? ?? false,
       deletedAt: json['deletedAt'] != null
           ? DateTime.parse(json['deletedAt'] as String)
           : null,
+      deletedBy: json['deletedBy'] as String?,
     );
   }
 
@@ -54,8 +72,12 @@ class Party {
     String? phone,
     String? address,
     String? gstNumber,
+    String? createdBy,
+    String? lastModifiedBy,
+    DateTime? lastModifiedAt,
     bool? isDeleted,
     DateTime? deletedAt,
+    String? deletedBy,
     bool clearDeletedAt = false,
   }) {
     return Party(
@@ -65,8 +87,12 @@ class Party {
       address: address ?? this.address,
       gstNumber: gstNumber ?? this.gstNumber,
       createdAt: createdAt,
+      createdBy: createdBy ?? this.createdBy,
+      lastModifiedBy: lastModifiedBy ?? this.lastModifiedBy,
+      lastModifiedAt: lastModifiedAt ?? this.lastModifiedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 }

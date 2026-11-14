@@ -526,6 +526,7 @@ class ChallanProvider extends ChangeNotifier {
       address: address.trim(),
       gstNumber: gstNumber.trim(),
       createdAt: DateTime.now(),
+      createdBy: performedBy,
     );
     _parties.add(party);
     await _storage.saveParties(_parties);
@@ -547,7 +548,10 @@ class ChallanProvider extends ChangeNotifier {
   Future<void> updateParty(Party updated, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _parties.indexWhere((p) => p.id == updated.id);
     if (idx != -1) {
-      _parties[idx] = updated;
+      _parties[idx] = updated.copyWith(
+        lastModifiedBy: performedBy,
+        lastModifiedAt: DateTime.now(),
+      );
       for (int i = 0; i < _challans.length; i++) {
         if (_challans[i].partyId == updated.id) {
           _challans[i] = _challans[i].copyWith(partyName: updated.name);
@@ -577,6 +581,7 @@ class ChallanProvider extends ChangeNotifier {
       _parties[idx] = p.copyWith(
         isDeleted: true,
         deletedAt: DateTime.now(),
+        deletedBy: performedBy,
       );
       _selectedPartyIds.remove(partyId);
       await _storage.saveParties(_parties);
@@ -676,6 +681,7 @@ class ChallanProvider extends ChangeNotifier {
       chequeDetails: chequeDetails,
       notes: notes.trim(),
       createdAt: DateTime.now(),
+      createdBy: performedBy,
     );
 
     _challans.insert(0, entry);
@@ -698,17 +704,21 @@ class ChallanProvider extends ChangeNotifier {
   Future<void> updateChallan(ChallanEntry updated, {String performedBy = 'admin', String userRole = 'ADMIN'}) async {
     final idx = _challans.indexWhere((c) => c.id == updated.id);
     if (idx != -1) {
-      _challans[idx] = updated;
+      final stamped = updated.copyWith(
+        lastModifiedBy: performedBy,
+        lastModifiedAt: DateTime.now(),
+      );
+      _challans[idx] = stamped;
       await _storage.saveChallans(_challans);
 
       await logAction(
         action: AuditAction.update,
         entityType: AuditEntityType.challan,
-        entityId: updated.id,
-        entityTitle: 'Challan #${updated.challanNo} (${updated.partyName})',
+        entityId: stamped.id,
+        entityTitle: 'Challan #${stamped.challanNo} (${stamped.partyName})',
         performedBy: performedBy,
         userRole: userRole,
-        description: 'Updated challan #${updated.challanNo} details (Final Amt: ₹${Formatters.currency(updated.finalAmount)})',
+        description: 'Updated challan #${stamped.challanNo} details (Final Amt: ₹${Formatters.currency(stamped.finalAmount)})',
       );
 
       notifyListeners();
@@ -722,6 +732,7 @@ class ChallanProvider extends ChangeNotifier {
       _challans[idx] = c.copyWith(
         isDeleted: true,
         deletedAt: DateTime.now(),
+        deletedBy: performedBy,
       );
       await _storage.saveChallans(_challans);
 

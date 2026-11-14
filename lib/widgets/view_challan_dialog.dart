@@ -251,7 +251,19 @@ class ViewChallanDialog extends StatelessWidget {
                       const Divider(height: 16),
                       _buildRow('Notes', entry.notes),
                     ],
-                    if (challanLogs.isNotEmpty) ...[
+                    const Divider(height: 16),
+                    _buildRow(
+                      'Created By',
+                      '@${entry.createdBy} (${Formatters.dateTime(entry.createdAt)})',
+                    ),
+                    if (entry.lastModifiedBy != null) ...[
+                      const Divider(height: 16),
+                      _buildRow(
+                        'Last Modified By',
+                        '@${entry.lastModifiedBy} (${entry.lastModifiedAt != null ? Formatters.dateTime(entry.lastModifiedAt!) : 'Updated'})',
+                      ),
+                    ],
+                    if (auth.canViewAuditLogs && challanLogs.isNotEmpty) ...[
                       const Divider(height: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +279,7 @@ class ViewChallanDialog extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 6),
-                          ...challanLogs.take(4).map((l) {
+                          ...challanLogs.take(5).map((l) {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 3),
                               child: Row(
@@ -280,7 +292,7 @@ class ViewChallanDialog extends StatelessWidget {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      '${l.description} by ${l.performedBy} [${l.userRole}]',
+                                      '${l.description} by @${l.performedBy} [${l.userRole}]',
                                       style: const TextStyle(fontSize: 11),
                                     ),
                                   ),

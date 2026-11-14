@@ -105,7 +105,9 @@ class _MainLayoutState extends State<MainLayout> {
         contentBody = const RecycleBinView();
         break;
       case 4:
-        contentBody = const AuditLogView();
+        contentBody = auth.canViewAuditLogs
+            ? const AuditLogView()
+            : const ChallanListView();
         break;
       case 5:
         contentBody = const SettingsView();
@@ -344,15 +346,16 @@ class _MainLayoutState extends State<MainLayout> {
                 isCollapsed: isCollapsed,
                 isDrawer: isDrawer,
               ),
-              _buildNavItem(
-                index: 4,
-                icon: Icons.history_outlined,
-                activeIcon: Icons.history,
-                label: 'Audit History',
-                badge: '${provider.auditLogs.length}',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
+              if (auth.canViewAuditLogs)
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.history_outlined,
+                  activeIcon: Icons.history,
+                  label: 'Audit History',
+                  badge: '${provider.auditLogs.length}',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
               _buildNavItem(
                 index: 5,
                 icon: Icons.settings_outlined,

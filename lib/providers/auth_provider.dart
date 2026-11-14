@@ -28,19 +28,19 @@ class AuthProvider extends ChangeNotifier {
   String get currentRoleId => _currentUser?.roleId ?? 'clerk';
   UserRole get currentRole => _currentUser?.role ?? UserRole.clerk;
 
-  /// System Developer has supreme access and can supervise all roles
+  /// System Developer has supreme access and master supervision across all records & logs
   bool get isDeveloper =>
       _currentUser?.role == UserRole.developer ||
       _currentUser?.roleId == AppRole.developerId;
 
-  /// Administrator has full administrative access (except viewing Developer role)
+  /// Administrator has full administrative access (except viewing Developer role & permanent user delete)
   bool get isAdmin =>
       isDeveloper ||
       currentRole == UserRole.admin ||
       currentRoleId == AppRole.adminId;
 
-  bool get isManager => currentRole == UserRole.manager;
-  bool get isClerk => currentRole == UserRole.clerk;
+  bool get isManager => currentRole == UserRole.manager || currentRoleId == AppRole.managerId;
+  bool get isClerk => currentRole == UserRole.clerk || currentRoleId == AppRole.clerkId;
 
   /// All roles registered in the system (built-in + user-defined custom roles)
   List<AppRole> get allRoles => [
@@ -63,18 +63,20 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// List of users visible to the currently authenticated operator:
-  /// - Developer can see ALL users (including other developers and admins).
-  /// - Administrator can see all users EXCEPT users with the Developer role
-  ///   ("admin can not view developer role view").
+  /// - Developer sees ALL users (including soft-deleted and blocked accounts for master audit/purge).
+  /// - Administrator sees non-deleted users, excluding Developer accounts ("admin can not view developer role view").
+  /// - Manager sees non-deleted users, excluding Developer accounts.
   List<AppUser> get visibleUsers {
     if (isDeveloper) {
       return List.unmodifiable(_users);
     }
-    // Filter out Developer accounts for Admin
+    // Filter out Developer accounts and soft-deleted accounts for Admin/Manager
     return List.unmodifiable(
       _users
           .where((u) =>
-              u.role != UserRole.developer && u.roleId != AppRole.developerId)
+              !u.isDeleted &&
+              u.role != UserRole.developer &&
+              u.roleId != AppRole.developerId)
           .toList(),
     );
   }
@@ -88,19 +90,37 @@ class AuthProvider extends ChangeNotifier {
 
   RolePermissions permissionsFor(UserRole role) => permissionsForId(role.name);
 
+  // 1. 👁️ View
+  bool get canViewChallans => currentPermissions.canViewChallans;
+  bool get canViewParties => currentPermissions.canViewParties;
+  bool get canViewReports => currentPermissions.canViewReports;
+  bool get canExportReports => currentPermissions.canViewReports;
+  bool get canPrintInvoice => currentPermissions.canPrintInvoice;
+
+  // 2. ➕ Add
   bool get canCreateChallan => currentPermissions.canCreateChallan;
+  bool get canManageParties => currentPermissions.canManageParties;
+  bool get canAddUsers => currentPermissions.canAddUsers;
+
+  // 3. ✏️ Edit
   bool get canEditChallan => currentPermissions.canEditChallan;
+  bool get canEditUsers => currentPermissions.canEditUsers;
+  bool get canManageSettings => currentPermissions.canManageSettings;
+
+  // 4. 🗑️ Delete & Recovery
   bool get canDelete => currentPermissions.canDeleteChallan;
   bool get canDeleteChallan => currentPermissions.canDeleteChallan;
   bool get canRestoreFromBin => currentPermissions.canRestoreChallan;
   bool get canPurgeRecycleBin => currentPermissions.canPurgeRecycleBin;
-  bool get canManageParties => currentPermissions.canManageParties;
-  bool get canExportReports => currentPermissions.canExportReports;
-  bool get canPrintInvoice => currentPermissions.canPrintInvoice;
-  bool get canViewAuditLogs => currentPermissions.canViewAuditLogs;
-  bool get canClearAuditLogs => currentPermissions.canClearAuditLogs;
+  bool get canDeleteUsers => currentPermissions.canDeleteUsers;
+  bool get canPermanentDeleteUsers => isDeveloper && currentPermissions.canPermanentDeleteUsers;
+  bool get canBlockUsers => isDeveloper;
+
+  // 5. 📜 Log & Audit
+  bool get canViewAuditLogs => isDeveloper || currentPermissions.canViewAuditLogs;
+  bool get canClearAuditLogs => isDeveloper && currentPermissions.canClearAuditLogs;
+
   bool get canManageUsers => currentPermissions.canManageUsers;
-  bool get canManageSettings => currentPermissions.canManageSettings;
 
   String roleNameFor(String roleId) {
     final matched = allRoles.where((r) => r.id == roleId).toList();
@@ -151,6 +171,7 @@ class AuthProvider extends ChangeNotifier {
           email: 'developer@ommavtar.com',
           phone: '+91 98250 99999',
           createdAt: DateTime.now(),
+          createdBy: 'system',
         ),
         AppUser(
           id: 'user_admin_default',
@@ -162,6 +183,7 @@ class AuthProvider extends ChangeNotifier {
           email: 'admin@ommavtar.com',
           phone: '+91 98250 12345',
           createdAt: DateTime.now(),
+          createdBy: 'system',
         ),
         AppUser(
           id: 'user_manager_default',
@@ -173,6 +195,7 @@ class AuthProvider extends ChangeNotifier {
           email: 'manager@ommavtar.com',
           phone: '+91 98250 22334',
           createdAt: DateTime.now(),
+          createdBy: 'system',
         ),
         AppUser(
           id: 'user_clerk_default',
@@ -184,6 +207,7 @@ class AuthProvider extends ChangeNotifier {
           email: 'accounts@ommavtar.com',
           phone: '+91 98250 33445',
           createdAt: DateTime.now(),
+          createdBy: 'system',
         ),
       ];
       await _storage.saveUsers(_users);
@@ -202,6 +226,7 @@ class AuthProvider extends ChangeNotifier {
             email: 'developer@ommavtar.com',
             phone: '+91 98250 99999',
             createdAt: DateTime.now(),
+            createdBy: 'system',
           ),
         );
         await _storage.saveUsers(_users);
@@ -213,7 +238,7 @@ class AuthProvider extends ChangeNotifier {
     if (savedUser != null) {
       final matched =
           _users.where((u) => u.id == savedUser.id && u.isActive).toList();
-      if (matched.isNotEmpty) {
+      if (matched.isNotEmpty && !matched.first.isDeleted && !matched.first.isBlocked) {
         _currentUser = matched.first;
       } else {
         await _storage.saveActiveSessionUser(null);
@@ -242,6 +267,12 @@ class AuthProvider extends ChangeNotifier {
     }
 
     final user = matched.first;
+
+    // Check if account is deleted or blocked
+    if (user.isDeleted || user.isBlocked) {
+      return false;
+    }
+
     final updated = user.copyWith(lastLogin: DateTime.now());
 
     final idx = _users.indexWhere((u) => u.id == user.id);
@@ -285,7 +316,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add new authorized user
+  /// Add new authorized user (Manager, Admin, Developer)
   Future<bool> addUser({
     required String username,
     required String password,
@@ -307,6 +338,8 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
 
+    final operator = _currentUser?.username ?? 'admin';
+
     final newUser = AppUser(
       id: _uuid.v4(),
       username: cleanUsername,
@@ -318,6 +351,7 @@ class AuthProvider extends ChangeNotifier {
       email: email.trim(),
       phone: phone.trim(),
       createdAt: DateTime.now(),
+      createdBy: operator,
     );
 
     _users.add(newUser);
@@ -329,14 +363,14 @@ class AuthProvider extends ChangeNotifier {
       entityId: newUser.id,
       entityTitle: newUser.displayName,
       description:
-          'Created new user account: ${newUser.username} with role [${roleNameFor(effectiveRoleId)}]',
+          'Created new user account: ${newUser.username} with role [${roleNameFor(effectiveRoleId)}] by @$operator',
     );
 
     notifyListeners();
     return true;
   }
 
-  /// Update existing user
+  /// Update existing user (Manager, Admin, Developer)
   Future<void> updateUser(AppUser updated) async {
     final idx = _users.indexWhere((u) => u.id == updated.id);
     if (idx != -1) {
@@ -345,33 +379,45 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
 
-      _users[idx] = updated;
+      final operator = _currentUser?.username ?? 'admin';
+      final stamped = updated.copyWith(
+        updatedBy: operator,
+        updatedAt: DateTime.now(),
+      );
+
+      _users[idx] = stamped;
       await _storage.saveUsers(_users);
 
       if (_currentUser?.id == updated.id) {
-        _currentUser = updated;
-        await _storage.saveActiveSessionUser(updated);
+        _currentUser = stamped;
+        await _storage.saveActiveSessionUser(stamped);
       }
 
       _logEvent(
         action: AuditAction.update,
         entityType: AuditEntityType.auth,
-        entityId: updated.id,
-        entityTitle: updated.displayName,
+        entityId: stamped.id,
+        entityTitle: stamped.displayName,
         description:
-            'Updated user account: ${updated.username} [${roleNameFor(updated.roleId)}]',
+            'Updated user account: ${stamped.username} [${roleNameFor(stamped.roleId)}] by @$operator',
       );
 
       notifyListeners();
     }
   }
 
-  /// Delete user (cannot delete default admin, developer, or self)
+  /// Soft Delete User (Admin or Developer)
+  /// User is NOT removed from database: preserves audit record until Developer purges
   Future<bool> deleteUser(String userId) async {
     if (userId == 'user_admin_default' ||
         userId == 'user_developer_default' ||
         _currentUser?.id == userId) {
-      return false; // cannot delete default admin/developer or self
+      return false; // cannot delete default accounts or active session
+    }
+
+    // Manager CANNOT delete users!
+    if (!canDeleteUsers) {
+      return false;
     }
 
     final target = _users.firstWhere((u) => u.id == userId);
@@ -381,19 +427,126 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
 
+    final operator = _currentUser?.username ?? 'admin';
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx != -1) {
+      _users[idx] = target.copyWith(
+        isDeleted: true,
+        deletedAt: DateTime.now(),
+        deletedBy: operator,
+      );
+      await _storage.saveUsers(_users);
+
+      _logEvent(
+        action: AuditAction.softDelete,
+        entityType: AuditEntityType.auth,
+        entityId: userId,
+        entityTitle: target.displayName,
+        description:
+            'Soft-deleted user account: ${target.username} by @$operator (preserved in database for Developer audit)',
+      );
+
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  /// Restore a soft-deleted user (Admin or Developer)
+  Future<bool> restoreUser(String userId) async {
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx != -1) {
+      final target = _users[idx];
+      _users[idx] = target.copyWith(
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+      );
+      await _storage.saveUsers(_users);
+
+      final operator = _currentUser?.username ?? 'admin';
+      _logEvent(
+        action: AuditAction.restore,
+        entityType: AuditEntityType.auth,
+        entityId: userId,
+        entityTitle: target.displayName,
+        description: 'Restored user account: ${target.username} by @$operator',
+      );
+
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  /// Developer Master Right: Permanently purge user from database
+  Future<bool> permanentDeleteUser(String userId) async {
+    if (!isDeveloper) {
+      return false; // Only DEVELOPER has final delete right!
+    }
+
+    if (userId == 'user_admin_default' ||
+        userId == 'user_developer_default' ||
+        _currentUser?.id == userId) {
+      return false; // cannot delete root accounts or self
+    }
+
+    final target = _users.firstWhere((u) => u.id == userId);
     _users.removeWhere((u) => u.id == userId);
     await _storage.saveUsers(_users);
 
+    final operator = _currentUser?.username ?? 'developer';
     _logEvent(
       action: AuditAction.permanentDelete,
       entityType: AuditEntityType.auth,
       entityId: userId,
       entityTitle: target.displayName,
-      description: 'Deleted user account: ${target.username}',
+      description:
+          'DEVELOPER @$operator permanently purged user "${target.username}" from database',
     );
 
     notifyListeners();
     return true;
+  }
+
+  /// Developer Master Right: Block or unblock a user from logging in
+  Future<bool> toggleBlockUser(String userId) async {
+    if (!isDeveloper) {
+      return false; // Only DEVELOPER has block rights!
+    }
+
+    if (userId == 'user_admin_default' ||
+        userId == 'user_developer_default' ||
+        _currentUser?.id == userId) {
+      return false; // cannot block root accounts or self
+    }
+
+    final idx = _users.indexWhere((u) => u.id == userId);
+    if (idx != -1) {
+      final target = _users[idx];
+      final newBlockStatus = !target.isBlocked;
+      final operator = _currentUser?.username ?? 'developer';
+
+      _users[idx] = target.copyWith(
+        isBlocked: newBlockStatus,
+        blockedAt: newBlockStatus ? DateTime.now() : null,
+        blockedBy: newBlockStatus ? operator : null,
+      );
+      await _storage.saveUsers(_users);
+
+      _logEvent(
+        action: AuditAction.update,
+        entityType: AuditEntityType.auth,
+        entityId: userId,
+        entityTitle: target.displayName,
+        description:
+            'DEVELOPER ${newBlockStatus ? 'BLOCKED' : 'UNBLOCKED'} user "${target.username}"',
+      );
+
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   /// Create a new custom role (Admin or Developer can add a new role)
@@ -432,7 +585,7 @@ class AuthProvider extends ChangeNotifier {
       entityId: roleId,
       entityTitle: 'Role: $cleanName',
       description:
-          'Created new role "$cleanName" modeled from template [$copyFromRoleId]',
+          'Created new role "$cleanName" modeled from template [$copyFromRoleId] by @${_currentUser?.username ?? 'admin'}',
     );
 
     notifyListeners();
@@ -461,7 +614,7 @@ class AuthProvider extends ChangeNotifier {
       entityType: AuditEntityType.settings,
       entityId: roleId,
       entityTitle: 'Role: ${deleted.name}',
-      description: 'Deleted custom role "${deleted.name}"',
+      description: 'Deleted custom role "${deleted.name}" by @${_currentUser?.username ?? 'admin'}',
     );
 
     notifyListeners();
@@ -475,7 +628,11 @@ class AuthProvider extends ChangeNotifier {
     RolePermissions safePermissions = newPermissions;
     if (roleId == AppRole.adminId || roleId == AppRole.developerId) {
       if (!safePermissions.canManageUsers) {
-        safePermissions = safePermissions.copyWith(canManageUsers: true);
+        safePermissions = safePermissions.copyWith(
+          canAddUsers: true,
+          canEditUsers: true,
+          canDeleteUsers: true,
+        );
       }
     }
 
@@ -488,7 +645,7 @@ class AuthProvider extends ChangeNotifier {
       entityId: 'rbac_$roleId',
       entityTitle: 'RBAC Permissions: ${roleNameFor(roleId)}',
       description:
-          'Dynamically updated permissions for role [${roleNameFor(roleId)}]',
+          'Dynamically updated permissions for role [${roleNameFor(roleId)}] by @${_currentUser?.username ?? 'admin'}',
     );
 
     notifyListeners();
@@ -510,7 +667,7 @@ class AuthProvider extends ChangeNotifier {
       entityId: 'rbac_$roleId',
       entityTitle: 'RBAC Permissions: ${roleNameFor(roleId)}',
       description:
-          'Reset permissions for role [${roleNameFor(roleId)}] to factory defaults',
+          'Reset permissions for role [${roleNameFor(roleId)}] to factory defaults by @${_currentUser?.username ?? 'admin'}',
     );
 
     notifyListeners();
