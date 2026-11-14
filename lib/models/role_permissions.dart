@@ -2,8 +2,9 @@ import 'app_user.dart';
 
 /// Configurable, dynamic permission matrix for a user role.
 /// All permissions are stored in the database and can be dynamically
-/// adjusted by the Administrator at runtime.
+/// adjusted by the Administrator or Developer at runtime.
 class RolePermissions {
+  final String roleId;
   final UserRole role;
 
   // Challan management
@@ -30,8 +31,9 @@ class RolePermissions {
   final bool canManageUsers;
   final bool canManageSettings;
 
-  const RolePermissions({
-    required this.role,
+  RolePermissions({
+    String? roleId,
+    UserRole? role,
     this.canCreateChallan = true,
     this.canEditChallan = true,
     this.canDeleteChallan = true,
@@ -44,10 +46,19 @@ class RolePermissions {
     this.canClearAuditLogs = false,
     this.canManageUsers = false,
     this.canManageSettings = false,
-  });
+  })  : roleId = roleId ?? role?.name ?? 'clerk',
+        role = role ?? roleFromId(roleId ?? 'clerk');
+
+  static UserRole roleFromId(String id) {
+    return UserRole.values.firstWhere(
+      (r) => r.name == id,
+      orElse: () => UserRole.custom,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-        'role': role.name,
+        'role': roleId,
+        'roleId': roleId,
         'canCreateChallan': canCreateChallan,
         'canEditChallan': canEditChallan,
         'canDeleteChallan': canDeleteChallan,
@@ -63,30 +74,41 @@ class RolePermissions {
       };
 
   factory RolePermissions.fromJson(Map<String, dynamic> json) {
-    final role = UserRole.values.firstWhere(
-      (r) => r.name == json['role'],
-      orElse: () => UserRole.clerk,
-    );
-    final defaults = RolePermissions.defaultFor(role);
+    final rawRole = (json['roleId'] ?? json['role'] ?? 'clerk') as String;
+    final defaults = RolePermissions.defaultForId(rawRole);
 
     return RolePermissions(
-      role: role,
-      canCreateChallan: json['canCreateChallan'] as bool? ?? defaults.canCreateChallan,
-      canEditChallan: json['canEditChallan'] as bool? ?? defaults.canEditChallan,
-      canDeleteChallan: json['canDeleteChallan'] as bool? ?? defaults.canDeleteChallan,
-      canRestoreChallan: json['canRestoreChallan'] as bool? ?? defaults.canRestoreChallan,
-      canPurgeRecycleBin: json['canPurgeRecycleBin'] as bool? ?? defaults.canPurgeRecycleBin,
-      canManageParties: json['canManageParties'] as bool? ?? defaults.canManageParties,
-      canExportReports: json['canExportReports'] as bool? ?? defaults.canExportReports,
-      canPrintInvoice: json['canPrintInvoice'] as bool? ?? defaults.canPrintInvoice,
-      canViewAuditLogs: json['canViewAuditLogs'] as bool? ?? defaults.canViewAuditLogs,
-      canClearAuditLogs: json['canClearAuditLogs'] as bool? ?? defaults.canClearAuditLogs,
-      canManageUsers: json['canManageUsers'] as bool? ?? defaults.canManageUsers,
-      canManageSettings: json['canManageSettings'] as bool? ?? defaults.canManageSettings,
+      roleId: rawRole,
+      canCreateChallan:
+          json['canCreateChallan'] as bool? ?? defaults.canCreateChallan,
+      canEditChallan:
+          json['canEditChallan'] as bool? ?? defaults.canEditChallan,
+      canDeleteChallan:
+          json['canDeleteChallan'] as bool? ?? defaults.canDeleteChallan,
+      canRestoreChallan:
+          json['canRestoreChallan'] as bool? ?? defaults.canRestoreChallan,
+      canPurgeRecycleBin:
+          json['canPurgeRecycleBin'] as bool? ?? defaults.canPurgeRecycleBin,
+      canManageParties:
+          json['canManageParties'] as bool? ?? defaults.canManageParties,
+      canExportReports:
+          json['canExportReports'] as bool? ?? defaults.canExportReports,
+      canPrintInvoice:
+          json['canPrintInvoice'] as bool? ?? defaults.canPrintInvoice,
+      canViewAuditLogs:
+          json['canViewAuditLogs'] as bool? ?? defaults.canViewAuditLogs,
+      canClearAuditLogs:
+          json['canClearAuditLogs'] as bool? ?? defaults.canClearAuditLogs,
+      canManageUsers:
+          json['canManageUsers'] as bool? ?? defaults.canManageUsers,
+      canManageSettings:
+          json['canManageSettings'] as bool? ?? defaults.canManageSettings,
     );
   }
 
   RolePermissions copyWith({
+    String? roleId,
+    UserRole? role,
     bool? canCreateChallan,
     bool? canEditChallan,
     bool? canDeleteChallan,
@@ -100,8 +122,10 @@ class RolePermissions {
     bool? canManageUsers,
     bool? canManageSettings,
   }) {
+    final effectiveRoleId = roleId ?? (role != null ? role.name : this.roleId);
     return RolePermissions(
-      role: role,
+      roleId: effectiveRoleId,
+      role: role ?? roleFromId(effectiveRoleId),
       canCreateChallan: canCreateChallan ?? this.canCreateChallan,
       canEditChallan: canEditChallan ?? this.canEditChallan,
       canDeleteChallan: canDeleteChallan ?? this.canDeleteChallan,
@@ -117,11 +141,32 @@ class RolePermissions {
     );
   }
 
-  /// System default preset for a given role
-  static RolePermissions defaultFor(UserRole role) {
-    switch (role) {
-      case UserRole.admin:
-        return const RolePermissions(
+  /// System default preset for a given UserRole enum
+  static RolePermissions defaultFor(UserRole role) => defaultForId(role.name);
+
+  /// System default preset for any role identifier
+  static RolePermissions defaultForId(String roleId) {
+    switch (roleId) {
+      case 'developer':
+        return RolePermissions(
+          roleId: 'developer',
+          role: UserRole.developer,
+          canCreateChallan: true,
+          canEditChallan: true,
+          canDeleteChallan: true,
+          canRestoreChallan: true,
+          canPurgeRecycleBin: true,
+          canManageParties: true,
+          canExportReports: true,
+          canPrintInvoice: true,
+          canViewAuditLogs: true,
+          canClearAuditLogs: true,
+          canManageUsers: true,
+          canManageSettings: true,
+        );
+      case 'admin':
+        return RolePermissions(
+          roleId: 'admin',
           role: UserRole.admin,
           canCreateChallan: true,
           canEditChallan: true,
@@ -136,8 +181,9 @@ class RolePermissions {
           canManageUsers: true,
           canManageSettings: true,
         );
-      case UserRole.manager:
-        return const RolePermissions(
+      case 'manager':
+        return RolePermissions(
+          roleId: 'manager',
           role: UserRole.manager,
           canCreateChallan: true,
           canEditChallan: true,
@@ -152,9 +198,28 @@ class RolePermissions {
           canManageUsers: false,
           canManageSettings: false,
         );
-      case UserRole.clerk:
-        return const RolePermissions(
+      case 'clerk':
+        return RolePermissions(
+          roleId: 'clerk',
           role: UserRole.clerk,
+          canCreateChallan: true,
+          canEditChallan: true,
+          canDeleteChallan: false,
+          canRestoreChallan: false,
+          canPurgeRecycleBin: false,
+          canManageParties: false,
+          canExportReports: true,
+          canPrintInvoice: true,
+          canViewAuditLogs: false,
+          canClearAuditLogs: false,
+          canManageUsers: false,
+          canManageSettings: false,
+        );
+      default:
+        // Default template for user-defined custom roles
+        return RolePermissions(
+          roleId: roleId,
+          role: roleFromId(roleId),
           canCreateChallan: true,
           canEditChallan: true,
           canDeleteChallan: false,
@@ -171,4 +236,3 @@ class RolePermissions {
     }
   }
 }
-

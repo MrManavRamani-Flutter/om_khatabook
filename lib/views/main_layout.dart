@@ -212,7 +212,9 @@ class _MainLayoutState extends State<MainLayout> {
   }) {
     final currentUser = auth.currentUser;
     final userName = currentUser?.displayName ?? provider.adminName;
-    final roleName = currentUser?.role.name.toUpperCase() ?? 'ADMIN';
+    final roleName = currentUser != null
+        ? auth.roleNameFor(currentUser.roleId)
+        : 'ADMIN';
 
     return Column(
       children: [

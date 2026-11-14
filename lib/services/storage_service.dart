@@ -28,6 +28,7 @@ class StorageService {
   static const String _keyActiveSession = 'om_active_session_v2';
   static const String _keyAuditLogs = 'om_audit_logs_v2';
   static const String _keyRolePermissions = 'om_role_permissions_v2';
+  static const String _keyCustomRoles = 'om_custom_roles_v2';
 
   late SharedPreferences _prefs;
 
@@ -190,19 +191,36 @@ class StorageService {
     }
   }
 
-  // --- DYNAMIC ROLE PERMISSIONS (RBAC) ---
-  Future<Map<UserRole, RolePermissions>> loadRolePermissions() async {
+  // --- CUSTOM ROLES & DYNAMIC ROLE PERMISSIONS (RBAC) ---
+  Future<List<AppRole>> loadCustomRoles() async {
+    final str = _prefs.getString(_keyCustomRoles);
+    if (str != null && str.isNotEmpty) {
+      try {
+        final list = jsonDecode(str) as List<dynamic>;
+        return list
+            .map((e) => AppRole.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        debugPrint('Error loading custom roles: $e');
+      }
+    }
+    return [];
+  }
+
+  Future<void> saveCustomRoles(List<AppRole> roles) async {
+    final list = roles.map((r) => r.toJson()).toList();
+    await _prefs.setString(_keyCustomRoles, jsonEncode(list));
+  }
+
+  Future<Map<String, RolePermissions>> loadRolePermissions() async {
     final str = _prefs.getString(_keyRolePermissions);
     if (str != null && str.isNotEmpty) {
       try {
         final map = jsonDecode(str) as Map<String, dynamic>;
-        final result = <UserRole, RolePermissions>{};
+        final result = <String, RolePermissions>{};
         for (final entry in map.entries) {
-          final role = UserRole.values.firstWhere(
-            (r) => r.name == entry.key,
-            orElse: () => UserRole.clerk,
-          );
-          result[role] = RolePermissions.fromJson(entry.value as Map<String, dynamic>);
+          result[entry.key] =
+              RolePermissions.fromJson(entry.value as Map<String, dynamic>);
         }
         return result;
       } catch (e) {
@@ -212,10 +230,11 @@ class StorageService {
     return {};
   }
 
-  Future<void> saveRolePermissions(Map<UserRole, RolePermissions> permissions) async {
+  Future<void> saveRolePermissions(
+      Map<String, RolePermissions> permissions) async {
     final map = <String, dynamic>{};
     for (final entry in permissions.entries) {
-      map[entry.key.name] = entry.value.toJson();
+      map[entry.key] = entry.value.toJson();
     }
     await _prefs.setString(_keyRolePermissions, jsonEncode(map));
   }
@@ -250,6 +269,7 @@ class StorageService {
     final usersStr = _prefs.getString(_keyUsers) ?? '[]';
     final auditStr = _prefs.getString(_keyAuditLogs) ?? '[]';
     final permissionsStr = _prefs.getString(_keyRolePermissions) ?? '{}';
+    final customRolesStr = _prefs.getString(_keyCustomRoles) ?? '[]';
 
     final data = {
       'app': 'OM Mavtar Group Khata Book',
@@ -260,6 +280,7 @@ class StorageService {
       'users': jsonDecode(usersStr),
       'auditLogs': jsonDecode(auditStr),
       'rolePermissions': jsonDecode(permissionsStr),
+      'customRoles': jsonDecode(customRolesStr),
       'branding': {
         'companyName': companyName,
         'companyTagline': companyTagline,
@@ -303,6 +324,9 @@ class StorageService {
       if (data.containsKey('rolePermissions')) {
         await _prefs.setString(_keyRolePermissions, jsonEncode(data['rolePermissions']));
       }
+      if (data.containsKey('customRoles')) {
+        await _prefs.setString(_keyCustomRoles, jsonEncode(data['customRoles']));
+      }
       if (data.containsKey('branding') &&
           data['branding'] is Map<String, dynamic>) {
         final b = data['branding'] as Map<String, dynamic>;
@@ -337,5 +361,6 @@ class StorageService {
     await _prefs.remove(_keyActiveSession);
     await _prefs.remove(_keyAuditLogs);
     await _prefs.remove(_keyRolePermissions);
+    await _prefs.remove(_keyCustomRoles);
   }
 }

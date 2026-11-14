@@ -26,16 +26,41 @@ void main() {
       await auth.initialize();
     });
 
-    test('Initial seeded accounts are admin, manager, and clerk', () {
-      expect(auth.users.length, equals(3));
+    test('Initial seeded accounts are developer, admin, manager, and clerk', () {
+      expect(auth.users.length, equals(4));
       final usernames = auth.users.map((u) => u.username).toList();
-      expect(usernames, containsAll(['admin', 'manager', 'clerk']));
+      expect(usernames, containsAll(['developer', 'admin', 'manager', 'clerk']));
+    });
+
+    test('Developer login succeeds and grants full developer & system permissions', () async {
+      final success = await auth.login('developer', 'developer123');
+      expect(success, isTrue);
+      expect(auth.isAuthenticated, isTrue);
+      expect(auth.isDeveloper, isTrue);
+      expect(auth.isAdmin, isTrue);
+      expect(auth.currentUser?.role, equals(UserRole.developer));
+
+      // RBAC Permission checks for Developer
+      expect(auth.canCreateChallan, isTrue);
+      expect(auth.canEditChallan, isTrue);
+      expect(auth.canDelete, isTrue);
+      expect(auth.canRestoreFromBin, isTrue);
+      expect(auth.canPurgeRecycleBin, isTrue);
+      expect(auth.canManageParties, isTrue);
+      expect(auth.canExportReports, isTrue);
+      expect(auth.canPrintInvoice, isTrue);
+      expect(auth.canViewAuditLogs, isTrue);
+      expect(auth.canClearAuditLogs, isTrue);
+      expect(auth.canManageUsers, isTrue);
+      expect(auth.canManageSettings, isTrue);
     });
 
     test('Default login with admin/admin123 succeeds and grants full admin permissions', () async {
       final success = await auth.login('admin', 'admin123');
       expect(success, isTrue);
       expect(auth.isAuthenticated, isTrue);
+      expect(auth.isDeveloper, isFalse);
+      expect(auth.isAdmin, isTrue);
       expect(auth.currentUser?.role, equals(UserRole.admin));
 
       // RBAC Permission checks for Admin
@@ -163,11 +188,96 @@ void main() {
 
       // Check database persistence
       final savedInDb = await storage.loadRolePermissions();
-      expect(savedInDb[UserRole.clerk]?.canManageParties, isFalse);
+      expect(savedInDb['clerk']?.canManageParties, isFalse);
     });
 
-    test('Dynamic role permissions are preserved in backup JSON export/import', () async {
+    test('Visibility rule: Admin CANNOT view Developer role or Developer users', () async {
       await auth.login('admin', 'admin123');
+
+      // Admin visible roles must NOT contain Developer
+      final visibleRoles = auth.visibleRoles;
+      final roleIds = visibleRoles.map((r) => r.id).toList();
+      expect(roleIds, isNot(contains(AppRole.developerId)));
+      expect(roleIds, containsAll([AppRole.adminId, AppRole.managerId, AppRole.clerkId]));
+
+      // Admin visible users must NOT contain Developer
+      final visibleUsers = auth.visibleUsers;
+      final usernames = visibleUsers.map((u) => u.username).toList();
+      expect(usernames, isNot(contains('developer')));
+      expect(usernames, containsAll(['admin', 'manager', 'clerk']));
+      expect(visibleUsers.length, equals(3));
+    });
+
+    test('Visibility rule: Developer CAN view all roles including Developer and all users', () async {
+      await auth.login('developer', 'developer123');
+
+      // Developer visible roles must contain all roles including Developer
+      final visibleRoles = auth.visibleRoles;
+      final roleIds = visibleRoles.map((r) => r.id).toList();
+      expect(roleIds, containsAll([AppRole.developerId, AppRole.adminId, AppRole.managerId, AppRole.clerkId]));
+
+      // Developer visible users must contain all users including developer
+      final visibleUsers = auth.visibleUsers;
+      final usernames = visibleUsers.map((u) => u.username).toList();
+      expect(usernames, containsAll(['developer', 'admin', 'manager', 'clerk']));
+      expect(visibleUsers.length, equals(4));
+    });
+
+    test('Admin and Developer can add a new custom role and assign dynamic permissions', () async {
+      await auth.login('admin', 'admin123');
+
+      // Add a custom role "Accountant"
+      final newRole = await auth.createCustomRole(
+        name: 'Accountant',
+        description: 'Manages ledger and tax invoices',
+        copyFromRoleId: AppRole.clerkId,
+      );
+
+      expect(newRole.name, equals('Accountant'));
+      expect(newRole.isBuiltIn, isFalse);
+
+      // Verify custom role is in visible roles
+      expect(auth.visibleRoles.any((r) => r.id == newRole.id), isTrue);
+
+      // Verify default permissions copied from clerk
+      expect(auth.permissionsForId(newRole.id).canCreateChallan, isTrue);
+      expect(auth.permissionsForId(newRole.id).canDeleteChallan, isFalse);
+
+      // Admin updates Accountant permissions to allow deleting challans
+      final currentPerms = auth.permissionsForId(newRole.id);
+      await auth.updateRolePermissionsForId(
+        newRole.id,
+        currentPerms.copyWith(canDeleteChallan: true),
+      );
+      expect(auth.permissionsForId(newRole.id).canDeleteChallan, isTrue);
+
+      // Create a user assigned to this custom role
+      final userCreated = await auth.addUser(
+        username: 'ramesh_acc',
+        password: 'password123',
+        displayName: 'Ramesh (Accountant)',
+        roleId: newRole.id,
+      );
+      expect(userCreated, isTrue);
+
+      // Login as the custom role user and verify permissions
+      await auth.login('ramesh_acc', 'password123');
+      expect(auth.currentRoleId, equals(newRole.id));
+      expect(auth.canCreateChallan, isTrue);
+      expect(auth.canDeleteChallan, isTrue);
+      expect(auth.canPurgeRecycleBin, isFalse);
+    });
+
+    test('Dynamic role permissions and custom roles are preserved in backup JSON export/import', () async {
+      await auth.login('developer', 'developer123');
+
+      // Create custom role
+      final customRole = await auth.createCustomRole(
+        name: 'Store Supervisor',
+        description: 'Warehouse supervisor',
+        copyFromRoleId: AppRole.managerId,
+      );
+
       final current = auth.permissionsFor(UserRole.manager);
       await auth.updateRolePermissions(
         UserRole.manager,
@@ -177,19 +287,27 @@ void main() {
       // Export JSON
       final backupJson = await storage.exportBackupJson();
       expect(backupJson, contains('rolePermissions'));
+      expect(backupJson, contains('customRoles'));
+      expect(backupJson, contains('Store Supervisor'));
       expect(backupJson, contains('"canPurgeRecycleBin": true'));
 
       // Clear all data
       await storage.clearAllData();
       final blankPermissions = await storage.loadRolePermissions();
       expect(blankPermissions.isEmpty, isTrue);
+      final blankRoles = await storage.loadCustomRoles();
+      expect(blankRoles.isEmpty, isTrue);
 
       // Import backup JSON
       final importSuccess = await storage.importBackupJson(backupJson);
       expect(importSuccess, isTrue);
 
-      final restored = await storage.loadRolePermissions();
-      expect(restored[UserRole.manager]?.canPurgeRecycleBin, isTrue);
+      final restoredPerms = await storage.loadRolePermissions();
+      expect(restoredPerms['manager']?.canPurgeRecycleBin, isTrue);
+      expect(restoredPerms[customRole.id]?.canCreateChallan, isTrue);
+
+      final restoredRoles = await storage.loadCustomRoles();
+      expect(restoredRoles.any((r) => r.name == 'Store Supervisor'), isTrue);
     });
   });
 

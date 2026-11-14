@@ -8,7 +8,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-blue.svg?logo=flutter)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-informational.svg)](https://flutter.dev)
 [![Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Inno%20Setup)-success.svg)](.github/workflows/build_windows_exe.yml)
-[![Tests](https://img.shields.io/badge/Tests-34%20Passed-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/Tests-38%20Passed-brightgreen.svg)](test/)
 [![Security](https://img.shields.io/badge/Security-RBAC%20%2B%20Audit%20Trail-blueviolet.svg)]()
 [![Language](https://img.shields.io/badge/UI%20Language-100%25%20English-blue.svg)]()
 
@@ -296,16 +296,26 @@ Just like Windows File Explorer view settings, the ledger supports 3 distinct pr
   - Brand header with OM Mavtar Group logo, enterprise badge, and platform indicators.
   - Session persistence with "Remember Me" toggle.
 - **Default Testing Credentials & Quick Suggestion Chips**:
-  - Default credentials pre-configured:
-    - **Username**: `admin`
-    - **Password**: `admin123`
+  - Pre-configured system operator accounts:
+    - **Developer**: `developer` / `developer123` (Supreme master access)
+    - **Admin**: `admin` / `admin123` (Full operational administration)
+    - **Manager**: `manager` / `manager123` (Branch commercial operations)
+    - **Clerk**: `clerk` / `clerk123` (Data entry & invoice printing)
   - Quick-fill suggestion chips on the login screen for rapid role testing:
+    - `[ 💻 Developer (developer / developer123) ]`
     - `[ 👑 Admin (admin / admin123) ]`
     - `[ 🏢 Manager (manager / manager123) ]`
     - `[ 📝 Clerk (clerk / clerk123) ]`
 - **Dynamic Database-Persisted Role Permissions Matrix (`RolePermissions`)**:
-  - Permissions are no longer hardcoded: Administrator can dynamically grant, toggle, or revoke every capability per role (`Admin`, `Manager`, `Clerk`) through an interactive matrix.
-  - **Database Persistence**: All permission modifications are immediately persisted in the local database (`StorageService`) and included in JSON backup export/restore (`.json`), persisting across app restarts.
+  - Permissions are no longer hardcoded: Administrator or Developer can dynamically grant, toggle, or revoke every capability per role through an interactive matrix.
+  - **Dynamic Custom Roles ("Add New Role")**:
+    - Both **Admin** and **Developer** can create brand new custom roles (e.g. *Store Auditor*, *Inventory Supervisor*, *Accountant*).
+    - Baselines can be copied from existing role templates.
+    - Custom roles can be assigned to operators, configured dynamically with all 12 capabilities, and safely deleted when no longer in use.
+  - **Strict Visibility & Isolation Rules**:
+    - **Developer**: Can view ALL roles (Developer, Admin, Manager, Clerk, and Custom Roles) and ALL user accounts.
+    - **Administrator**: Can view and manage all accounts and roles (Admin, Manager, Clerk, Custom Roles), **but CANNOT view the Developer role or Developer accounts** (`visibleRoles` and `visibleUsers` strictly filter out Developer).
+  - **Database Persistence**: All custom roles and permission modifications are immediately persisted in the local database (`StorageService`) and included in JSON backup export/restore (`.json`), persisting across app restarts.
   - **12 Granular Permission Controls**:
     1. *Create Delivery Challans* (`canCreateChallan`)
     2. *Edit Existing Challans* (`canEditChallan`)
@@ -319,13 +329,13 @@ Just like Windows File Explorer view settings, the ledger supports 3 distinct pr
     10. *Clear Audit Trail History* (`canClearAuditLogs`)
     11. *Manage Users & Dynamic Roles* (`canManageUsers`)
     12. *Modify Settings & App Branding* (`canManageSettings`)
-  - **Admin Safety Lock**: Built-in protection prevents revoking `canManageUsers` on the Administrator role, guaranteeing the system can never be permanently locked out.
+  - **Safety Lock**: Built-in protection prevents revoking `canManageUsers` on the Administrator and Developer roles, guaranteeing the system can never be permanently locked out.
   - **Reset to Factory Defaults**: Instant one-click restore button to revert permissions to recommended defaults with confirmation.
-  - **Audit Logging**: Every permission change or factory reset is automatically recorded with timestamp, operator, and action details in the Audit Trail.
+  - **Audit Logging**: Every permission change, role creation, or factory reset is automatically recorded with timestamp, operator, and action details in the Audit Trail.
 - **Dual-Tab Management Dialog (`UserManagementDialog`)**:
-  - Accessible to Administrators from the sidebar footer (`manage_accounts_outlined`), top avatar profile menu, or Settings.
-  - **Tab 1: 👥 Authorized Users**: Add operators, change passwords, assign roles, view active session indicators, and delete users safely.
-  - **Tab 2: 🛡️ Dynamic Role Permissions (Database)**: Interactive switch matrix to dynamically customize role capabilities with live database persistence.
+  - Accessible to Administrators and Developers from the sidebar footer (`manage_accounts_outlined`), top avatar profile menu, or Settings.
+  - **Tab 1: 👥 Authorized Users**: Add operators, change passwords, assign visible roles, view active session indicators, and delete users safely.
+  - **Tab 2: 🛡️ Dynamic Role Permissions (Database)**: Interactive switch matrix to dynamically customize role capabilities with live database persistence, and "➕ Add New Role" button.
 - **Cross-Platform Responsive UI**:
   - Fluid responsive layouts tailored for desktop screens (Windows, macOS) and mobile/tablet touchscreens (Android, iOS).
 
@@ -381,7 +391,8 @@ om_khatabook/
 ├── lib/
 │   ├── main.dart                        # App entry point, MultiProvider scope & Login gate
 │   ├── models/
-│   │   ├── app_user.dart                # User model with 3-tier UserRole & dynamic RBAC
+│   │   ├── app_role.dart                # System & dynamic custom role model
+│   │   ├── app_user.dart                # User model with dynamic role assignment & RBAC
 │   │   ├── audit_log_entry.dart         # Tamper-evident audit log model & action types
 │   │   ├── challan_entry.dart           # Challan model with soft-delete & warning flags
 │   │   ├── party.dart                   # Party model with notebook records & metadata

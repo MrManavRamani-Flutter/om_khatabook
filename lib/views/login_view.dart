@@ -488,6 +488,14 @@ class _LoginViewState extends State<LoginView> {
                     runSpacing: 8,
                     children: [
                       _buildQuickChip(
+                        label: 'Developer',
+                        user: 'developer',
+                        pass: 'developer123',
+                        roleDesc: 'Master Developer',
+                        color: const Color(0xFF7C3AED),
+                        icon: Icons.code,
+                      ),
+                      _buildQuickChip(
                         label: 'Admin',
                         user: 'admin',
                         pass: 'admin123',

@@ -576,7 +576,7 @@ class SettingsView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Active: ${auth.currentUser?.username ?? "admin"} [${auth.currentRole.name.toUpperCase()}]',
+                            'Active: ${auth.currentUser?.username ?? "admin"} [${auth.roleNameFor(auth.currentRoleId)}]',
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -622,7 +622,7 @@ class SettingsView extends StatelessWidget {
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                                       ),
                                       Text(
-                                        'Role: ${auth.currentRole.label} • ${auth.users.length} Users Registered',
+                                        'Role: ${auth.currentRoleLabel} • ${auth.visibleUsers.length} Users Registered',
                                         style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
                                       ),
                                     ],
