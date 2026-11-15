@@ -5,7 +5,6 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/branding_dialogs.dart';
-import '../widgets/user_management_dialog.dart';
 import 'audit_log_view.dart';
 import 'challan_list_view.dart';
 import 'parties_view.dart';
@@ -433,10 +432,7 @@ class _MainLayoutState extends State<MainLayout> {
                       IconButton(
                         icon: const Icon(Icons.manage_accounts_outlined, size: 18),
                         tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => showDialog(
-                          context: context,
-                          builder: (_) => const UserManagementDialog(),
-                        ),
+                        onPressed: () => setState(() => _selectedIndex = 5),
                       ),
                       const SizedBox(height: 4),
                     ],
@@ -516,10 +512,7 @@ class _MainLayoutState extends State<MainLayout> {
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                         icon: const Icon(Icons.manage_accounts_outlined, size: 18),
                         tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => showDialog(
-                          context: context,
-                          builder: (_) => const UserManagementDialog(),
-                        ),
+                        onPressed: () => setState(() => _selectedIndex = 5),
                       ),
                     IconButton(
                       visualDensity: VisualDensity.compact,
