@@ -103,7 +103,6 @@ graph TD
     subgraph "Central Cloud Infrastructure"
         API["Live PHP REST API v1 (Apache/Nginx + PHP 8.x)"]
         DB[("Central MySQL/MariaDB (InnoDB Engine)")]
-        STORAGE["Secure File Storage (Designs & Attachments)"]
     end
 
     WA <==>|Push Queue / Pull Cursor| API
@@ -111,7 +110,6 @@ graph TD
     WB <==>|Push Queue / Pull Cursor| API
     MB <==>|Push Queue / Pull Cursor| API
     API <==>|Prepared Statements & Row Locks| DB
-    API <==>|Multipart Streaming| STORAGE
 ```
 
 ### Complete Client-Server Data Flow Sequence
@@ -1162,7 +1160,9 @@ echo json_encode($report, JSON_PRETTY_PRINT);
 | **MySQL Storage Engine** | InnoDB (Row Locks) | InnoDB (Percona / MariaDB 10.6+) | Enforce `ENGINE=InnoDB` on all tables |
 | **HTTPS / SSL** | Required | Free Let's Encrypt SSL | Enable SSL; Flutter mobile enforces HTTPS |
 | **Execution Timeout** | 30 seconds | 60 seconds | Configure `max_execution_time = 60` for bulk batches |
-| **Upload File Size** | 10 MB | 25 MB | For design attachments (`upload_max_filesize = 25M`) |
+| **POST Request Body Size** | 8 MB | 16 MB | Standard JSON sync payload capacity (`post_max_size = 16M`) |
+
+> **Note on File Scope**: Design files (.DST, .EMB) and raw heavy image attachments are completely excluded from server sync. Synchronization is strictly focused on lightweight, fast, tabular transactional business records.
 
 ---
 
@@ -1207,8 +1207,8 @@ gantt
    * Build Machines, Daily Production entries, Thread Cutting, and Alteration screens.
 8. **Phase 8: Deliveries, Invoicing & Immutable Payment Reversals**
    * Build single-page GST invoice printing and payment receipts.
-9. **Phase 9: Attachment & Large File Sync Engine**
-   * Build chunked multipart image upload for embroidery sample designs.
+9. **Phase 9: Financial Reports, Multi-Branch Balances & Analytics**
+   * Build cross-branch financial summaries, party outstanding balance sheets, and tax ledger audits.
 10. **Phase 10: 4-Platform Release & Deployment**
     * Windows `.exe`/`.msix`, Android `.apk`/`.aab`, macOS `.dmg`, and iOS `.ipa`.
 
