@@ -1308,6 +1308,71 @@ Every release must pass these 11 automated and manual sync tests:
 
 ---
 
+## 13. Bulletproof Solutions & Mitigation Architecture for the 7 High-Level Risks
+
+To ensure total system stability, the 7 high-level risks identified during analysis are mitigated with concrete technical solutions embedded into the core architecture:
+
+### 1. Server Bottleneck & Shared Hosting Crash ➔ Solved by Adaptive Jittered Sync & Micro-Batches
+* **Dynamic Batching**: Instead of sending 500 records at once, client requests are limited to 25–50 records per batch.
+* **Jittered Exponential Backoff**: When the server experiences high load or returns HTTP 429/503, clients do not bombard the server at the exact same second. Each device waits:
+  $$\text{Delay} = \min(\text{MaxDelay}, \text{BaseDelay} \times 2^{\text{retry}}) + \text{RandomJitter}(0, 1500\text{ms})$$
+* **Microsecond Cursor Queries**: Incremental pull queries use an optimized compound index `(branch_id, sequence_id)`. The query `WHERE branch_id = ? AND sequence_id > ? LIMIT 50` finishes in under 2 milliseconds, preventing table locks on shared hosting.
+
+### 2. Sync Queue Deadlock & Cursor Desync ➔ Solved by Poison-Pill Quarantine & Two-Phase Commit
+* **Atomic Two-Phase Cursor Advance**: The local SQLite database only advances its `last_acknowledged_sequence` cursor *after* the local SQLite transaction successfully commits. If a network drop happens midway, the cursor never advances, guaranteeing zero record omissions.
+* **Poison-Pill Quarantine (Auto-Unfreeze)**: If a malformed operation fails with an unrecoverable validation error 3 consecutive times (`retry_count >= 3`), the engine automatically flags it as `quarantined: true`, logs the payload to the developer diagnostic table, notifies the admin, and **immediately allows subsequent operations to proceed** without blocking the rest of the queue.
+
+### 3. Human Error in 409 Conflict Resolution ➔ Solved by 3-Way Auto-Merge & Role-Gated Review
+* **Non-Overlapping 3-Way Field Merge**: If User A modifies delivery notes while User B modifies phone number on the same order, the server merges both fields automatically without bothering human operators.
+* **Role-Gated Conflict Review (Clerk Exemption)**: Factory operators and clerks are **never** shown complex 409 collision dialogs. When overlapping conflicts occur (e.g. conflicting order quantities), the system applies "Latest-Server-Timestamp" locally to maintain operation continuity, stamps the record with `has_conflict: true`, and places it in the **Manager / Admin Conflict Review Center** for supervisor approval.
+
+### 4. App Update & Local SQLite Migration Crash ➔ Solved by Pre-Migration Backups & Drift Schemas
+* **Automated SQLite Snapshot Before Migration**: Before executing any Drift schema update, `app_database.dart` automatically creates a safety snapshot `om_khatabook_local.sqlite.bak_v{current}`.
+* **Crash-Safe Rollback**: If `m.onUpgrade` throws an unexpected SQL syntax or integrity error, the engine catches the exception, restores the `.bak` file, logs the error, and boots the app in safe offline mode, preventing crash loops.
+* **Automated Drift Migration Unit Tests**: Drift's test generator (`drift_dev make-migrations`) generates automated migration verification tests (`test/generated_migrations/`) that run in CI/CD before any app binary is compiled.
+
+### 5. OS-Specific Background Sync Killing ➔ Solved by Reactive Lifecycle Triggers & UI Status Badges
+* **Foreground Lifecycle Triggers (`WidgetsBindingObserver`)**: Rather than relying strictly on fragile OS background timers, sync triggers reactively on:
+  1. Every `AppLifecycleState.resumed` (whenever user opens or switches back to the app).
+  2. Every local Save/Update button tap.
+  3. Every network reconnect via `connectivity_plus`.
+* **Platform-Native Keep-Alive**: Android uses `WorkManager` with battery-optimization exclusion prompts; macOS and Windows use desktop system tray timers; iOS utilizes registered `BGAppRefreshTask`.
+* **Color-Coded Visual Sync Pill in AppBar**:
+  * 🟢 **Green**: All changes synced with cloud.
+  * 🟡 **Spinning Amber**: Syncing $N$ pending items...
+  * 🔴 **Red**: Offline ($N$ changes stored safely on device). Tapping forces an immediate sync attempt.
+
+### 6. Financial & Stock Discrepancies ➔ Solved by Offline Provisional Tagging & Credit Limit Buffers
+* **Provisional Offline Status**: Any payment or cheque entered offline is stamped with `verification_status: 'offline_provisional'`.
+* **Visual Accounting Badge**: Receipts and ledgers clearly display:
+  `⏳ Offline Provisional Entry (Pending Central Bank / Server Reconciliation)`.
+* **Branch Credit Buffer Caching**: Customer credit limits and outstanding receivables are pre-cached in local SQLite. If an offline order causes customer dues to exceed their credit ceiling, the app warns the operator and requires a supervisor PIN override.
+* **Immutable Double-Entry Reversal**: Cancelled or bounced payments create an explicit negative reversal entry (`is_reversal: true`), ensuring financial integrity is never compromised.
+
+### 7. Extended Offline Token Expiration ➔ Solved by Dual-Token Architecture & Device Binding
+* **Dual-Token System**:
+  * **Access Token**: Short-lived (1 hour) for secure API queries.
+  * **Refresh Token**: Long-lived (90 days) cryptographically bound to the device's hardware UUID and stored in encrypted hardware keystore (`flutter_secure_storage` / Apple Keychain / Windows DPAPI).
+* **Silent Background Refresh**: When a tablet returns online after 20 days offline, the app silently calls `/auth/refresh` using the device-bound refresh token, acquiring a fresh access token without interrupting the operator or requiring password re-entry.
+* **Emergency Local Export PIN**: If credentials expire completely, operators can enter an emergency offline supervisor PIN to export unsynced records to an encrypted JSON backup file before signing out.
+
+---
+
+## 14. Residual Operational Edge Cases & Long-Term Considerations (Post-Mitigation Audit)
+
+With the 7 high-level architectural risks mitigated, the following residual operational edge cases, hardware constraints, and long-term maintenance considerations are noted for ongoing production governance:
+
+| # | Residual Consideration | Description & Real-World Trigger | Recommended Operational Standard |
+| :--- | :--- | :--- | :--- |
+| **R-01** | **Catastrophic Hardware Destruction Before Sync** | If a device is completely destroyed by fire, water, or physical theft **while** offline records exist that were never uploaded to the server, those specific records cannot be recovered from the cloud. | Enforce daily end-of-day Wi-Fi connectivity checkpoints before devices leave factory premises. |
+| **R-02** | **Client Device Clock Manipulation / Tampering** | If an operator manually changes their device system clock backwards or forwards, local timestamps (`created_at`) can become inaccurate. | Central MySQL server enforces server-side NTP timestamps for sequence generation and change logs, ignoring client clock skew. |
+| **R-03** | **Long-Term SQLite Storage Bloat on Low-End Tablets** | After 3–5 years of continuous production, accumulating 200,000+ historical order rows on an entry-level Android tablet (with 32GB eMMC storage) may slow down local queries. | Implement a **Selective Sync / Archival Policy**: client devices retain only active financial year + last 90 days of closed orders; historical records are queried on-demand. |
+| **R-04** | **Regulatory GST Tax Rate Changes During Offline Window** | If the government changes GST tax slabs (e.g. from 5% to 12%) while a branch tablet is disconnected for 10 days, invoices printed locally will use pre-cached tax slabs. | Central server sends a `tax_tables_version` flag on pull sync; whenever tax rules change, server flags clients to refresh tax slabs immediately upon reconnection. |
+| **R-05** | **Physical Factory Machine Double-Booking** | Two floor supervisors offline in different shifts assign the exact same physical embroidery machine (e.g. Tajima Machine #02) to two separate urgent jobs. | System allows entry but flags an on-screen warning: `⚠️ Machine Tajima #02 already scheduled for Order #45 during this shift`. |
+| **R-06** | **App Store Review Delays vs Instant Desktop Updates** | When deploying urgent bug-fix patches, Windows desktop can update immediately, while Apple App Store (iOS) and Google Play Store reviews may take 24–48 hours to approve. | Maintain backward compatibility on API v1 so older mobile versions continue syncing cleanly while desktop runs the latest patch. |
+
+---
+
 ## 🎯 Conclusion & Next Steps
 
 This document serves as the permanent architectural contract for **OM Mavtar Group**. Following this blueprint guarantees:
