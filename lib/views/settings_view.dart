@@ -38,7 +38,12 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   void initState() {
     super.initState();
-    _selectedCategoryIndex = widget.initialCategoryIndex.clamp(0, 3);
+    final auth = context.read<AuthProvider>();
+    int initialCat = widget.initialCategoryIndex.clamp(0, 3);
+    if (initialCat == 0 && !auth.canManagePermissions) {
+      initialCat = 2; // Default to Appearance & Branding for non-admins
+    }
+    _selectedCategoryIndex = initialCat;
     _selectedRoleId = widget.initialRoleId ?? AppRole.managerId;
 
     final provider = context.read<ChallanProvider>();
@@ -1015,31 +1020,48 @@ class _SettingsViewState extends State<SettingsView> {
       _selectedRoleId = visibleRoles.first.id;
     }
 
-    // Categories list for vertical sidebar navigation
-    final categories = [
-      {
+    // Dynamic categories list based on operator authority
+    final categories = <Map<String, dynamic>>[];
+
+    // Category 0: Role Permissions (RBAC) - DEVELOPER & ADMIN ONLY!
+    if (auth.canManagePermissions) {
+      categories.add({
+        'id': 0,
         'title': 'Role Permissions (RBAC)',
         'subtitle': '5-Pillar dynamic capability matrix',
         'icon': Icons.shield_outlined,
         'badge': '${visibleRoles.length} Roles',
-      },
-      {
+      });
+    }
+
+    // Category 1: Authorized Users - GATED BY canManageUsers or Admin/Dev
+    if (auth.canManageUsers || auth.canManagePermissions) {
+      categories.add({
+        'id': 1,
         'title': 'Authorized Users',
         'subtitle': 'Manage operator accounts & credentials',
         'icon': Icons.people_alt_outlined,
         'badge': '${auth.visibleUsers.length} Users',
-      },
-      {
-        'title': 'Appearance & Branding',
-        'subtitle': 'Company logo, theme & typography',
-        'icon': Icons.palette_outlined,
-      },
-      {
+      });
+    }
+
+    // Category 2: Appearance & Branding - Accessible to all operators
+    categories.add({
+      'id': 2,
+      'title': 'Appearance & Branding',
+      'subtitle': 'Company logo, theme & typography',
+      'icon': Icons.palette_outlined,
+    });
+
+    // Category 3: Backup & Data Safety - DEVELOPER & ADMIN ONLY!
+    if (auth.isDeveloper || auth.isAdmin) {
+      categories.add({
+        'id': 3,
         'title': 'Backup & Data Safety',
         'subtitle': 'JSON exports, restore & database',
         'icon': Icons.backup_outlined,
-      },
-    ];
+      });
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1111,7 +1133,8 @@ class _SettingsViewState extends State<SettingsView> {
                     separatorBuilder: (_, _) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final cat = categories[index];
-                      final isSelected = _selectedCategoryIndex == index;
+                      final catId = cat['id'] as int;
+                      final isSelected = _selectedCategoryIndex == catId;
 
                       return Container(
                         decoration: BoxDecoration(
@@ -1174,7 +1197,7 @@ class _SettingsViewState extends State<SettingsView> {
                                 )
                               : null,
                           onTap: () {
-                            setState(() => _selectedCategoryIndex = index);
+                            setState(() => _selectedCategoryIndex = catId);
                           },
                         ),
                       );
@@ -1255,16 +1278,117 @@ class _SettingsViewState extends State<SettingsView> {
   ) {
     switch (_selectedCategoryIndex) {
       case 0:
+        if (!auth.canManagePermissions) {
+          return _buildPermissionDeniedCard(
+            context,
+            'Role Permissions Restricted',
+            'Only System Developer and Administrator have rights to configure and grant system permissions.',
+          );
+        }
         return _buildRolePermissionsPage(context, auth, isDark);
       case 1:
+        if (!auth.canManageUsers && !auth.canManagePermissions) {
+          return _buildPermissionDeniedCard(
+            context,
+            'User Management Restricted',
+            'You do not have permission to manage operator accounts. Contact your Administrator.',
+          );
+        }
         return _buildAuthorizedUsersPage(context, auth, isDark);
       case 2:
         return _buildAppearanceAndBrandingPage(context, provider, isDark);
       case 3:
+        if (!auth.isDeveloper && !auth.isAdmin) {
+          return _buildPermissionDeniedCard(
+            context,
+            'Database Backup Restricted',
+            'Database snapshots and backup restoration are restricted to Administrator and Developer.',
+          );
+        }
         return _buildBackupAndDatabasePage(context, provider, auth, isDark);
       default:
-        return _buildRolePermissionsPage(context, auth, isDark);
+        return _buildAppearanceAndBrandingPage(context, provider, isDark);
     }
+  }
+
+  Widget _buildPermissionDeniedCard(
+    BuildContext context,
+    String title,
+    String message,
+  ) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(32),
+        margin: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.warningBgDark.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shield_outlined, size: 42, color: AppColors.warningText),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color
+                    ?.withValues(alpha: 0.8),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Permission control restricted to System Developer and Administrator',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ===========================================================================
@@ -2280,6 +2404,8 @@ class _SettingsViewState extends State<SettingsView> {
     ChallanProvider provider,
     bool isDark,
   ) {
+    final auth = context.watch<AuthProvider>();
+    final canEditBranding = auth.canManageSettings;
     final hasCustomLogo = provider.appLogoBase64.isNotEmpty;
 
     return Card(
@@ -2383,115 +2509,123 @@ class _SettingsViewState extends State<SettingsView> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          children: [
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        if (canEditBranding)
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                                icon: const Icon(Icons.file_upload_outlined, size: 17),
+                                label: const Text('Change Brand Logo...'),
+                                onPressed: () async {
+                                  final b64 = await BrandingDialogs.pickImageAsBase64();
+                                  if (b64 != null && b64.isNotEmpty) {
+                                    provider.setAppLogoBase64(b64);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Company brand logo updated successfully!'),
+                                          backgroundColor: AppColors.primary,
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                               ),
-                              icon: const Icon(Icons.file_upload_outlined, size: 17),
-                              label: const Text('Change Brand Logo...'),
-                              onPressed: () async {
-                                final b64 = await BrandingDialogs.pickImageAsBase64();
-                                if (b64 != null && b64.isNotEmpty) {
-                                  provider.setAppLogoBase64(b64);
-                                  if (context.mounted) {
+                              if (hasCustomLogo)
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  ),
+                                  icon: const Icon(Icons.restore, size: 16),
+                                  label: const Text('Reset to Default Logo'),
+                                  onPressed: () {
+                                    provider.setAppLogoBase64('');
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Company brand logo updated successfully!'),
-                                        backgroundColor: AppColors.primary,
+                                        content: Text('Brand logo reset to default OM Mavtar Group logo.'),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
-                                  }
-                                }
-                              },
-                            ),
-                            if (hasCustomLogo)
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  },
                                 ),
-                                icon: const Icon(Icons.restore, size: 16),
-                                label: const Text('Reset to Default Logo'),
-                                onPressed: () {
-                                  provider.setAppLogoBase64('');
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Brand logo reset to default OM Mavtar Group logo.'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                              ),
-                          ],
-                        ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            'Brand logo customization is restricted to Administrator or Developer.',
+                            style: TextStyle(fontSize: 11.5, color: Colors.grey, fontStyle: FontStyle.italic),
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            if (canEditBranding) ...[
+              const SizedBox(height: 16),
 
-            // OPTIONAL MANUAL FILE PATH
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _manualLogoPathController,
-                    decoration: InputDecoration(
-                      labelText: 'Or Local Logo File Path',
-                      hintText: '/path/to/logo.png',
-                      isDense: true,
-                      prefixIcon: const Icon(Icons.folder_open, size: 18),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              // OPTIONAL MANUAL FILE PATH
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _manualLogoPathController,
+                      decoration: InputDecoration(
+                        labelText: 'Or Local Logo File Path',
+                        hintText: '/path/to/logo.png',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.folder_open, size: 18),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () async {
-                    final p = _manualLogoPathController.text.trim();
-                    if (p.isNotEmpty) {
-                      try {
-                        final file = File(p);
-                        if (await file.exists()) {
-                          final bytes = await file.readAsBytes();
-                          provider.setAppLogoBase64(base64Encode(bytes));
-                          _manualLogoPathController.clear();
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final p = _manualLogoPathController.text.trim();
+                      if (p.isNotEmpty) {
+                        try {
+                          final file = File(p);
+                          if (await file.exists()) {
+                            final bytes = await file.readAsBytes();
+                            provider.setAppLogoBase64(base64Encode(bytes));
+                            _manualLogoPathController.clear();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Loaded and saved logo from file path!'),
+                                  backgroundColor: AppColors.primary,
+                                ),
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('File does not exist at specified path.')),
+                              );
+                            }
+                          }
+                        } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Loaded and saved logo from file path!'),
-                                backgroundColor: AppColors.primary,
-                              ),
+                              SnackBar(content: Text('Error loading file: $e')),
                             );
                           }
-                        } else {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('File does not exist at specified path.')),
-                            );
-                          }
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error loading file: $e')),
-                          );
                         }
                       }
-                    }
-                  },
-                  child: const Text('Load File'),
-                ),
-              ],
-            ),
+                    },
+                    child: const Text('Load File'),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
 
             // INLINE FORM FIELDS (COMPANY NAME & TAGLINE)
@@ -2506,6 +2640,7 @@ class _SettingsViewState extends State<SettingsView> {
             const SizedBox(height: 10),
             TextField(
               controller: _companyNameController,
+              enabled: canEditBranding,
               decoration: InputDecoration(
                 labelText: 'Company / Business Legal Name *',
                 hintText: 'e.g. OM Mavtar Group',
@@ -2518,6 +2653,7 @@ class _SettingsViewState extends State<SettingsView> {
             const SizedBox(height: 14),
             TextField(
               controller: _companyTaglineController,
+              enabled: canEditBranding,
               decoration: InputDecoration(
                 labelText: 'Business Tagline / Subtitle',
                 hintText: 'e.g. Khata Book Desktop & Mobile',
@@ -2532,37 +2668,56 @@ class _SettingsViewState extends State<SettingsView> {
             // SAVE BRANDING BUTTON
             Align(
               alignment: Alignment.centerLeft,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('Save Company Branding', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {
-                  final name = _companyNameController.text.trim();
-                  final tagline = _companyTaglineController.text.trim();
-                  if (name.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Company name cannot be blank.'),
-                        backgroundColor: AppColors.warningText,
+              child: canEditBranding
+                  ? ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                    );
-                    return;
-                  }
-                  provider.setCompanyBranding(name: name, tagline: tagline);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Company branding saved successfully!'),
-                      backgroundColor: AppColors.primary,
-                      duration: Duration(seconds: 2),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Save Company Branding', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        final name = _companyNameController.text.trim();
+                        final tagline = _companyTaglineController.text.trim();
+                        if (name.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Company name cannot be blank.'),
+                              backgroundColor: AppColors.warningText,
+                            ),
+                          );
+                          return;
+                        }
+                        provider.setCompanyBranding(name: name, tagline: tagline);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Company branding saved successfully!'),
+                            backgroundColor: AppColors.primary,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text(
+                            'Admin Protected: Only Developer and Administrator can modify official company branding.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

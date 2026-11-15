@@ -278,6 +278,36 @@ void main() {
       expect(auth.canPurgeRecycleBin, isFalse);
     });
 
+    test('Only Developer and Admin have canManagePermissions right; Clerk and Manager are blocked', () async {
+      // 1. Clerk
+      await auth.login('clerk', 'clerk123');
+      expect(auth.canManagePermissions, isFalse);
+      expect(
+        () => auth.createCustomRole(name: 'Unauthorized Role'),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => auth.updateRolePermissionsForId(AppRole.clerkId, RolePermissions.defaultForId('clerk')),
+        throwsA(isA<StateError>()),
+      );
+
+      // 2. Manager
+      await auth.login('manager', 'manager123');
+      expect(auth.canManagePermissions, isFalse);
+      expect(
+        () => auth.createCustomRole(name: 'Unauthorized Role 2'),
+        throwsA(isA<StateError>()),
+      );
+
+      // 3. Admin
+      await auth.login('admin', 'admin123');
+      expect(auth.canManagePermissions, isTrue);
+
+      // 4. Developer
+      await auth.login('developer', 'developer123');
+      expect(auth.canManagePermissions, isTrue);
+    });
+
     test('Dynamic role permissions and custom roles are preserved in backup JSON export/import', () async {
       await auth.login('developer', 'developer123');
 

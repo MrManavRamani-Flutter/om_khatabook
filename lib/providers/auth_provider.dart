@@ -105,7 +105,7 @@ class AuthProvider extends ChangeNotifier {
   // 3. ✏️ Edit
   bool get canEditChallan => currentPermissions.canEditChallan;
   bool get canEditUsers => currentPermissions.canEditUsers;
-  bool get canManageSettings => currentPermissions.canManageSettings;
+  bool get canManageSettings => isDeveloper || isAdmin || currentPermissions.canManageSettings;
 
   // 4. 🗑️ Delete & Recovery
   bool get canDelete => currentPermissions.canDeleteChallan;
@@ -120,7 +120,11 @@ class AuthProvider extends ChangeNotifier {
   bool get canViewAuditLogs => isDeveloper || currentPermissions.canViewAuditLogs;
   bool get canClearAuditLogs => isDeveloper && currentPermissions.canClearAuditLogs;
 
-  bool get canManageUsers => currentPermissions.canManageUsers;
+  bool get canManageUsers => isDeveloper || isAdmin || currentPermissions.canManageUsers;
+
+  /// Supreme & Administrative Right:
+  /// ONLY Developer and Admin have authority to configure, grant, create, or modify dynamic role permissions!
+  bool get canManagePermissions => isDeveloper || isAdmin;
 
   String roleNameFor(String roleId) {
     final matched = allRoles.where((r) => r.id == roleId).toList();
@@ -555,6 +559,10 @@ class AuthProvider extends ChangeNotifier {
     String description = '',
     String copyFromRoleId = 'clerk',
   }) async {
+    if (!canManagePermissions) {
+      throw StateError('Permission denied: Only Developer and Admin can create custom roles.');
+    }
+
     final cleanName = name.trim();
     if (cleanName.isEmpty) {
       throw ArgumentError('Role name cannot be empty');
@@ -594,6 +602,10 @@ class AuthProvider extends ChangeNotifier {
 
   /// Delete a custom role (built-in roles cannot be deleted)
   Future<bool> deleteCustomRole(String roleId) async {
+    if (!canManagePermissions) {
+      return false;
+    }
+
     final roleIndex = _customRoles.indexWhere((r) => r.id == roleId);
     if (roleIndex == -1) return false;
 
@@ -624,6 +636,10 @@ class AuthProvider extends ChangeNotifier {
   /// Dynamically update permissions for a role identifier
   Future<void> updateRolePermissionsForId(
       String roleId, RolePermissions newPermissions) async {
+    if (!canManagePermissions) {
+      throw StateError('Permission denied: Only Developer and Admin can modify dynamic permissions.');
+    }
+
     // Safety check: Admin & Developer always maintain canManageUsers
     RolePermissions safePermissions = newPermissions;
     if (roleId == AppRole.adminId || roleId == AppRole.developerId) {
@@ -658,6 +674,10 @@ class AuthProvider extends ChangeNotifier {
 
   /// Reset permissions for a role to factory defaults
   Future<void> resetRolePermissionsForId(String roleId) async {
+    if (!canManagePermissions) {
+      return;
+    }
+
     _rolePermissions[roleId] = RolePermissions.defaultForId(roleId);
     await _storage.saveRolePermissions(_rolePermissions);
 

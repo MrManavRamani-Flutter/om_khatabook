@@ -97,24 +97,71 @@ class _MainLayoutState extends State<MainLayout> {
       );
     }
 
+    // Auto-fallback if the current user doesn't have permission for the selected index
+    int effectiveIndex = _selectedIndex;
+    if (effectiveIndex == 0 && !auth.canViewChallans) {
+      if (auth.canViewParties) {
+        effectiveIndex = 1;
+      } else if (auth.canViewReports) {
+        effectiveIndex = 2;
+      } else {
+        effectiveIndex = 5;
+      }
+    }
+
     Widget contentBody;
-    switch (_selectedIndex) {
+    switch (effectiveIndex) {
       case 0:
-        contentBody = const ChallanListView();
+        contentBody = auth.canViewChallans
+            ? const ChallanListView()
+            : _buildAccessDeniedView(
+                title: 'Challan Ledger Access Restricted',
+                message:
+                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view delivery challans. Please request access from Administrator or Developer.',
+                icon: Icons.receipt_long_outlined,
+              );
         break;
       case 1:
-        contentBody = const PartiesView();
+        contentBody = auth.canViewParties
+            ? const PartiesView()
+            : _buildAccessDeniedView(
+                title: 'Parties Directory Access Restricted',
+                message:
+                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view the counterparties directory.',
+                icon: Icons.people_outline,
+              );
         break;
       case 2:
-        contentBody = const SummaryReportsView();
+        contentBody = auth.canViewReports
+            ? const SummaryReportsView()
+            : _buildAccessDeniedView(
+                title: 'Financial Reports Access Restricted',
+                message:
+                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view aggregate financial reports.',
+                icon: Icons.bar_chart_outlined,
+              );
         break;
       case 3:
-        contentBody = const RecycleBinView();
+        contentBody = (auth.canDeleteChallan ||
+                auth.canPurgeRecycleBin ||
+                auth.canRestoreFromBin)
+            ? const RecycleBinView()
+            : _buildAccessDeniedView(
+                title: 'Recycle Bin Access Restricted',
+                message:
+                    'Your assigned role [${auth.currentRoleLabel}] does not have permissions to access deleted records.',
+                icon: Icons.delete_outline,
+              );
         break;
       case 4:
         contentBody = auth.canViewAuditLogs
             ? const AuditLogView()
-            : const ChallanListView();
+            : _buildAccessDeniedView(
+                title: 'Audit Logs Access Restricted',
+                message:
+                    'Audit trail inspection is restricted to authorized supervisory personnel.',
+                icon: Icons.history_outlined,
+              );
         break;
       case 5:
         contentBody = SettingsView(
@@ -319,43 +366,47 @@ class _MainLayoutState extends State<MainLayout> {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
             children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long,
-                label: 'Challan Ledger',
-                badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
-                isWarningBadge: warningCount > 0,
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.people_outline,
-                activeIcon: Icons.people,
-                label: 'Parties Directory',
-                badge: '${provider.parties.length}',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.bar_chart_outlined,
-                activeIcon: Icons.bar_chart,
-                label: 'Financial Reports',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.delete_outline,
-                activeIcon: Icons.delete,
-                label: 'Recycle Bin',
-                badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
-                isWarningBadge: false,
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
+              if (auth.canViewChallans)
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long,
+                  label: 'Challan Ledger',
+                  badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
+                  isWarningBadge: warningCount > 0,
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+              if (auth.canViewParties)
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.people_outline,
+                  activeIcon: Icons.people,
+                  label: 'Parties Directory',
+                  badge: '${provider.parties.length}',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+              if (auth.canViewReports)
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.bar_chart_outlined,
+                  activeIcon: Icons.bar_chart,
+                  label: 'Financial Reports',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+              if (auth.canDeleteChallan || auth.canPurgeRecycleBin || auth.canRestoreFromBin)
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.delete_outline,
+                  activeIcon: Icons.delete,
+                  label: 'Recycle Bin',
+                  badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
+                  isWarningBadge: false,
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
               if (auth.canViewAuditLogs)
                 _buildNavItem(
                   index: 4,
@@ -370,7 +421,7 @@ class _MainLayoutState extends State<MainLayout> {
                 index: 5,
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
-                label: 'Settings & RBAC',
+                label: auth.canManagePermissions ? 'Settings & RBAC' : 'Settings & Themes',
                 isCollapsed: isCollapsed,
                 isDrawer: isDrawer,
               ),
@@ -663,6 +714,86 @@ class _MainLayoutState extends State<MainLayout> {
             if (isDrawer) Navigator.of(context).pop();
             setState(() => _selectedIndex = index);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccessDeniedView({
+    required String title,
+    required String message,
+    required IconData icon,
+  }) {
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 480),
+        padding: const EdgeInsets.all(32),
+        margin: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.warningBgDark.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 40, color: AppColors.warningText),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.color
+                    ?.withValues(alpha: 0.8),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Permission controlled dynamically by Developer / Admin',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
