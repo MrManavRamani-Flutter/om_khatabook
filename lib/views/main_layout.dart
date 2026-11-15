@@ -21,6 +21,14 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
+  int _settingsCategoryIndex = 0;
+
+  void _navigateToSettings({int categoryIndex = 0}) {
+    setState(() {
+      _selectedIndex = 5;
+      _settingsCategoryIndex = categoryIndex;
+    });
+  }
 
   void _openAddChallan(BuildContext context) {
     showDialog(
@@ -109,7 +117,10 @@ class _MainLayoutState extends State<MainLayout> {
             : const ChallanListView();
         break;
       case 5:
-        contentBody = const SettingsView();
+        contentBody = SettingsView(
+          key: ValueKey('settings_category_$_settingsCategoryIndex'),
+          initialCategoryIndex: _settingsCategoryIndex,
+        );
         break;
       default:
         contentBody = const ChallanListView();
@@ -226,11 +237,11 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Column(
                   children: [
                     Tooltip(
-                      message: 'OM Mavtar Admin (Click to edit Profile & Logo)',
+                      message: 'OM Mavtar Admin (Click to customize Profile & Logo)',
                       child: AppLogoWidget(
                         size: 40,
                         showEditBadge: true,
-                        onTap: () => BrandingDialogs.showProfileDialog(context),
+                        onTap: () => _navigateToSettings(categoryIndex: 2),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -247,17 +258,17 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Row(
                   children: [
                     Tooltip(
-                      message: 'Click to edit Profile & Logo',
+                      message: 'Click to customize Profile & Logo',
                       child: AppLogoWidget(
                         size: 42,
                         showEditBadge: true,
-                        onTap: () => BrandingDialogs.showProfileDialog(context),
+                        onTap: () => _navigateToSettings(categoryIndex: 2),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: InkWell(
-                        onTap: () => BrandingDialogs.showAppBrandingDialog(context),
+                        onTap: () => _navigateToSettings(categoryIndex: 2),
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -420,11 +431,11 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Column(
                   children: [
                     Tooltip(
-                      message: '$userName [$roleName] (Click to edit)',
+                      message: '$userName [$roleName] (Click to customize Profile)',
                       child: ProfileAvatarWidget(
                         radius: 17,
                         showEditBadge: true,
-                        onTap: () => BrandingDialogs.showProfileDialog(context),
+                        onTap: () => _navigateToSettings(categoryIndex: 2),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -432,7 +443,7 @@ class _MainLayoutState extends State<MainLayout> {
                       IconButton(
                         icon: const Icon(Icons.manage_accounts_outlined, size: 18),
                         tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => setState(() => _selectedIndex = 5),
+                        onPressed: () => _navigateToSettings(categoryIndex: 0),
                       ),
                       const SizedBox(height: 4),
                     ],
@@ -458,7 +469,7 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => BrandingDialogs.showProfileDialog(context),
+                      onTap: () => _navigateToSettings(categoryIndex: 2),
                       borderRadius: BorderRadius.circular(20),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -466,7 +477,7 @@ class _MainLayoutState extends State<MainLayout> {
                           ProfileAvatarWidget(
                             radius: 16,
                             showEditBadge: true,
-                            onTap: () => BrandingDialogs.showProfileDialog(context),
+                            onTap: () => _navigateToSettings(categoryIndex: 2),
                           ),
                           const SizedBox(width: 6),
                           ConstrainedBox(
@@ -512,7 +523,7 @@ class _MainLayoutState extends State<MainLayout> {
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                         icon: const Icon(Icons.manage_accounts_outlined, size: 18),
                         tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => setState(() => _selectedIndex = 5),
+                        onPressed: () => _navigateToSettings(categoryIndex: 0),
                       ),
                     IconButton(
                       visualDensity: VisualDensity.compact,

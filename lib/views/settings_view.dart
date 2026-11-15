@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_user.dart';
@@ -26,11 +28,37 @@ class _SettingsViewState extends State<SettingsView> {
   late int _selectedCategoryIndex;
   late String _selectedRoleId;
 
+  late final TextEditingController _companyNameController;
+  late final TextEditingController _companyTaglineController;
+  late final TextEditingController _manualLogoPathController;
+  late final TextEditingController _adminNameController;
+  late final TextEditingController _adminRoleController;
+  late final TextEditingController _manualAvatarPathController;
+
   @override
   void initState() {
     super.initState();
     _selectedCategoryIndex = widget.initialCategoryIndex.clamp(0, 3);
     _selectedRoleId = widget.initialRoleId ?? AppRole.managerId;
+
+    final provider = context.read<ChallanProvider>();
+    _companyNameController = TextEditingController(text: provider.companyName);
+    _companyTaglineController = TextEditingController(text: provider.companyTagline);
+    _manualLogoPathController = TextEditingController();
+    _adminNameController = TextEditingController(text: provider.adminName);
+    _adminRoleController = TextEditingController(text: provider.adminRole);
+    _manualAvatarPathController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _companyNameController.dispose();
+    _companyTaglineController.dispose();
+    _manualLogoPathController.dispose();
+    _adminNameController.dispose();
+    _adminRoleController.dispose();
+    _manualAvatarPathController.dispose();
+    super.dispose();
   }
 
   // --- DIALOGS FOR USER & ROLE ACTIONS ---
@@ -2194,7 +2222,7 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   // ===========================================================================
-  // CATEGORY 2: APPEARANCE & COMPANY BRANDING
+  // CATEGORY 2: APPEARANCE & COMPANY BRANDING (100% INLINE, NO POPUP DIALOGS)
   // ===========================================================================
   Widget _buildAppearanceAndBrandingPage(
     BuildContext context,
@@ -2209,16 +2237,16 @@ class _SettingsViewState extends State<SettingsView> {
           const Text(
             'Appearance & Company Branding',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
-            'Customize display themes, data entry casing, and commercial business identity',
+            'Manage official company branding, logo, operator credentials, and visual display preferences directly inline.',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.5,
               color: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -2226,313 +2254,778 @@ class _SettingsViewState extends State<SettingsView> {
                   ?.withValues(alpha: 0.8),
             ),
           ),
+          const SizedBox(height: 22),
+
+          // 1. COMPANY BRAND IDENTITY & OFFICIAL LOGO (INLINE)
+          _buildCompanyBrandingCard(context, provider, isDark),
           const SizedBox(height: 20),
 
-          // THEME CARD
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
+          // 2. OPERATOR / ADMIN PROFILE & AVATAR (INLINE)
+          _buildAdminProfileCard(context, provider, isDark),
+          const SizedBox(height: 20),
+
+          // 3. DISPLAY THEME MODE
+          _buildThemeModeCard(context, provider, isDark),
+          const SizedBox(height: 20),
+
+          // 4. TEXT CASING & TYPOGRAPHY
+          _buildTextCasingCard(context, provider, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompanyBrandingCard(
+    BuildContext context,
+    ChallanProvider provider,
+    bool isDark,
+  ) {
+    final hasCustomLogo = provider.appLogoBase64.isNotEmpty;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.business_center, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.palette_outlined, color: AppColors.primary),
-                      SizedBox(width: 10),
-                      Text(
-                        'Display Theme Mode',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      const Text(
+                        'Company Brand Identity & Official Logo',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Dark Mode Theme'),
-                    subtitle: const Text(
-                      'Optimized high-contrast dark theme for long working hours on Desktop',
-                    ),
-                    value: provider.isDarkMode,
-                    onChanged: (_) => provider.toggleTheme(),
-                    secondary: Icon(
-                      provider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  Divider(
-                    height: 28,
-                    thickness: 1,
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-                  ),
-                  const Row(
-                    children: [
-                      Icon(Icons.text_fields_rounded, color: AppColors.primary, size: 20),
-                      SizedBox(width: 8),
+                      const SizedBox(height: 2),
                       Text(
-                        'Text Casing & Typography (Data Entry)',
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Choose how party names, challans, and entry details format automatically',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...TextCasingStyle.values.map((style) {
-                    final isSelected = provider.textCasingStyle == style;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.08)
-                            : Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Theme.of(context).dividerColor.withValues(alpha: 0.25),
-                          width: isSelected ? 1.5 : 1.0,
+                        'Updates the navigation header, summary reports, and printed GST commercial tax invoices.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
                         ),
                       ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => provider.setTextCasingStyle(style),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_off,
-                                color: isSelected ? AppColors.primary : Colors.grey,
-                                size: 20,
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 18),
+
+            // INLINE LOGO PREVIEW & UPLOAD
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const AppLogoWidget(
+                    size: 64,
+                    borderRadius: 14,
+                    showEditBadge: false,
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              hasCustomLogo ? 'Custom Brand Logo' : 'Default OM Mavtar Logo',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: hasCustomLogo
+                                    ? AppColors.primary.withValues(alpha: 0.15)
+                                    : Colors.grey.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          style.label,
-                                          style: TextStyle(
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                            fontSize: 13,
-                                            color: isSelected ? AppColors.primary : null,
-                                          ),
-                                        ),
-                                        if (style == TextCasingStyle.uppercase) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'Default',
-                                              style: TextStyle(
-                                                fontSize: 9.5,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
+                              child: Text(
+                                hasCustomLogo ? 'Active' : 'Built-in Asset',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasCustomLogo ? AppColors.primary : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Upload a PNG, JPG, or WEBP image file directly from your computer.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              ),
+                              icon: const Icon(Icons.file_upload_outlined, size: 17),
+                              label: const Text('Change Brand Logo...'),
+                              onPressed: () async {
+                                final b64 = await BrandingDialogs.pickImageAsBase64();
+                                if (b64 != null && b64.isNotEmpty) {
+                                  provider.setAppLogoBase64(b64);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Company brand logo updated successfully!'),
+                                        backgroundColor: AppColors.primary,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            if (hasCustomLogo)
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                                icon: const Icon(Icons.restore, size: 16),
+                                label: const Text('Reset to Default Logo'),
+                                onPressed: () {
+                                  provider.setAppLogoBase64('');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Brand logo reset to default OM Mavtar Group logo.'),
+                                      duration: Duration(seconds: 2),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      style.example,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // OPTIONAL MANUAL FILE PATH
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _manualLogoPathController,
+                    decoration: InputDecoration(
+                      labelText: 'Or Local Logo File Path',
+                      hintText: '/path/to/logo.png',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.folder_open, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () async {
+                    final p = _manualLogoPathController.text.trim();
+                    if (p.isNotEmpty) {
+                      try {
+                        final file = File(p);
+                        if (await file.exists()) {
+                          final bytes = await file.readAsBytes();
+                          provider.setAppLogoBase64(base64Encode(bytes));
+                          _manualLogoPathController.clear();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Loaded and saved logo from file path!'),
+                                backgroundColor: AppColors.primary,
+                              ),
+                            );
+                          }
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('File does not exist at specified path.')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error loading file: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text('Load File'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // INLINE FORM FIELDS (COMPANY NAME & TAGLINE)
+            Text(
+              'Company Details',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.9),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _companyNameController,
+              decoration: InputDecoration(
+                labelText: 'Company / Business Legal Name *',
+                hintText: 'e.g. OM Mavtar Group',
+                prefixIcon: const Icon(Icons.storefront_outlined, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _companyTaglineController,
+              decoration: InputDecoration(
+                labelText: 'Business Tagline / Subtitle',
+                hintText: 'e.g. Khata Book Desktop & Mobile',
+                prefixIcon: const Icon(Icons.subtitles_outlined, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // SAVE BRANDING BUTTON
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Save Company Branding', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  final name = _companyNameController.text.trim();
+                  final tagline = _companyTaglineController.text.trim();
+                  if (name.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Company name cannot be blank.'),
+                        backgroundColor: AppColors.warningText,
+                      ),
+                    );
+                    return;
+                  }
+                  provider.setCompanyBranding(name: name, tagline: tagline);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Company branding saved successfully!'),
+                      backgroundColor: AppColors.primary,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminProfileCard(
+    BuildContext context,
+    ChallanProvider provider,
+    bool isDark,
+  ) {
+    final hasCustomPhoto = provider.profileLogoBase64.isNotEmpty;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.person_pin_circle_outlined, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Administrator & Operator Profile',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Shown at the bottom of the navigation sidebar and recorded in system audit logs.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 18),
+
+            // INLINE AVATAR PREVIEW & UPLOAD
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const ProfileAvatarWidget(
+                    radius: 32,
+                    showEditBadge: false,
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              hasCustomPhoto ? 'Custom Avatar Photo' : 'Default Initials Avatar',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: hasCustomPhoto
+                                    ? AppColors.primary.withValues(alpha: 0.15)
+                                    : Colors.grey.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                hasCustomPhoto ? 'Photo Uploaded' : 'Letter Avatar',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasCustomPhoto ? AppColors.primary : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Upload your own personal portrait photo or operator profile picture.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              ),
+                              icon: const Icon(Icons.add_a_photo_outlined, size: 17),
+                              label: const Text('Change Avatar Photo...'),
+                              onPressed: () async {
+                                final b64 = await BrandingDialogs.pickImageAsBase64();
+                                if (b64 != null && b64.isNotEmpty) {
+                                  provider.setProfileLogoBase64(b64);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Operator profile avatar updated successfully!'),
+                                        backgroundColor: AppColors.primary,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            if (hasCustomPhoto)
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                                icon: const Icon(Icons.restore, size: 16),
+                                label: const Text('Reset to Initial Letter'),
+                                onPressed: () {
+                                  provider.setProfileLogoBase64('');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Avatar reset to initial letter.'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // OPTIONAL MANUAL FILE PATH
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _manualAvatarPathController,
+                    decoration: InputDecoration(
+                      labelText: 'Or Local Avatar File Path',
+                      hintText: '/path/to/my_photo.jpg',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.image_search, size: 18),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () async {
+                    final p = _manualAvatarPathController.text.trim();
+                    if (p.isNotEmpty) {
+                      try {
+                        final file = File(p);
+                        if (await file.exists()) {
+                          final bytes = await file.readAsBytes();
+                          provider.setProfileLogoBase64(base64Encode(bytes));
+                          _manualAvatarPathController.clear();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Loaded and saved profile avatar from file path!'),
+                                backgroundColor: AppColors.primary,
+                              ),
+                            );
+                          }
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('File does not exist at specified path.')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error loading file: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text('Load Photo'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // INLINE FORM FIELDS (NAME & DESIGNATION ROLE)
+            Text(
+              'Operator Credentials',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.9),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _adminNameController,
+              decoration: InputDecoration(
+                labelText: 'Administrator / Operator Full Name *',
+                hintText: 'e.g. Manav Ramani',
+                prefixIcon: const Icon(Icons.person_outline, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _adminRoleController,
+              decoration: InputDecoration(
+                labelText: 'Designation / Display Role Label *',
+                hintText: 'e.g. SYSTEM DEVELOPER / ADMIN',
+                prefixIcon: const Icon(Icons.shield_outlined, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // SAVE PROFILE BUTTON
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Save Profile Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  final name = _adminNameController.text.trim();
+                  final role = _adminRoleController.text.trim();
+                  if (name.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Operator name cannot be blank.'),
+                        backgroundColor: AppColors.warningText,
+                      ),
+                    );
+                    return;
+                  }
+                  provider.setAdminProfile(
+                    name: name,
+                    role: role.isNotEmpty ? role : 'Administrator',
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Operator profile updated successfully!'),
+                      backgroundColor: AppColors.primary,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeModeCard(
+    BuildContext context,
+    ChallanProvider provider,
+    bool isDark,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.palette_outlined, color: AppColors.primary),
+                SizedBox(width: 10),
+                Text(
+                  'Display Theme Mode',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Dark Mode Theme'),
+              subtitle: const Text(
+                'Optimized high-contrast dark theme for long working hours on Desktop',
+              ),
+              value: provider.isDarkMode,
+              onChanged: (_) => provider.toggleTheme(),
+              secondary: Icon(
+                provider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextCasingCard(
+    BuildContext context,
+    ChallanProvider provider,
+    bool isDark,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.text_fields_rounded, color: AppColors.primary, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Text Casing & Typography (Data Entry)',
+                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose how party names, challans, and entry details format automatically',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 14),
+            ...TextCasingStyle.values.map((style) {
+              final isSelected = provider.textCasingStyle == style;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                    width: isSelected ? 1.5 : 1.0,
+                  ),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => provider.setTextCasingStyle(style),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: isSelected ? AppColors.primary : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    style.label,
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      fontSize: 13,
+                                      color: isSelected ? AppColors.primary : null,
+                                    ),
+                                  ),
+                                  if (style == TextCasingStyle.uppercase) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'Default',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
                                       ),
                                     ),
                                   ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                style.example,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // BRANDING IDENTITIES CARD
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.branding_watermark_outlined, color: AppColors.primary),
-                      SizedBox(width: 10),
-                      Text(
-                        'Commercial Brand Identity & Profile',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Update company logos, commercial legal name, and operator profile.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // COMPANY LOGO
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  AppLogoWidget(
-                                    size: 48,
-                                    showEditBadge: true,
-                                    onTap: () => BrandingDialogs.showAppBrandingDialog(context),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          provider.companyName,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          provider.companyTagline,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.color
-                                                ?.withValues(alpha: 0.7),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Edit Company Brand Logo'),
-                                  onPressed: () => BrandingDialogs.showAppBrandingDialog(context),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // PROFILE AVATAR
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  ProfileAvatarWidget(
-                                    radius: 24,
-                                    showEditBadge: true,
-                                    onTap: () => BrandingDialogs.showProfileDialog(context),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          provider.adminName,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          provider.adminRole,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.color
-                                                ?.withValues(alpha: 0.7),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.badge, size: 16),
-                                  label: const Text('Edit Profile & Avatar'),
-                                  onPressed: () => BrandingDialogs.showProfileDialog(context),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
