@@ -755,7 +755,7 @@ class AuthProvider extends ChangeNotifier {
         entityType: entityType,
         entityId: entityId,
         entityTitle: entityTitle,
-        performedBy: _currentUser?.username ?? 'OMMAVTAR36',
+        performedBy: 'OM MAVTAR',
         userRole: 'MASTER',
         description: description,
       );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
-import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -52,8 +51,7 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     final phone = _phoneController.text.trim();
     final gstin = _gstController.text.trim().toUpperCase();
 
-    final auth = context.read<AuthProvider>();
-    final uName = auth.currentUser?.username ?? 'OMMAVTAR36';
+    const uName = 'OM MAVTAR';
     const uRole = 'MASTER';
 
     if (widget.partyToEdit != null) {

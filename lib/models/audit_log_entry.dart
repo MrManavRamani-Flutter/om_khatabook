@@ -48,7 +48,7 @@ class AuditLogEntry {
     String? userRole,
     required this.description,
     this.metadata = const {},
-  })  : performedBy = 'OMMAVTAR36',
+  })  : performedBy = 'OM MAVTAR',
         userRole = 'MASTER';
 
   AuditLogEntry copyWith({
@@ -108,7 +108,7 @@ class AuditLogEntry {
       ),
       entityId: json['entityId'] as String? ?? '',
       entityTitle: json['entityTitle'] as String? ?? '',
-      performedBy: 'OMMAVTAR36',
+      performedBy: 'OM MAVTAR',
       userRole: 'MASTER',
       description: json['description'] as String? ?? '',
       metadata: (json['metadata'] as Map<String, dynamic>?) ?? {},

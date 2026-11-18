@@ -5,7 +5,6 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/branding_dialogs.dart';
-import 'audit_log_view.dart';
 import 'challan_list_view.dart';
 import 'parties_view.dart';
 import 'recycle_bin_view.dart';
@@ -25,7 +24,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   void _navigateToSettings({int categoryIndex = 0}) {
     setState(() {
-      _selectedIndex = 5;
+      _selectedIndex = 4;
       _settingsCategoryIndex = categoryIndex;
     });
   }
@@ -77,9 +76,6 @@ class _MainLayoutState extends State<MainLayout> {
         contentBody = const RecycleBinView();
         break;
       case 4:
-        contentBody = const AuditLogView();
-        break;
-      case 5:
         contentBody = SettingsView(
           key: ValueKey('settings_category_$_settingsCategoryIndex'),
           initialCategoryIndex: _settingsCategoryIndex,
@@ -310,15 +306,6 @@ class _MainLayoutState extends State<MainLayout> {
               ),
               _buildNavItem(
                 index: 4,
-                icon: Icons.history_outlined,
-                activeIcon: Icons.history,
-                label: 'Audit History',
-                badge: '${provider.auditLogs.length}',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 5,
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
                 label: 'Settings',

@@ -245,7 +245,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Operator: OMMAVTAR36 [MASTER] • Tamper-evident record of all commercial transactions & activities',
+                    'Operator: OM MAVTAR [MASTER] • Tamper-evident record of all commercial transactions & activities',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).textTheme.bodySmall?.color,
@@ -272,7 +272,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Operator: OMMAVTAR36 [MASTER] • Tamper-evident record of all commercial transactions & activities',
+                        'Operator: OM MAVTAR [MASTER] • Tamper-evident record of all commercial transactions & activities',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).textTheme.bodySmall?.color,

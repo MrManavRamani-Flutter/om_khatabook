@@ -255,14 +255,14 @@ class StorageService {
       }
     }
 
-    // Normalize any legacy/default entries to the single master operator OMMAVTAR36 [MASTER]
+    // Normalize any legacy/default entries to the single master operator OM MAVTAR [MASTER]
     bool needsResave = false;
     final normalized = <AuditLogEntry>[];
     for (final entry in logs) {
-      if (entry.performedBy != 'OMMAVTAR36' || entry.userRole != 'MASTER') {
+      if (entry.performedBy != 'OM MAVTAR' || entry.userRole != 'MASTER') {
         needsResave = true;
         normalized.add(entry.copyWith(
-          performedBy: 'OMMAVTAR36',
+          performedBy: 'OM MAVTAR',
           userRole: 'MASTER',
         ));
       } else {
@@ -277,11 +277,11 @@ class StorageService {
         timestamp: DateTime.now(),
         action: AuditAction.login,
         entityType: AuditEntityType.auth,
-        entityId: 'OMMAVTAR36',
+        entityId: 'OM_MAVTAR',
         entityTitle: 'Master System Session',
-        performedBy: 'OMMAVTAR36',
+        performedBy: 'OM MAVTAR',
         userRole: 'MASTER',
-        description: 'Master operator OMMAVTAR36 session initialized',
+        description: 'Master operator OM MAVTAR session initialized',
       ));
       needsResave = true;
     }

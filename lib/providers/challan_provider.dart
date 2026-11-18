@@ -538,7 +538,7 @@ class ChallanProvider extends ChangeNotifier {
     required AuditEntityType entityType,
     required String entityId,
     required String entityTitle,
-    String performedBy = 'OMMAVTAR36',
+    String performedBy = 'OM MAVTAR',
     String userRole = 'MASTER',
     required String description,
     Map<String, dynamic> metadata = const {},
@@ -570,7 +570,7 @@ class ChallanProvider extends ChangeNotifier {
     String phone = '',
     String address = '',
     String gstNumber = '',
-    String performedBy = 'OMMAVTAR36',
+    String performedBy = 'OM MAVTAR',
     String userRole = 'MASTER',
   }) async {
     final party = Party(
@@ -599,7 +599,7 @@ class ChallanProvider extends ChangeNotifier {
     return party;
   }
 
-  Future<void> updateParty(Party updated, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> updateParty(Party updated, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _parties.indexWhere((p) => p.id == updated.id);
     if (idx != -1) {
       _parties[idx] = updated.copyWith(
@@ -628,7 +628,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> moveToBinParty(String partyId, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> moveToBinParty(String partyId, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _parties.indexWhere((p) => p.id == partyId);
     if (idx != -1) {
       final p = _parties[idx];
@@ -654,7 +654,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> restoreParty(String partyId, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> restoreParty(String partyId, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _parties.indexWhere((p) => p.id == partyId);
     if (idx != -1) {
       final p = _parties[idx];
@@ -678,7 +678,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deletePermanentlyParty(String partyId, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> deletePermanentlyParty(String partyId, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _parties.indexWhere((p) => p.id == partyId);
     final partyName = idx != -1 ? _parties[idx].name : partyId;
     _parties.removeWhere((p) => p.id == partyId);
@@ -716,7 +716,7 @@ class ChallanProvider extends ChangeNotifier {
     bool isCashPaid = true,
     ChequeDetails? chequeDetails,
     String notes = '',
-    String performedBy = 'OMMAVTAR36',
+    String performedBy = 'OM MAVTAR',
     String userRole = 'MASTER',
   }) async {
     final entry = ChallanEntry(
@@ -755,7 +755,7 @@ class ChallanProvider extends ChangeNotifier {
     return entry;
   }
 
-  Future<void> updateChallan(ChallanEntry updated, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> updateChallan(ChallanEntry updated, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _challans.indexWhere((c) => c.id == updated.id);
     if (idx != -1) {
       final stamped = updated.copyWith(
@@ -779,7 +779,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> moveToBinChallan(String id, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> moveToBinChallan(String id, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _challans.indexWhere((c) => c.id == id);
     if (idx != -1) {
       final c = _challans[idx];
@@ -804,7 +804,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> restoreChallan(String id, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> restoreChallan(String id, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _challans.indexWhere((c) => c.id == id);
     if (idx != -1) {
       final c = _challans[idx];
@@ -828,7 +828,7 @@ class ChallanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deletePermanentlyChallan(String id, {String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> deletePermanentlyChallan(String id, {String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final idx = _challans.indexWhere((c) => c.id == id);
     final title = idx != -1 ? 'Challan #${_challans[idx].challanNo} (${_challans[idx].partyName})' : 'Challan ID $id';
     _challans.removeWhere((c) => c.id == id);
@@ -851,7 +851,7 @@ class ChallanProvider extends ChangeNotifier {
   Future<void> deleteChallan(String id) => moveToBinChallan(id);
 
   // --- EMPTY RECYCLE BIN ---
-  Future<void> emptyRecycleBin({String performedBy = 'OMMAVTAR36', String userRole = 'MASTER'}) async {
+  Future<void> emptyRecycleBin({String performedBy = 'OM MAVTAR', String userRole = 'MASTER'}) async {
     final count = deletedChallans.length + deletedParties.length;
     _challans.removeWhere((c) => c.isDeleted);
     _parties.removeWhere((p) => p.isDeleted);
@@ -1059,7 +1059,7 @@ class ChallanProvider extends ChangeNotifier {
     required String jsonString,
     required BackupImportMode mode,
     bool importBranding = true,
-    String performedBy = 'OMMAVTAR36',
+    String performedBy = 'OM MAVTAR',
   }) async {
     final analysis = analyzeBackupJson(jsonString);
     if (!analysis.isValid) {

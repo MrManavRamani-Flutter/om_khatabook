@@ -1426,15 +1426,6 @@ class _SettingsViewState extends State<SettingsView> {
                           color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildStatItem(
-                          context,
-                          'Audit History Logs',
-                          '${provider.auditLogs.length}',
-                          Icons.history_edu,
-                        ),
-                      ),
                     ],
                   ),
                 ],
