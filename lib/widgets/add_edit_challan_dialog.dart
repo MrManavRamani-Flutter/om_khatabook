@@ -328,8 +328,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
             .id;
 
     final auth = context.read<AuthProvider>();
-    final uName = auth.currentUser?.username ?? 'admin';
-    final uRole = auth.currentUser?.role.name.toUpperCase() ?? 'ADMIN';
+    final uName = auth.currentUser?.username ?? 'OMMAVTAR36';
+    const uRole = 'MASTER';
 
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(

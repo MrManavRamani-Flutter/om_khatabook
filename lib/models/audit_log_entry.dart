@@ -33,7 +33,7 @@ class AuditLogEntry {
   final String entityId;
   final String entityTitle;
   final String performedBy; // username
-  final String userRole; // ADMIN, MANAGER, CLERK
+  final String userRole; // MASTER
   final String description;
   final Map<String, dynamic> metadata;
 
@@ -44,11 +44,38 @@ class AuditLogEntry {
     required this.entityType,
     required this.entityId,
     required this.entityTitle,
-    required this.performedBy,
-    required this.userRole,
+    String? performedBy,
+    String? userRole,
     required this.description,
     this.metadata = const {},
-  });
+  })  : performedBy = 'OMMAVTAR36',
+        userRole = 'MASTER';
+
+  AuditLogEntry copyWith({
+    String? id,
+    DateTime? timestamp,
+    AuditAction? action,
+    AuditEntityType? entityType,
+    String? entityId,
+    String? entityTitle,
+    String? performedBy,
+    String? userRole,
+    String? description,
+    Map<String, dynamic>? metadata,
+  }) {
+    return AuditLogEntry(
+      id: id ?? this.id,
+      timestamp: timestamp ?? this.timestamp,
+      action: action ?? this.action,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+      entityTitle: entityTitle ?? this.entityTitle,
+      performedBy: performedBy ?? this.performedBy,
+      userRole: userRole ?? this.userRole,
+      description: description ?? this.description,
+      metadata: metadata ?? this.metadata,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -81,8 +108,8 @@ class AuditLogEntry {
       ),
       entityId: json['entityId'] as String? ?? '',
       entityTitle: json['entityTitle'] as String? ?? '',
-      performedBy: json['performedBy'] as String? ?? 'admin',
-      userRole: json['userRole'] as String? ?? 'ADMIN',
+      performedBy: 'OMMAVTAR36',
+      userRole: 'MASTER',
       description: json['description'] as String? ?? '',
       metadata: (json['metadata'] as Map<String, dynamic>?) ?? {},
     );

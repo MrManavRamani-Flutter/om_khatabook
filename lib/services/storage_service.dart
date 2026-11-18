@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../models/app_user.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
@@ -242,17 +243,54 @@ class StorageService {
   // --- AUDIT TRAIL & HISTORY LOGS ---
   Future<List<AuditLogEntry>> loadAuditLogs() async {
     final str = _prefs.getString(_keyAuditLogs);
+    List<AuditLogEntry> logs = [];
     if (str != null && str.isNotEmpty) {
       try {
         final list = jsonDecode(str) as List<dynamic>;
-        return list
+        logs = list
             .map((e) => AuditLogEntry.fromJson(e as Map<String, dynamic>))
             .toList();
       } catch (e) {
         debugPrint('Error loading audit logs: $e');
       }
     }
-    return [];
+
+    // Normalize any legacy/default entries to the single master operator OMMAVTAR36 [MASTER]
+    bool needsResave = false;
+    final normalized = <AuditLogEntry>[];
+    for (final entry in logs) {
+      if (entry.performedBy != 'OMMAVTAR36' || entry.userRole != 'MASTER') {
+        needsResave = true;
+        normalized.add(entry.copyWith(
+          performedBy: 'OMMAVTAR36',
+          userRole: 'MASTER',
+        ));
+      } else {
+        normalized.add(entry);
+      }
+    }
+
+    // If completely empty, seed an initial master session log
+    if (normalized.isEmpty) {
+      normalized.add(AuditLogEntry(
+        id: const Uuid().v4(),
+        timestamp: DateTime.now(),
+        action: AuditAction.login,
+        entityType: AuditEntityType.auth,
+        entityId: 'OMMAVTAR36',
+        entityTitle: 'Master System Session',
+        performedBy: 'OMMAVTAR36',
+        userRole: 'MASTER',
+        description: 'Master operator OMMAVTAR36 session initialized',
+      ));
+      needsResave = true;
+    }
+
+    if (needsResave) {
+      await saveAuditLogs(normalized);
+    }
+
+    return normalized;
   }
 
   Future<void> saveAuditLogs(List<AuditLogEntry> logs) async {

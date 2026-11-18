@@ -755,10 +755,8 @@ class AuthProvider extends ChangeNotifier {
         entityType: entityType,
         entityId: entityId,
         entityTitle: entityTitle,
-        performedBy: _currentUser?.username ?? 'system',
-        userRole: _currentUser != null
-            ? roleNameFor(_currentUser!.roleId)
-            : 'OPERATOR',
+        performedBy: _currentUser?.username ?? 'OMMAVTAR36',
+        userRole: 'MASTER',
         description: description,
       );
       onAuditLog!(entry);

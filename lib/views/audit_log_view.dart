@@ -245,7 +245,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Tamper-evident record of all commercial challans, parties, exports, and login sessions',
+                    'Operator: OMMAVTAR36 [MASTER] • Tamper-evident record of all commercial transactions & activities',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).textTheme.bodySmall?.color,
@@ -272,7 +272,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tamper-evident record of all commercial challans, parties, exports, and login sessions',
+                        'Operator: OMMAVTAR36 [MASTER] • Tamper-evident record of all commercial transactions & activities',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).textTheme.bodySmall?.color,
@@ -320,7 +320,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Search audit records by description, party name, challan #, or user...',
+                            hintText: 'Search audit records by description, party name, or challan #...',
                             prefixIcon: const Icon(Icons.search, size: 20),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

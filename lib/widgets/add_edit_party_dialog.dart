@@ -53,8 +53,8 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     final gstin = _gstController.text.trim().toUpperCase();
 
     final auth = context.read<AuthProvider>();
-    final uName = auth.currentUser?.username ?? 'admin';
-    final uRole = auth.currentUser?.role.name.toUpperCase() ?? 'ADMIN';
+    final uName = auth.currentUser?.username ?? 'OMMAVTAR36';
+    const uRole = 'MASTER';
 
     if (widget.partyToEdit != null) {
       final updated = widget.partyToEdit!.copyWith(

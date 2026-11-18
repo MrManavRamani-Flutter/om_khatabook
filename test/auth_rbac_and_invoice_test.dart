@@ -91,6 +91,40 @@ void main() {
       expect(createLogs.isNotEmpty, isTrue);
       expect(createLogs.first.entityType, equals(AuditEntityType.challan));
       expect(createLogs.first.entityTitle, contains('CH-999'));
+      expect(createLogs.first.performedBy, equals('OMMAVTAR36'));
+      expect(createLogs.first.userRole, equals('MASTER'));
+    });
+
+    test('Audit history strictly normalizes legacy user references to single master operator OMMAVTAR36', () async {
+      // Test 1: fromJson with legacy usernames
+      final legacyJson = {
+        'id': 'legacy_1',
+        'timestamp': DateTime.now().toIso8601String(),
+        'action': 'create',
+        'entityType': 'party',
+        'entityId': 'p_1',
+        'entityTitle': 'TEST PARTY',
+        'performedBy': 'developer',
+        'userRole': 'DEVELOPER',
+        'description': 'Old developer action',
+      };
+      final parsed = AuditLogEntry.fromJson(legacyJson);
+      expect(parsed.performedBy, equals('OMMAVTAR36'));
+      expect(parsed.userRole, equals('MASTER'));
+
+      // Test 2: Provider actions default to OMMAVTAR36 and MASTER
+      final party = await provider.addParty(name: 'MASTER AUDIT TEST PARTY');
+      final partyLogs = provider.auditLogs.where((l) => l.entityId == party.id);
+      expect(partyLogs.isNotEmpty, isTrue);
+      expect(partyLogs.first.performedBy, equals('OMMAVTAR36'));
+      expect(partyLogs.first.userRole, equals('MASTER'));
+
+      // Test 3: StorageService loadAuditLogs normalizes storage
+      final loadedLogs = await storage.loadAuditLogs();
+      for (final log in loadedLogs) {
+        expect(log.performedBy, equals('OMMAVTAR36'));
+        expect(log.userRole, equals('MASTER'));
+      }
     });
 
     test('Editing and soft deleting a challan appends to audit trail', () async {
