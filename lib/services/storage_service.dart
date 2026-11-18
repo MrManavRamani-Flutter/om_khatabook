@@ -306,6 +306,28 @@ class StorageService {
     return file.path;
   }
 
+  Future<List<File>> getRecentBackupFiles() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final entities = dir.listSync();
+      final files = entities.whereType<File>().where((f) {
+        final name = f.uri.pathSegments.last;
+        return name.startsWith('OM_Mavtar_') && name.endsWith('.json');
+      }).toList();
+      files.sort((a, b) {
+        try {
+          return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+        } catch (_) {
+          return 0;
+        }
+      });
+      return files;
+    } catch (e) {
+      debugPrint('Error listing backup files: $e');
+      return [];
+    }
+  }
+
   Future<bool> importBackupJson(String jsonString) async {
     try {
       final data = jsonDecode(jsonString) as Map<String, dynamic>;

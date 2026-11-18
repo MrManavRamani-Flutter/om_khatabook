@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -6,6 +8,57 @@ import '../models/challan_entry.dart';
 import '../models/party.dart';
 import '../services/storage_service.dart';
 import '../utils/formatters.dart';
+
+enum BackupImportMode {
+  merge, // Combine / Merge with existing data (preserves both, duplicates skipped)
+  replace, // Clean overwrite / erase existing data
+}
+
+class BackupAnalysisResult {
+  final bool isValid;
+  final String? errorMessage;
+  final List<ChallanEntry> challans;
+  final List<Party> parties;
+  final Map<String, dynamic>? branding;
+  final bool isPartialOrLegacy;
+  final int totalChallans;
+  final int totalParties;
+
+  BackupAnalysisResult({
+    required this.isValid,
+    this.errorMessage,
+    this.challans = const [],
+    this.parties = const [],
+    this.branding,
+    this.isPartialOrLegacy = false,
+    this.totalChallans = 0,
+    this.totalParties = 0,
+  });
+}
+
+class BackupImportSummary {
+  final bool success;
+  final BackupImportMode mode;
+  final int challansAdded;
+  final int challansDuplicateSkipped;
+  final int partiesAdded;
+  final int partiesDuplicateSkipped;
+  final int totalActiveChallans;
+  final int totalActiveParties;
+  final String message;
+
+  BackupImportSummary({
+    required this.success,
+    required this.mode,
+    this.challansAdded = 0,
+    this.challansDuplicateSkipped = 0,
+    this.partiesAdded = 0,
+    this.partiesDuplicateSkipped = 0,
+    this.totalActiveChallans = 0,
+    this.totalActiveParties = 0,
+    required this.message,
+  });
+}
 
 class ChallanProvider extends ChangeNotifier {
   final StorageService _storage;
@@ -180,6 +233,7 @@ class ChallanProvider extends ChangeNotifier {
 
     _parties = await _storage.loadParties();
     _challans = await _storage.loadChallans();
+    _challans.sort((a, b) => b.date.compareTo(a.date));
     _auditLogs = await _storage.loadAuditLogs();
 
     if (!_storage.isCleanDataMigrated) {
@@ -829,35 +883,457 @@ class ChallanProvider extends ChangeNotifier {
     return await _storage.saveBackupToDocuments();
   }
 
-  Future<bool> importBackup(String jsonString) async {
-    final ok = await _storage.importBackupJson(jsonString);
-    if (ok) {
-      _parties = await _storage.loadParties();
-      _challans = await _storage.loadChallans();
-      _appLogoBase64 = _storage.appLogoBase64;
-      _profileLogoBase64 = _storage.profileLogoBase64;
-      _companyName = _storage.companyName;
-      _companyTagline = _storage.companyTagline;
-      _adminName = _storage.adminName;
-      _adminRole = _storage.adminRole;
-      final savedCasing = _storage.textCasingStyle;
+  Future<List<File>> getRecentBackupFiles() async {
+    return await _storage.getRecentBackupFiles();
+  }
+
+  static bool isSameChallanContent(ChallanEntry a, ChallanEntry b) {
+    final sameDate = a.date.year == b.date.year &&
+        a.date.month == b.date.month &&
+        a.date.day == b.date.day;
+    if (!sameDate) return false;
+
+    if (a.challanNo.trim().toUpperCase() != b.challanNo.trim().toUpperCase()) {
+      return false;
+    }
+
+    if (a.partyName.trim().toUpperCase() != b.partyName.trim().toUpperCase()) {
+      return false;
+    }
+
+    if ((a.finalAmount - b.finalAmount).abs() > 0.01) return false;
+    if ((a.challanAmount - b.challanAmount).abs() > 0.01) return false;
+
+    if (a.gstBillNo.trim().toUpperCase() != b.gstBillNo.trim().toUpperCase()) {
+      return false;
+    }
+    if ((a.gstAmount - b.gstAmount).abs() > 0.01) return false;
+
+    if (a.paymentOption != b.paymentOption) return false;
+    if (a.isCashPaid != b.isCashPaid) return false;
+
+    return true;
+  }
+
+  static bool isSamePartyContent(Party a, Party b) {
+    return a.name.trim().toUpperCase() == b.name.trim().toUpperCase() &&
+        a.phone.trim() == b.phone.trim() &&
+        a.address.trim().toUpperCase() == b.address.trim().toUpperCase() &&
+        a.gstNumber.trim().toUpperCase() == b.gstNumber.trim().toUpperCase();
+  }
+
+  BackupAnalysisResult analyzeBackupJson(String jsonString) {
+    try {
+      final trimmed = jsonString.trim();
+      if (trimmed.isEmpty) {
+        return BackupAnalysisResult(
+          isValid: false,
+          errorMessage: 'Backup content is empty.',
+        );
+      }
+      final decoded = jsonDecode(trimmed);
+      List<dynamic> rawChallans = [];
+      List<dynamic> rawParties = [];
+      Map<String, dynamic>? brandingMap;
+      bool isPartial = false;
+
+      if (decoded is List) {
+        isPartial = true;
+        for (var item in decoded) {
+          if (item is Map) {
+            final m = Map<String, dynamic>.from(item);
+            if (m.containsKey('challanNo') ||
+                m.containsKey('challanAmount') ||
+                m.containsKey('partyName')) {
+              rawChallans.add(m);
+            } else if (m.containsKey('name') || m.containsKey('gstNumber')) {
+              rawParties.add(m);
+            } else {
+              rawChallans.add(m);
+            }
+          }
+        }
+      } else if (decoded is Map) {
+        final map = Map<String, dynamic>.from(decoded);
+
+        if (map['challans'] is List) {
+          rawChallans = map['challans'] as List;
+        } else if (map['entries'] is List) {
+          rawChallans = map['entries'] as List;
+          isPartial = true;
+        } else if (map['records'] is List) {
+          rawChallans = map['records'] as List;
+          isPartial = true;
+        } else if (map['data'] is List) {
+          rawChallans = map['data'] as List;
+          isPartial = true;
+        }
+
+        if (map['parties'] is List) {
+          rawParties = map['parties'] as List;
+        } else if (map['customers'] is List) {
+          rawParties = map['customers'] as List;
+          isPartial = true;
+        } else if (map['clients'] is List) {
+          rawParties = map['clients'] as List;
+          isPartial = true;
+        }
+
+        if (map['branding'] is Map) {
+          brandingMap = Map<String, dynamic>.from(map['branding'] as Map);
+        } else if (map['settings'] is Map) {
+          brandingMap = Map<String, dynamic>.from(map['settings'] as Map);
+        }
+      } else {
+        return BackupAnalysisResult(
+          isValid: false,
+          errorMessage: 'Unrecognized JSON data format. Expected JSON Object or Array.',
+        );
+      }
+
+      final parsedChallans = <ChallanEntry>[];
+      for (var item in rawChallans) {
+        if (item is Map) {
+          try {
+            final c = ChallanEntry.fromJson(Map<String, dynamic>.from(item));
+            parsedChallans.add(c);
+          } catch (e) {
+            debugPrint('Skipping malformed challan entry: $e');
+          }
+        }
+      }
+
+      final parsedParties = <Party>[];
+      for (var item in rawParties) {
+        if (item is Map) {
+          try {
+            final p = Party.fromJson(Map<String, dynamic>.from(item));
+            parsedParties.add(p);
+          } catch (e) {
+            debugPrint('Skipping malformed party entry: $e');
+          }
+        }
+      }
+
+      if (parsedParties.isEmpty && parsedChallans.isNotEmpty) {
+        final Set<String> seenNames = {};
+        for (var c in parsedChallans) {
+          final cleanName = c.partyName.trim();
+          if (cleanName.isNotEmpty && !seenNames.contains(cleanName.toUpperCase())) {
+            seenNames.add(cleanName.toUpperCase());
+            final partyId = c.partyId.isNotEmpty ? c.partyId : 'party_${_uuid.v4()}';
+            parsedParties.add(Party(
+              id: partyId,
+              name: cleanName,
+              createdAt: DateTime.now(),
+            ));
+          }
+        }
+      }
+
+      if (parsedChallans.isEmpty && parsedParties.isEmpty && brandingMap == null) {
+        return BackupAnalysisResult(
+          isValid: false,
+          errorMessage: 'No challan records or parties could be identified in the provided file.',
+        );
+      }
+
+      return BackupAnalysisResult(
+        isValid: true,
+        challans: parsedChallans,
+        parties: parsedParties,
+        branding: brandingMap,
+        isPartialOrLegacy: isPartial,
+        totalChallans: parsedChallans.length,
+        totalParties: parsedParties.length,
+      );
+    } catch (e) {
+      return BackupAnalysisResult(
+        isValid: false,
+        errorMessage: 'JSON parse error: $e',
+      );
+    }
+  }
+
+  Future<BackupImportSummary> importBackupWithStrategy({
+    required String jsonString,
+    required BackupImportMode mode,
+    bool importBranding = true,
+    String performedBy = 'OMMAVTAR36',
+  }) async {
+    final analysis = analyzeBackupJson(jsonString);
+    if (!analysis.isValid) {
+      return BackupImportSummary(
+        success: false,
+        mode: mode,
+        message: analysis.errorMessage ?? 'Invalid backup JSON data.',
+      );
+    }
+
+    if (mode == BackupImportMode.replace) {
+      // 1. CLEAN REPLACE (Overwrites database with backup data)
+      final newParties = List<Party>.from(analysis.parties);
+      final newChallans = <ChallanEntry>[];
+
+      final partyMap = {for (var p in newParties) p.name.trim().toUpperCase(): p};
+      for (var c in analysis.challans) {
+        var resolvedPartyId = c.partyId;
+        if (resolvedPartyId.isEmpty || !newParties.any((p) => p.id == resolvedPartyId)) {
+          final existingP = partyMap[c.partyName.trim().toUpperCase()];
+          if (existingP != null) {
+            resolvedPartyId = existingP.id;
+          } else if (c.partyName.trim().isNotEmpty) {
+            final np = Party(
+              id: 'party_${_uuid.v4()}',
+              name: c.partyName.trim(),
+              createdAt: DateTime.now(),
+            );
+            newParties.add(np);
+            partyMap[np.name.trim().toUpperCase()] = np;
+            resolvedPartyId = np.id;
+          }
+        }
+        newChallans.add(c.copyWith(partyId: resolvedPartyId));
+      }
+
+      // Sort DESCENDING by date (newest/current date first)
+      newChallans.sort((a, b) => b.date.compareTo(a.date));
+
+      _parties = newParties;
+      _challans = newChallans;
+      _sortAscending = false;
+
+      await _storage.saveParties(_parties);
+      await _storage.saveChallans(_challans);
+
+      if (importBranding && analysis.branding != null) {
+        await _applyBranding(analysis.branding!);
+      }
+
+      addAuditLog(AuditLogEntry(
+        id: _uuid.v4(),
+        timestamp: DateTime.now(),
+        action: AuditAction.settingsChange,
+        entityType: AuditEntityType.settings,
+        entityId: 'backup_restore_replace',
+        entityTitle: 'Backup Restored (Clean Replace)',
+        performedBy: performedBy,
+        userRole: 'ADMIN',
+        description: 'Clean overwrite with backup: ${_challans.length} challans, ${_parties.length} parties loaded.',
+      ));
+
+      notifyListeners();
+
+      return BackupImportSummary(
+        success: true,
+        mode: mode,
+        challansAdded: _challans.length,
+        partiesAdded: _parties.length,
+        totalActiveChallans: _challans.length,
+        totalActiveParties: _parties.length,
+        message: 'Database replaced successfully with ${_challans.length} challans and ${_parties.length} parties.',
+      );
+    } else {
+      // 2. COMBINE & MERGE WITH DEDUPLICATION AND COLLISION RESOLUTION
+      int challansAdded = 0;
+      int challansDuplicateSkipped = 0;
+      int partiesAdded = 0;
+      int partiesDuplicateSkipped = 0;
+
+      final existingPartyById = {for (var p in _parties) p.id: p};
+      final existingPartyByName = {for (var p in _parties) p.name.trim().toUpperCase(): p};
+      final Map<String, String> partyIdRemap = {};
+
+      for (var party in analysis.parties) {
+        if (existingPartyById.containsKey(party.id)) {
+          final existing = existingPartyById[party.id]!;
+          if (isSamePartyContent(existing, party)) {
+            partyIdRemap[party.id] = existing.id;
+            partiesDuplicateSkipped++;
+          } else {
+            // ID matches but data is different -> Assign new primary ID to preserve both
+            final newId = 'party_${_uuid.v4()}';
+            final newParty = party.copyWith(id: newId);
+            _parties.add(newParty);
+            partyIdRemap[party.id] = newId;
+            existingPartyById[newId] = newParty;
+            existingPartyByName[newParty.name.trim().toUpperCase()] = newParty;
+            partiesAdded++;
+          }
+        } else if (existingPartyByName.containsKey(party.name.trim().toUpperCase())) {
+          final existing = existingPartyByName[party.name.trim().toUpperCase()]!;
+          if (isSamePartyContent(existing, party)) {
+            partyIdRemap[party.id] = existing.id;
+            partiesDuplicateSkipped++;
+          } else {
+            final newId = 'party_${_uuid.v4()}';
+            final newParty = party.copyWith(id: newId);
+            _parties.add(newParty);
+            partyIdRemap[party.id] = newId;
+            existingPartyById[newId] = newParty;
+            partiesAdded++;
+          }
+        } else {
+          _parties.add(party);
+          partyIdRemap[party.id] = party.id;
+          existingPartyById[party.id] = party;
+          existingPartyByName[party.name.trim().toUpperCase()] = party;
+          partiesAdded++;
+        }
+      }
+
+      // Merge Challans
+      final existingChallanById = {for (var c in _challans) c.id: c};
+
+      for (var c in analysis.challans) {
+        var resolvedPartyId = partyIdRemap[c.partyId] ?? c.partyId;
+        if (resolvedPartyId.isEmpty || !_parties.any((p) => p.id == resolvedPartyId)) {
+          Party? p;
+          final cleanPartyName = c.partyName.trim().toUpperCase();
+          for (var item in _parties) {
+            if (item.name.trim().toUpperCase() == cleanPartyName) {
+              p = item;
+              break;
+            }
+          }
+          if (p != null) {
+            resolvedPartyId = p.id;
+          } else if (c.partyName.trim().isNotEmpty) {
+            final newP = Party(
+              id: 'party_${_uuid.v4()}',
+              name: c.partyName.trim(),
+              createdAt: DateTime.now(),
+            );
+            _parties.add(newP);
+            resolvedPartyId = newP.id;
+            partiesAdded++;
+          }
+        }
+        c = c.copyWith(partyId: resolvedPartyId);
+
+        // Deduplication & Collision checks
+        if (existingChallanById.containsKey(c.id)) {
+          final existing = existingChallanById[c.id]!;
+          if (isSameChallanContent(existing, c)) {
+            // Same ID and same data -> Duplicate! Do NOT duplicate!
+            challansDuplicateSkipped++;
+          } else {
+            // Same ID but different data -> Generate NEW primary ID so old data is NOT removed!
+            final newId = _uuid.v4();
+            final newChallan = c.copyWith(id: newId);
+            _challans.add(newChallan);
+            existingChallanById[newId] = newChallan;
+            challansAdded++;
+          }
+        } else {
+          // Check if any existing challan already has the exact same content
+          final duplicateExists = _challans.any((existing) => isSameChallanContent(existing, c));
+          if (duplicateExists) {
+            challansDuplicateSkipped++;
+          } else {
+            _challans.add(c);
+            existingChallanById[c.id] = c;
+            challansAdded++;
+          }
+        }
+      }
+
+      // Sort DESCENDING by date (newest/current date first)
+      _challans.sort((a, b) => b.date.compareTo(a.date));
+      _sortAscending = false;
+
+      await _storage.saveParties(_parties);
+      await _storage.saveChallans(_challans);
+
+      if (importBranding && analysis.branding != null) {
+        await _applyBranding(analysis.branding!);
+      }
+
+      addAuditLog(AuditLogEntry(
+        id: _uuid.v4(),
+        timestamp: DateTime.now(),
+        action: AuditAction.settingsChange,
+        entityType: AuditEntityType.settings,
+        entityId: 'backup_restore_merge',
+        entityTitle: 'Backup Merged (Combine)',
+        performedBy: performedBy,
+        userRole: 'ADMIN',
+        description: 'Merged backup: $challansAdded challans added, $challansDuplicateSkipped duplicates skipped. Total active: ${_challans.length}.',
+      ));
+
+      notifyListeners();
+
+      return BackupImportSummary(
+        success: true,
+        mode: mode,
+        challansAdded: challansAdded,
+        challansDuplicateSkipped: challansDuplicateSkipped,
+        partiesAdded: partiesAdded,
+        partiesDuplicateSkipped: partiesDuplicateSkipped,
+        totalActiveChallans: _challans.length,
+        totalActiveParties: _parties.length,
+        message: 'Merge complete: $challansAdded new challans added, $challansDuplicateSkipped duplicates skipped.',
+      );
+    }
+  }
+
+  Future<void> _applyBranding(Map<String, dynamic> b) async {
+    if (b['companyName'] != null) {
+      _companyName = b['companyName'] as String;
+      await _storage.setCompanyName(_companyName);
+    }
+    if (b['companyTagline'] != null) {
+      _companyTagline = b['companyTagline'] as String;
+      await _storage.setCompanyTagline(_companyTagline);
+    }
+    if (b['adminName'] != null) {
+      _adminName = b['adminName'] as String;
+      await _storage.setAdminName(_adminName);
+    }
+    if (b['adminRole'] != null) {
+      _adminRole = b['adminRole'] as String;
+      await _storage.setAdminRole(_adminRole);
+    }
+    if (b['appLogoBase64'] != null) {
+      _appLogoBase64 = b['appLogoBase64'] as String;
+      await _storage.setAppLogoBase64(_appLogoBase64);
+    }
+    if (b['profileLogoBase64'] != null) {
+      _profileLogoBase64 = b['profileLogoBase64'] as String;
+      await _storage.setProfileLogoBase64(_profileLogoBase64);
+    }
+    if (b['textCasingStyle'] != null) {
+      final savedCasing = b['textCasingStyle'] as String;
       _textCasingStyle = TextCasingStyle.values.firstWhere(
         (e) => e.name == savedCasing,
         orElse: () => TextCasingStyle.uppercase,
       );
-      final savedMode = _storage.ledgerViewMode;
+      await _storage.setTextCasingStyle(savedCasing);
+    }
+    if (b['ledgerViewMode'] != null) {
+      final savedMode = b['ledgerViewMode'] as String;
       _viewMode = LedgerViewMode.values.firstWhere(
         (e) => e.name == savedMode,
         orElse: () => LedgerViewMode.table,
       );
-      final savedPartyMode = _storage.partyViewMode;
+      await _storage.setLedgerViewMode(savedMode);
+    }
+    if (b['partyViewMode'] != null) {
+      final savedMode = b['partyViewMode'] as String;
       _partyViewMode = LedgerViewMode.values.firstWhere(
-        (e) => e.name == savedPartyMode,
+        (e) => e.name == savedMode,
         orElse: () => LedgerViewMode.table,
       );
-      notifyListeners();
+      await _storage.setPartyViewMode(savedMode);
     }
-    return ok;
+  }
+
+  Future<bool> importBackup(String jsonString) async {
+    final summary = await importBackupWithStrategy(
+      jsonString: jsonString,
+      mode: BackupImportMode.replace,
+    );
+    return summary.success;
   }
 
   // --- REAL REGISTERED PARTIES (FROM NOTEBOOK REGISTER) ---

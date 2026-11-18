@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 enum LedgerViewMode {
   table('Table (Excel Grid)'),
@@ -115,13 +116,25 @@ class ChequeDetails {
   }
 
   factory ChequeDetails.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
+    double parseAmount(dynamic val) {
+      if (val == null) return 0.0;
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString()) ?? 0.0;
+    }
+
     return ChequeDetails(
-      chequeDate: DateTime.parse(json['chequeDate'] as String),
-      chequeNo: json['chequeNo'] as String? ?? '',
-      bankName: json['bankName'] as String? ?? '',
-      chequeAmount: (json['chequeAmount'] as num?)?.toDouble() ?? 0.0,
+      chequeDate: parseDate(json['chequeDate']),
+      chequeNo: json['chequeNo']?.toString().trim() ?? '',
+      bankName: json['bankName']?.toString().trim() ?? '',
+      chequeAmount: parseAmount(json['chequeAmount']),
       status: ChequeStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name.toLowerCase() == json['status']?.toString().toLowerCase(),
         orElse: () => ChequeStatus.pending,
       ),
     );
@@ -273,50 +286,75 @@ class ChallanEntry {
     };
   }
 
+  static double _parseAmount(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? 0.0;
+  }
+
+  static DateTime _parseDate(dynamic val, {DateTime? fallback}) {
+    if (val == null) return fallback ?? DateTime.now();
+    if (val is DateTime) return val;
+    final str = val.toString().trim();
+    if (str.isEmpty) return fallback ?? DateTime.now();
+    return DateTime.tryParse(str) ?? (fallback ?? DateTime.now());
+  }
+
   factory ChallanEntry.fromJson(Map<String, dynamic> json) {
-    final finalAmt = (json['finalAmount'] as num?)?.toDouble() ?? 0.0;
-    final isCashPaidVal = json['isCashPaid'] as bool? ?? true;
-    final paidAmt = (json['paidAmount'] as num?)?.toDouble() ??
-        (isCashPaidVal ? finalAmt : 0.0);
+    final finalAmt = _parseAmount(json['finalAmount'] ?? json['totalAmount'] ?? json['amount']);
+    final isCashPaidVal = json['isCashPaid'] is bool
+        ? json['isCashPaid'] as bool
+        : (json['isCashPaid']?.toString().toLowerCase() == 'true' || json['isCashPaid'] == null);
+
+    final paidAmt = json['paidAmount'] != null
+        ? _parseAmount(json['paidAmount'])
+        : (isCashPaidVal ? finalAmt : 0.0);
+
+    final rawId = json['id']?.toString().trim();
+    final id = (rawId != null && rawId.isNotEmpty)
+        ? rawId
+        : 'challan_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 8)}';
+
+    ChequeDetails? cheque;
+    if (json['chequeDetails'] != null && json['chequeDetails'] is Map) {
+      try {
+        cheque = ChequeDetails.fromJson(
+            Map<String, dynamic>.from(json['chequeDetails'] as Map));
+      } catch (_) {
+        cheque = null;
+      }
+    }
 
     return ChallanEntry(
-      id: json['id'] as String,
-      date: DateTime.parse(json['date'] as String),
-      challanNo: json['challanNo'] as String? ?? '',
-      partyId: json['partyId'] as String? ?? '',
-      partyName: json['partyName'] as String? ?? '',
-      challanAmount: (json['challanAmount'] as num?)?.toDouble() ?? 0.0,
+      id: id,
+      date: _parseDate(json['date']),
+      challanNo: json['challanNo']?.toString().trim() ?? '',
+      partyId: json['partyId']?.toString().trim() ?? '',
+      partyName: json['partyName']?.toString().trim() ?? '',
+      challanAmount: _parseAmount(json['challanAmount']),
       finalAmount: finalAmt,
       paidAmount: paidAmt,
-      gstBillNo: json['gstBillNo'] as String? ?? '',
-      gstAmount: (json['gstAmount'] as num?)?.toDouble() ?? 0.0,
+      gstBillNo: json['gstBillNo']?.toString().trim() ?? '',
+      gstAmount: _parseAmount(json['gstAmount']),
       paymentOption: PaymentOption.values.firstWhere(
-        (e) => e.name == json['paymentOption'],
+        (e) => e.name.toLowerCase() == json['paymentOption']?.toString().toLowerCase(),
         orElse: () => PaymentOption.cash,
       ),
       isCashPaid: isCashPaidVal,
-      chequeDetails: json['chequeDetails'] != null
-          ? ChequeDetails.fromJson(
-              json['chequeDetails'] as Map<String, dynamic>)
-          : null,
-      notes: json['notes'] as String? ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      createdBy: json['createdBy'] as String? ?? 'admin',
-      lastModifiedBy: json['lastModifiedBy'] as String?,
-      lastModifiedAt: json['lastModifiedAt'] != null
-          ? DateTime.parse(json['lastModifiedAt'] as String)
-          : null,
-      isDeleted: json['isDeleted'] as bool? ?? false,
-      deletedAt: json['deletedAt'] != null
-          ? DateTime.parse(json['deletedAt'] as String)
-          : null,
-      deletedBy: json['deletedBy'] as String?,
+      chequeDetails: cheque,
+      notes: json['notes']?.toString().trim() ?? '',
+      createdAt: _parseDate(json['createdAt']),
+      createdBy: json['createdBy']?.toString().trim() ?? 'system',
+      lastModifiedBy: json['lastModifiedBy']?.toString().trim(),
+      lastModifiedAt: json['lastModifiedAt'] != null ? _parseDate(json['lastModifiedAt']) : null,
+      isDeleted: json['isDeleted'] == true || json['isDeleted']?.toString() == 'true',
+      deletedAt: json['deletedAt'] != null ? _parseDate(json['deletedAt']) : null,
+      deletedBy: json['deletedBy']?.toString().trim(),
     );
   }
 
   ChallanEntry copyWith({
+    String? id,
     DateTime? date,
     String? challanNo,
     String? partyId,
@@ -339,7 +377,7 @@ class ChallanEntry {
     bool clearDeletedAt = false,
   }) {
     return ChallanEntry(
-      id: id,
+      id: id ?? this.id,
       date: date ?? this.date,
       challanNo: challanNo ?? this.challanNo,
       partyId: partyId ?? this.partyId,

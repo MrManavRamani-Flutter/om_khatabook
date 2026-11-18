@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/branding_dialogs.dart';
+import '../widgets/import_backup_dialog.dart';
 
 class SettingsView extends StatefulWidget {
   final int initialCategoryIndex;
@@ -107,61 +108,9 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   void _showImportDialog(BuildContext context) {
-    final textController = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restore from Backup JSON'),
-        content: SizedBox(
-          width: 500,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Paste your backup JSON content below:'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: textController,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  hintText: '{\n  "app": "OM Mavtar Group Khata Book",\n  ...\n}',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              final val = textController.text.trim();
-              if (val.isEmpty) return;
-              final provider = context.read<ChallanProvider>();
-              final messenger = ScaffoldMessenger.of(context);
-              final nav = Navigator.of(ctx);
-              final ok = await provider.importBackup(val);
-              nav.pop();
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(ok
-                      ? 'Backup restored successfully!'
-                      : 'Invalid backup JSON data format.'),
-                  backgroundColor:
-                      ok ? AppColors.primary : AppColors.warningText,
-                ),
-              );
-            },
-            child: const Text('Restore Data'),
-          ),
-        ],
-      ),
+      builder: (_) => const ImportBackupDialog(),
     );
   }
 

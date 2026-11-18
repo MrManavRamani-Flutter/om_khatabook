@@ -44,30 +44,39 @@ class Party {
     };
   }
 
+  static DateTime _parseDate(dynamic val, {DateTime? fallback}) {
+    if (val == null) return fallback ?? DateTime.now();
+    if (val is DateTime) return val;
+    final str = val.toString().trim();
+    if (str.isEmpty) return fallback ?? DateTime.now();
+    return DateTime.tryParse(str) ?? (fallback ?? DateTime.now());
+  }
+
   factory Party.fromJson(Map<String, dynamic> json) {
+    final rawName = json['name']?.toString().trim() ?? json['partyName']?.toString().trim() ?? '';
+    final rawId = json['id']?.toString().trim();
+    final id = (rawId != null && rawId.isNotEmpty)
+        ? rawId
+        : 'party_${DateTime.now().millisecondsSinceEpoch}_${rawName.hashCode.abs()}';
+
     return Party(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      phone: json['phone'] as String? ?? '',
-      address: json['address'] as String? ?? '',
-      gstNumber: json['gstNumber'] as String? ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      createdBy: json['createdBy'] as String? ?? 'admin',
-      lastModifiedBy: json['lastModifiedBy'] as String?,
-      lastModifiedAt: json['lastModifiedAt'] != null
-          ? DateTime.parse(json['lastModifiedAt'] as String)
-          : null,
-      isDeleted: json['isDeleted'] as bool? ?? false,
-      deletedAt: json['deletedAt'] != null
-          ? DateTime.parse(json['deletedAt'] as String)
-          : null,
-      deletedBy: json['deletedBy'] as String?,
+      id: id,
+      name: rawName,
+      phone: json['phone']?.toString().trim() ?? json['contact']?.toString().trim() ?? '',
+      address: json['address']?.toString().trim() ?? json['city']?.toString().trim() ?? '',
+      gstNumber: json['gstNumber']?.toString().trim() ?? json['gstin']?.toString().trim() ?? '',
+      createdAt: _parseDate(json['createdAt']),
+      createdBy: json['createdBy']?.toString().trim() ?? 'system',
+      lastModifiedBy: json['lastModifiedBy']?.toString().trim(),
+      lastModifiedAt: json['lastModifiedAt'] != null ? _parseDate(json['lastModifiedAt']) : null,
+      isDeleted: json['isDeleted'] == true || json['isDeleted']?.toString() == 'true',
+      deletedAt: json['deletedAt'] != null ? _parseDate(json['deletedAt']) : null,
+      deletedBy: json['deletedBy']?.toString().trim(),
     );
   }
 
   Party copyWith({
+    String? id,
     String? name,
     String? phone,
     String? address,
@@ -81,7 +90,7 @@ class Party {
     bool clearDeletedAt = false,
   }) {
     return Party(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
