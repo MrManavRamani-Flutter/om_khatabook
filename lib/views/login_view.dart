@@ -27,9 +27,10 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void _fillDefaultCredentials() {
+    final auth = context.read<AuthProvider>();
     setState(() {
       _usernameController.text = 'OMMAVTAR36';
-      _passwordController.text = 'OMMAVTAR36';
+      _passwordController.text = auth.masterPassword;
       _errorMessage = null;
     });
   }
@@ -58,7 +59,7 @@ class _LoginViewState extends State<LoginView> {
     if (!success) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Invalid username or password. Use: OMMAVTAR36 / OMMAVTAR36';
+        _errorMessage = 'Invalid username or password. Please verify your credentials.';
       });
     }
   }

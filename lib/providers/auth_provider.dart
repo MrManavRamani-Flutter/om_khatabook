@@ -22,6 +22,23 @@ class AuthProvider extends ChangeNotifier {
   static const String defaultUsername = 'OMMAVTAR36';
   static const String defaultPassword = 'OMMAVTAR36';
 
+  String get masterPassword {
+    final master = _users.firstWhere(
+      (u) => u.username.toUpperCase() == 'OMMAVTAR36',
+      orElse: () => AppUser(
+        id: 'user_ommavtar36',
+        username: 'OMMAVTAR36',
+        password: defaultPassword,
+        displayName: 'OM Mavtar Group',
+        roleId: AppRole.adminId,
+        role: UserRole.admin,
+        createdAt: DateTime.now(),
+        createdBy: 'system',
+      ),
+    );
+    return master.password;
+  }
+
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
   AppUser? get currentUser => _currentUser;
@@ -269,23 +286,24 @@ class AuthProvider extends ChangeNotifier {
     final cleanUsername = username.trim().toUpperCase();
     final cleanPassword = password.trim();
 
-    // 1. Direct validation for default master credentials OMMAVTAR36 / OMMAVTAR36
-    if (cleanUsername == 'OMMAVTAR36' && cleanPassword == 'OMMAVTAR36') {
-      var user = _users.firstWhere(
-        (u) => u.username.toUpperCase() == 'OMMAVTAR36',
-        orElse: () => AppUser(
-          id: 'user_ommavtar36',
-          username: 'OMMAVTAR36',
-          password: 'OMMAVTAR36',
-          displayName: 'OM Mavtar Group',
-          roleId: AppRole.adminId,
-          role: UserRole.admin,
-          createdAt: DateTime.now(),
-          createdBy: 'system',
-        ),
-      );
-      final updated = user.copyWith(lastLogin: DateTime.now());
-      final idx = _users.indexWhere((u) => u.id == user.id);
+    // 1. Direct validation for master account OMMAVTAR36
+    final masterUser = _users.firstWhere(
+      (u) => u.username.toUpperCase() == 'OMMAVTAR36',
+      orElse: () => AppUser(
+        id: 'user_ommavtar36',
+        username: 'OMMAVTAR36',
+        password: defaultPassword,
+        displayName: 'OM Mavtar Group',
+        roleId: AppRole.adminId,
+        role: UserRole.admin,
+        createdAt: DateTime.now(),
+        createdBy: 'system',
+      ),
+    );
+
+    if (cleanUsername == 'OMMAVTAR36' && cleanPassword == masterUser.password) {
+      final updated = masterUser.copyWith(lastLogin: DateTime.now());
+      final idx = _users.indexWhere((u) => u.id == masterUser.id);
       if (idx != -1) {
         _users[idx] = updated;
         await _storage.saveUsers(_users);
@@ -361,6 +379,85 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = null;
     await _storage.saveActiveSessionUser(null);
     notifyListeners();
+  }
+
+  /// Update master account password with old, new, and confirm validation
+  Future<({bool success, String message})> updatePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final cleanOld = oldPassword.trim();
+    final cleanNew = newPassword.trim();
+    final cleanConfirm = confirmPassword.trim();
+
+    if (cleanOld.isEmpty) {
+      return (success: false, message: 'Please enter your current (old) password.');
+    }
+    if (cleanNew.isEmpty) {
+      return (success: false, message: 'Please enter a new password.');
+    }
+    if (cleanConfirm.isEmpty) {
+      return (success: false, message: 'Please confirm your new password.');
+    }
+
+    if (cleanNew.length < 4) {
+      return (success: false, message: 'New password must be at least 4 characters long.');
+    }
+
+    if (cleanNew != cleanConfirm) {
+      return (success: false, message: 'New password and confirm password do not match.');
+    }
+
+    // Get current master user & password
+    final masterIdx = _users.indexWhere((u) => u.username.toUpperCase() == 'OMMAVTAR36');
+    final currentStoredPassword = masterIdx != -1 ? _users[masterIdx].password : defaultPassword;
+
+    if (cleanOld != currentStoredPassword) {
+      return (success: false, message: 'Current (old) password is incorrect.');
+    }
+
+    if (cleanOld == cleanNew) {
+      return (success: false, message: 'New password cannot be the same as the old password.');
+    }
+
+    // Save updated password
+    if (masterIdx != -1) {
+      _users[masterIdx] = _users[masterIdx].copyWith(password: cleanNew);
+    } else {
+      _users.insert(
+        0,
+        AppUser(
+          id: 'user_ommavtar36',
+          username: 'OMMAVTAR36',
+          password: cleanNew,
+          displayName: 'OM Mavtar Group',
+          roleId: AppRole.adminId,
+          role: UserRole.admin,
+          createdAt: DateTime.now(),
+          createdBy: 'system',
+        ),
+      );
+    }
+
+    // Update active session user if currently logged in
+    if (_currentUser != null && _currentUser!.username.toUpperCase() == 'OMMAVTAR36') {
+      _currentUser = _currentUser!.copyWith(password: cleanNew);
+      await _storage.saveActiveSessionUser(_currentUser);
+    }
+
+    await _storage.saveUsers(_users);
+
+    _logEvent(
+      action: AuditAction.settingsChange,
+      entityType: AuditEntityType.settings,
+      entityId: 'password_update',
+      entityTitle: 'Master Password Updated',
+      description: 'Master account password updated successfully',
+    );
+
+    notifyListeners();
+    return (success: true, message: 'Password updated successfully!');
   }
 
   /// Add new authorized user (Manager, Admin, Developer)

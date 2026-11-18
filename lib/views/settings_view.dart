@@ -31,10 +31,20 @@ class _SettingsViewState extends State<SettingsView> {
   late final TextEditingController _adminRoleController;
   late final TextEditingController _manualAvatarPathController;
 
+  final TextEditingController _oldPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _obscureOldPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _isUpdatingPassword = false;
+  String? _passwordError;
+  String? _passwordSuccess;
+
   @override
   void initState() {
     super.initState();
-    _selectedCategoryIndex = widget.initialCategoryIndex.clamp(0, 1);
+    _selectedCategoryIndex = widget.initialCategoryIndex.clamp(0, 2);
 
     final provider = context.read<ChallanProvider>();
     _companyNameController = TextEditingController(text: provider.companyName);
@@ -53,7 +63,58 @@ class _SettingsViewState extends State<SettingsView> {
     _adminNameController.dispose();
     _adminRoleController.dispose();
     _manualAvatarPathController.dispose();
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // --- PASSWORD UPDATE ACTION ---
+
+  Future<void> _handlePasswordUpdate(AuthProvider auth) async {
+    setState(() {
+      _passwordError = null;
+      _passwordSuccess = null;
+      _isUpdatingPassword = true;
+    });
+
+    final res = await auth.updatePassword(
+      oldPassword: _oldPasswordController.text,
+      newPassword: _newPasswordController.text,
+      confirmPassword: _confirmPasswordController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isUpdatingPassword = false;
+      if (res.success) {
+        _passwordSuccess = res.message;
+        _passwordError = null;
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+      } else {
+        _passwordError = res.message;
+        _passwordSuccess = null;
+      }
+    });
+
+    if (res.success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Text(res.message),
+            ],
+          ),
+          backgroundColor: AppColors.successText,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   // --- BACKUP & RESTORE ACTIONS ---
@@ -194,6 +255,12 @@ class _SettingsViewState extends State<SettingsView> {
       },
       {
         'id': 1,
+        'title': 'Security & Password',
+        'subtitle': 'Update master login password',
+        'icon': Icons.lock_outline,
+      },
+      {
+        'id': 2,
         'title': 'Backup & Data Safety',
         'subtitle': 'JSON exports, restore & database',
         'icon': Icons.backup_outlined,
@@ -470,6 +537,8 @@ class _SettingsViewState extends State<SettingsView> {
       case 0:
         return _buildAppearanceAndBrandingPage(context, provider, auth, isDark);
       case 1:
+        return _buildSecurityAndPasswordPage(context, auth, isDark);
+      case 2:
         return _buildBackupAndDatabasePage(context, provider, auth, isDark);
       default:
         return _buildAppearanceAndBrandingPage(context, provider, auth, isDark);
@@ -570,16 +639,33 @@ class _SettingsViewState extends State<SettingsView> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.warningText,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              icon: const Icon(Icons.logout, size: 18),
-              label: const Text('Sign Out / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: () => _confirmLogout(context, auth),
+            Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.lock_reset, size: 18),
+                  label: const Text('Change Master Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _selectedCategoryIndex = 1),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.warningText,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Sign Out / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () => _confirmLogout(context, auth),
+                ),
+              ],
             ),
           ],
         ),
@@ -1343,7 +1429,331 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   // ===========================================================================
-  // CATEGORY 1: BACKUP & DATABASE (INLINE VERTICAL CONFIGURATION)
+  // CATEGORY 1: SECURITY & MASTER PASSWORD
+  // ===========================================================================
+  Widget _buildSecurityAndPasswordPage(
+    BuildContext context,
+    AuthProvider auth,
+    bool isDark,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isMobile ? 14 : 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Security & Master Password',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Manage login credentials, update master operator password, and configure active session security.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.color
+                  ?.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(height: 22),
+
+          // 1. PASSWORD UPDATE CARD
+          _buildPasswordUpdateCard(context, auth, isDark),
+          const SizedBox(height: 20),
+
+          // 2. OPERATOR SESSION & SECURITY LOGOUT
+          _buildLogoutCard(context, auth, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordUpdateCard(
+    BuildContext context,
+    AuthProvider auth,
+    bool isDark,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.lock_outline, color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Change Master Password',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Update the login password for operator OMMAVTAR36',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Text(
+                    'OMMAVTAR36 [MASTER]',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 28),
+
+            // ERROR BANNER
+            if (_passwordError != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.warningText.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.warningText.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppColors.warningText, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _passwordError!,
+                        style: const TextStyle(
+                          color: AppColors.warningText,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // SUCCESS BANNER
+            if (_passwordSuccess != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.successText.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.successText.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: AppColors.successText, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _passwordSuccess!,
+                        style: const TextStyle(
+                          color: AppColors.successText,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // 1. OLD PASSWORD
+            const Text(
+              'Current (Old) Password',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _oldPasswordController,
+              obscureText: _obscureOldPassword,
+              decoration: InputDecoration(
+                hintText: 'Enter current password (default: OMMAVTAR36)',
+                prefixIcon: const Icon(Icons.lock_clock_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureOldPassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                  ),
+                  onPressed: () => setState(() => _obscureOldPassword = !_obscureOldPassword),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 2. NEW PASSWORD
+            const Text(
+              'New Password',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _newPasswordController,
+              obscureText: _obscureNewPassword,
+              decoration: InputDecoration(
+                hintText: 'Enter new password (min. 4 characters)',
+                prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                  ),
+                  onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 3. CONFIRM PASSWORD
+            const Text(
+              'Confirm New Password',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirmPassword,
+              decoration: InputDecoration(
+                hintText: 'Re-enter new password to confirm',
+                prefixIcon: const Icon(Icons.verified_user_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // HELPER SECURITY NOTE
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Password must be at least 4 characters long. Once updated, you will need this new password to sign in next time.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ACTION BUTTONS
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: _isUpdatingPassword
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.lock_reset, size: 18),
+                  label: Text(
+                    _isUpdatingPassword ? 'Updating Password...' : 'Update Password',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _isUpdatingPassword ? null : () => _handlePasswordUpdate(auth),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear'),
+                  onPressed: () {
+                    setState(() {
+                      _oldPasswordController.clear();
+                      _newPasswordController.clear();
+                      _confirmPasswordController.clear();
+                      _passwordError = null;
+                      _passwordSuccess = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // CATEGORY 2: BACKUP & DATABASE (INLINE VERTICAL CONFIGURATION)
   // ===========================================================================
   Widget _buildBackupAndDatabasePage(
     BuildContext context,

@@ -289,4 +289,83 @@ void main() {
       expect(fetchedParty.lastModifiedAt, isNotNull);
     });
   });
+
+  group('Password Update & Master Security Tests', () {
+    late StorageService storage;
+    late AuthProvider auth;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = StorageService();
+      await storage.init();
+      auth = AuthProvider(storage);
+      await auth.initialize();
+    });
+
+    test('updatePassword rejects empty old, new, or confirm password fields', () async {
+      final res1 = await auth.updatePassword(oldPassword: '', newPassword: 'newPass123', confirmPassword: 'newPass123');
+      expect(res1.success, isFalse);
+      expect(res1.message, contains('current (old) password'));
+
+      final res2 = await auth.updatePassword(oldPassword: 'OMMAVTAR36', newPassword: '', confirmPassword: 'newPass123');
+      expect(res2.success, isFalse);
+      expect(res2.message, contains('new password'));
+
+      final res3 = await auth.updatePassword(oldPassword: 'OMMAVTAR36', newPassword: 'newPass123', confirmPassword: '');
+      expect(res3.success, isFalse);
+      expect(res3.message, contains('confirm your new password'));
+    });
+
+    test('updatePassword rejects short passwords under 4 characters', () async {
+      final res = await auth.updatePassword(oldPassword: 'OMMAVTAR36', newPassword: 'abc', confirmPassword: 'abc');
+      expect(res.success, isFalse);
+      expect(res.message, contains('at least 4 characters'));
+    });
+
+    test('updatePassword rejects mismatch between new and confirm password', () async {
+      final res = await auth.updatePassword(oldPassword: 'OMMAVTAR36', newPassword: 'NewPassword@1', confirmPassword: 'DifferentPassword@2');
+      expect(res.success, isFalse);
+      expect(res.message, contains('do not match'));
+    });
+
+    test('updatePassword rejects incorrect old password', () async {
+      final res = await auth.updatePassword(oldPassword: 'WRONG_OLD_PASS', newPassword: 'NewPassword@1', confirmPassword: 'NewPassword@1');
+      expect(res.success, isFalse);
+      expect(res.message, contains('Current (old) password is incorrect'));
+    });
+
+    test('updatePassword rejects new password identical to old password', () async {
+      final res = await auth.updatePassword(oldPassword: 'OMMAVTAR36', newPassword: 'OMMAVTAR36', confirmPassword: 'OMMAVTAR36');
+      expect(res.success, isFalse);
+      expect(res.message, contains('cannot be the same as the old password'));
+    });
+
+    test('updatePassword successfully updates password and enforces new credentials for login', () async {
+      // 1. Initial state: login with default credentials succeeds
+      final initLogin = await auth.login('OMMAVTAR36', 'OMMAVTAR36');
+      expect(initLogin, isTrue);
+
+      // 2. Update password
+      final updateRes = await auth.updatePassword(
+        oldPassword: 'OMMAVTAR36',
+        newPassword: 'OM_SECURE_2026',
+        confirmPassword: 'OM_SECURE_2026',
+      );
+      expect(updateRes.success, isTrue);
+      expect(auth.masterPassword, equals('OM_SECURE_2026'));
+
+      // 3. Logout
+      await auth.logout();
+      expect(auth.isAuthenticated, isFalse);
+
+      // 4. Login with old password fails
+      final oldLogin = await auth.login('OMMAVTAR36', 'OMMAVTAR36');
+      expect(oldLogin, isFalse);
+
+      // 5. Login with new updated password succeeds
+      final newLogin = await auth.login('OMMAVTAR36', 'OM_SECURE_2026');
+      expect(newLogin, isTrue);
+      expect(auth.currentUser?.username, equals('OMMAVTAR36'));
+    });
+  });
 }
