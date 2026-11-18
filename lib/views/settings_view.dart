@@ -199,6 +199,33 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  void _confirmLogout(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to sign out from OM Mavtar Group Khata Book?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warningText,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              auth.logout();
+            },
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- MAIN BUILD METHOD ---
 
   @override
@@ -206,6 +233,8 @@ class _SettingsViewState extends State<SettingsView> {
     final provider = context.watch<ChallanProvider>();
     final auth = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
 
     final categories = <Map<String, dynamic>>[
       {
@@ -221,6 +250,84 @@ class _SettingsViewState extends State<SettingsView> {
         'icon': Icons.backup_outlined,
       },
     ];
+
+    if (isMobile) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            // TOP MOBILE CATEGORY SELECTOR
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: categories.map((cat) {
+                  final catId = cat['id'] as int;
+                  final isSelected = _selectedCategoryIndex == catId;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: InkWell(
+                        onTap: () => setState(() => _selectedCategoryIndex = catId),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                cat['icon'] as IconData,
+                                size: 18,
+                                color: isSelected ? AppColors.primary : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  cat['title'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected ? AppColors.primary : null,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // CONTENT
+            Expanded(
+              child: _buildSelectedCategoryContent(context, auth, provider, isDark),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -412,11 +519,11 @@ class _SettingsViewState extends State<SettingsView> {
   ) {
     switch (_selectedCategoryIndex) {
       case 0:
-        return _buildAppearanceAndBrandingPage(context, provider, isDark);
+        return _buildAppearanceAndBrandingPage(context, provider, auth, isDark);
       case 1:
         return _buildBackupAndDatabasePage(context, provider, auth, isDark);
       default:
-        return _buildAppearanceAndBrandingPage(context, provider, isDark);
+        return _buildAppearanceAndBrandingPage(context, provider, auth, isDark);
     }
   }
 
@@ -426,10 +533,14 @@ class _SettingsViewState extends State<SettingsView> {
   Widget _buildAppearanceAndBrandingPage(
     BuildContext context,
     ChallanProvider provider,
+    AuthProvider auth,
     bool isDark,
   ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 14 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -469,7 +580,60 @@ class _SettingsViewState extends State<SettingsView> {
 
           // 4. TEXT CASING & TYPOGRAPHY
           _buildTextCasingCard(context, provider, isDark),
+          const SizedBox(height: 20),
+
+          // 5. OPERATOR SESSION & SECURITY LOGOUT
+          _buildLogoutCard(context, auth, isDark),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutCard(
+    BuildContext context,
+    AuthProvider auth,
+    bool isDark,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.security, color: AppColors.primary),
+                SizedBox(width: 10),
+                Text(
+                  'Operator Session & Security',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Currently signed in as ${auth.currentUser?.username ?? 'OMMAVTAR36'} with full access rights.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warningText,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Sign Out / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () => _confirmLogout(context, auth),
+            ),
+          ],
+        ),
       ),
     );
   }

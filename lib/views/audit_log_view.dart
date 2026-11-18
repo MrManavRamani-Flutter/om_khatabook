@@ -197,65 +197,95 @@ class _AuditLogViewState extends State<AuditLogView> {
     final totalDeletes = allLogs.where((l) => l.action == AuditAction.softDelete || l.action == AuditAction.permanentDelete).length;
     final totalLogins = allLogs.where((l) => l.action == AuditAction.login).length;
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final headerActions = [
+      OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          side: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        icon: _isExporting
+            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.file_download_outlined, size: 18),
+        label: const Text('Export Excel (.xlsx)'),
+        onPressed: _isExporting ? null : () => _exportToExcel(filteredLogs),
+      ),
+      if (auth.canClearAuditLogs) ...[
+        const SizedBox(width: 10, height: 10),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isDark ? AppColors.warningBgDark : AppColors.warningBgLight,
+            foregroundColor: AppColors.warningText,
+            elevation: 0,
+            side: const BorderSide(color: AppColors.warningBorder),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          ),
+          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+          label: const Text('Clear Logs'),
+          onPressed: allLogs.isEmpty ? null : () => _showClearConfirm(context, provider),
+        ),
+      ],
+    ];
+
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // TOP HEADER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Audit Trail & History Log',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            // TOP HEADER (RESPONSIVE)
+            if (isMobile) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Audit Trail & History Log',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tamper-evident record of all commercial challans, parties, exports, and login sessions',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tamper-evident record of all commercial challans, parties, exports, and login sessions',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: headerActions,
+                  ),
+                ],
+              ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Audit Trail & History Log',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                        side: BorderSide(color: Theme.of(context).dividerColor),
-                      ),
-                      icon: _isExporting
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.file_download_outlined, size: 18),
-                      label: const Text('Export Excel (.xlsx)'),
-                      onPressed: _isExporting ? null : () => _exportToExcel(filteredLogs),
-                    ),
-                    if (auth.canClearAuditLogs) ...[
-                      const SizedBox(width: 10),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDark ? AppColors.warningBgDark : AppColors.warningBgLight,
-                          foregroundColor: AppColors.warningText,
-                          elevation: 0,
-                          side: const BorderSide(color: AppColors.warningBorder),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tamper-evident record of all commercial challans, parties, exports, and login sessions',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
-                        icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                        label: const Text('Clear Logs'),
-                        onPressed: allLogs.isEmpty ? null : () => _showClearConfirm(context, provider),
                       ),
                     ],
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  Row(
+                    children: headerActions,
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 18),
 
             // KPI CARDS
@@ -397,9 +427,12 @@ class _AuditLogViewState extends State<AuditLogView> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          log.entityTitle.isNotEmpty ? log.entityTitle : log.entityType.label,
-                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                        Flexible(
+                          child: Text(
+                            log.entityTitle.isNotEmpty ? log.entityTitle : log.entityType.label,
+                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Container(

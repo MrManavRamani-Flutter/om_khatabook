@@ -19,25 +19,19 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider(this._storage);
 
+  static const String defaultUsername = 'OMMAVTAR36';
+  static const String defaultPassword = 'OMMAVTAR36';
+
   bool get isLoading => _isLoading;
-  bool get isAuthenticated => true;
-  AppUser? get currentUser => _currentUser ?? AppUser(
-        id: 'user_admin_default',
-        username: 'admin',
-        password: '',
-        displayName: 'OM Mavtar Admin',
-        roleId: AppRole.adminId,
-        role: UserRole.admin,
-        createdAt: DateTime.now(),
-        createdBy: 'system',
-      );
+  bool get isAuthenticated => _currentUser != null;
+  AppUser? get currentUser => _currentUser;
   List<AppUser> get users => List.unmodifiable(_users);
   List<AppRole> get customRoles => List.unmodifiable(_customRoles);
 
   String get currentRoleId => _currentUser?.roleId ?? 'admin';
   UserRole get currentRole => _currentUser?.role ?? UserRole.admin;
 
-  /// Full access granted when login/role restriction is removed
+  /// Full access granted for logged in operator
   bool get isDeveloper => true;
   bool get isAdmin => true;
   bool get isManager => true;
@@ -235,19 +229,35 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    // Ensure OMMAVTAR36 default master account exists
+    if (!_users.any((u) => u.username.toUpperCase() == 'OMMAVTAR36')) {
+      _users.insert(
+        0,
+        AppUser(
+          id: 'user_ommavtar36',
+          username: 'OMMAVTAR36',
+          password: 'OMMAVTAR36',
+          displayName: 'OM Mavtar Group',
+          roleId: AppRole.adminId,
+          role: UserRole.admin,
+          email: 'ommavtar36@ommavtar.com',
+          phone: '+91 98250 12345',
+          createdAt: DateTime.now(),
+          createdBy: 'system',
+        ),
+      );
+      await _storage.saveUsers(_users);
+    }
+
     // Try to restore existing active session
     final savedUser = await _storage.loadActiveSessionUser();
     if (savedUser != null) {
       final matched =
-          _users.where((u) => u.id == savedUser.id && u.isActive).toList();
+          _users.where((u) => (u.id == savedUser.id || u.username.toUpperCase() == savedUser.username.toUpperCase()) && u.isActive).toList();
       if (matched.isNotEmpty && !matched.first.isDeleted && !matched.first.isBlocked) {
         _currentUser = matched.first;
       }
     }
-    _currentUser ??= _users.firstWhere(
-      (u) => u.username == 'admin',
-      orElse: () => _users.first,
-    );
 
     _isLoading = false;
     notifyListeners();
@@ -256,14 +266,53 @@ class AuthProvider extends ChangeNotifier {
   /// Authenticate with username and password
   Future<bool> login(String username, String password,
       {bool rememberMe = true}) async {
-    final cleanUsername = username.trim().toLowerCase();
+    final cleanUsername = username.trim().toUpperCase();
     final cleanPassword = password.trim();
 
+    // 1. Direct validation for default master credentials OMMAVTAR36 / OMMAVTAR36
+    if (cleanUsername == 'OMMAVTAR36' && cleanPassword == 'OMMAVTAR36') {
+      var user = _users.firstWhere(
+        (u) => u.username.toUpperCase() == 'OMMAVTAR36',
+        orElse: () => AppUser(
+          id: 'user_ommavtar36',
+          username: 'OMMAVTAR36',
+          password: 'OMMAVTAR36',
+          displayName: 'OM Mavtar Group',
+          roleId: AppRole.adminId,
+          role: UserRole.admin,
+          createdAt: DateTime.now(),
+          createdBy: 'system',
+        ),
+      );
+      final updated = user.copyWith(lastLogin: DateTime.now());
+      final idx = _users.indexWhere((u) => u.id == user.id);
+      if (idx != -1) {
+        _users[idx] = updated;
+        await _storage.saveUsers(_users);
+      }
+      _currentUser = updated;
+      if (rememberMe) {
+        await _storage.saveActiveSessionUser(updated);
+      }
+      _logEvent(
+        action: AuditAction.login,
+        entityType: AuditEntityType.auth,
+        entityId: updated.id,
+        entityTitle: updated.displayName,
+        description: 'Master Operator ${updated.username} logged in successfully',
+      );
+      notifyListeners();
+      return true;
+    }
+
+    // 2. Also allow other existing registered users
     final matched = _users.where(
       (u) =>
-          u.username.trim().toLowerCase() == cleanUsername &&
+          u.username.trim().toUpperCase() == cleanUsername &&
           u.password == cleanPassword &&
-          u.isActive,
+          u.isActive &&
+          !u.isDeleted &&
+          !u.isBlocked,
     ).toList();
 
     if (matched.isEmpty) {
@@ -271,12 +320,6 @@ class AuthProvider extends ChangeNotifier {
     }
 
     final user = matched.first;
-
-    // Check if account is deleted or blocked
-    if (user.isDeleted || user.isBlocked) {
-      return false;
-    }
-
     final updated = user.copyWith(lastLogin: DateTime.now());
 
     final idx = _users.indexWhere((u) => u.id == user.id);
@@ -296,7 +339,7 @@ class AuthProvider extends ChangeNotifier {
       entityId: updated.id,
       entityTitle: updated.displayName,
       description:
-          'User ${updated.username} [${roleNameFor(updated.roleId)}] logged in successfully',
+          'User ${updated.username} logged in successfully',
     );
 
     notifyListeners();

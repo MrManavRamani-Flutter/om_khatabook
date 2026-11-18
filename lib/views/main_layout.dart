@@ -109,9 +109,9 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           actions: [
             IconButton(
-              icon: Icon(provider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-              tooltip: 'Toggle Theme',
-              onPressed: () => provider.toggleTheme(),
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Settings',
+              onPressed: () => _navigateToSettings(categoryIndex: 0),
             ),
           ],
         ),
@@ -374,75 +374,76 @@ class _MainLayoutState extends State<MainLayout> {
 
         const Divider(height: 1),
 
-        // FOOTER: USER & THEME
+        // FOOTER: PROFILE DETAILS (CLICKABLE TO OPEN SETTINGS PROFILE SECTION)
         isCollapsed
             ? Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  children: [
-                    Tooltip(
-                      message: '$userName (Click to customize Profile)',
-                      child: ProfileAvatarWidget(
-                        radius: 17,
-                        showEditBadge: true,
-                        onTap: () => _navigateToSettings(categoryIndex: 0),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    IconButton(
-                      icon: Icon(
-                        provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                        size: 18,
-                      ),
-                      tooltip: 'Toggle Theme',
-                      onPressed: () => provider.toggleTheme(),
-                    ),
-                  ],
+                child: Tooltip(
+                  message: '$userName (Click to customize Profile in Settings)',
+                  child: IconButton(
+                    icon: const Icon(Icons.tune_outlined, size: 20),
+                    tooltip: 'Settings & Profile',
+                    onPressed: () => _navigateToSettings(categoryIndex: 0),
+                  ),
                 ),
               )
             : Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                child: Row(
-                  children: [
-                    InkWell(
-                      onTap: () => _navigateToSettings(categoryIndex: 0),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ProfileAvatarWidget(
-                            radius: 16,
-                            showEditBadge: true,
-                            onTap: () => _navigateToSettings(categoryIndex: 0),
-                          ),
-                          const SizedBox(width: 8),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 130),
-                            child: Text(
-                              userName,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                child: InkWell(
+                  onTap: () {
+                    if (isDrawer) Navigator.of(context).pop();
+                    _navigateToSettings(categoryIndex: 0);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.business_outlined, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                provider.companyName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                              Text(
+                                userName,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withValues(alpha: 0.75),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 11,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                        ),
+                      ],
                     ),
-                    const Spacer(),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      icon: Icon(
-                        provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                        size: 18,
-                      ),
-                      tooltip: 'Toggle Theme',
-                      onPressed: () => provider.toggleTheme(),
-                    ),
-                  ],
+                  ),
                 ),
               ),
       ],

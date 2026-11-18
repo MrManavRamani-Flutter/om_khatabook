@@ -544,15 +544,16 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 900;
+                final isNarrow = constraints.maxWidth < 600;
                 final crossCount = isWide ? 4 : 2;
 
                 return GridView.count(
                   crossAxisCount: crossCount,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: isWide ? 1.7 : 2.2,
+                  crossAxisSpacing: isNarrow ? 10 : 14,
+                  mainAxisSpacing: isNarrow ? 10 : 14,
+                  childAspectRatio: isWide ? 1.7 : (isNarrow ? 1.55 : 2.2),
                   children: [
                     _buildKpiCard(
                       context,
@@ -1247,20 +1248,27 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     final sumDue = entries.fold(0.0, (s, c) => s + (c.paymentOption == PaymentOption.cash ? c.remainingAmount : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0)));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // EXCEL TABLE HEADER ROW
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth = constraints.maxWidth < 1000 ? 1000.0 : constraints.maxWidth;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            child: Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // EXCEL TABLE HEADER ROW
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
@@ -1586,6 +1594,10 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           ),
         ],
       ),
+    ),
+  ),
+);
+      },
     );
   }
 

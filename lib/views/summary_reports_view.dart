@@ -63,6 +63,7 @@ class SummaryReportsView extends StatelessWidget {
     final provider = context.watch<ChallanProvider>();
     final auth = context.watch<AuthProvider>();
     final challans = provider.challans;
+    final isMobile = MediaQuery.of(context).size.width < 768;
 
     final totalChallan = provider.totalChallanAmount;
     final totalFinal = provider.totalFinalAmount;
@@ -86,199 +87,246 @@ class SummaryReportsView extends StatelessWidget {
         .where((c) => c.chequeDetails?.status == ChequeStatus.pending)
         .fold(0.0, (s, c) => s + c.finalAmount);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+    final exportButtons = [
+      OutlinedButton.icon(
+        onPressed: () => _quickExportPdf(context),
+        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+        label: const Text('Quick PDF'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+      const SizedBox(width: 8, height: 8),
+      OutlinedButton.icon(
+        onPressed: () => _quickExportExcel(context),
+        icon: const Icon(Icons.table_chart, color: Color(0xFF15803D), size: 18),
+        label: const Text('Quick Excel'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+      const SizedBox(width: 8, height: 8),
+      ElevatedButton.icon(
+        onPressed: () => _openCustomReportDialog(context),
+        icon: const Icon(Icons.tune, size: 18),
+        label: const Text('Custom Report Generator'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    ];
+
+    final metricTile1 = _buildMetricTile(
+      'TOTAL BILLED',
+      Formatters.currency(totalFinal),
+      'Gross Challan: ${Formatters.currency(totalChallan)}',
+      AppColors.primary,
+      Icons.account_balance_wallet,
+    );
+    final metricTile2 = _buildMetricTile(
+      'TOTAL GST BILLED',
+      Formatters.currency(totalGst),
+      'Across ${challans.where((c) => c.gstBillNo.isNotEmpty).length} Invoices',
+      const Color(0xFF7C3AED),
+      Icons.calculate,
+    );
+    final metricTile3 = _buildMetricTile(
+      'PENDING / UNPAID DUES',
+      Formatters.currency(totalUnpaid),
+      '${provider.unpaidWarningCount} Entries Require Action',
+      AppColors.warningText,
+      Icons.warning_amber_rounded,
+    );
+
+    final cashCard = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // HEADER WITH ACTIONS
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Financial & Billing Summary',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
+                Icon(Icons.money, color: AppColors.primary),
+                SizedBox(width: 10),
+                Text(
+                  'Cash Transactions Breakdown',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildStatRow('Total Cash Challans', '${cashChallans.length} Entries'),
+            const Divider(height: 16),
+            _buildStatRow(
+              'Cash Received & Cleared',
+              Formatters.currency(cashPaidAmt),
+              valueColor: AppColors.successText,
+            ),
+            const Divider(height: 16),
+            _buildStatRow(
+              '⚠️ Cash Pending / Unpaid',
+              Formatters.currency(cashUnpaidAmt),
+              valueColor: AppColors.warningText,
+              isBold: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final chequeCard = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.account_balance, color: AppColors.primary),
+                SizedBox(width: 10),
+                Text(
+                  'Cheque Transactions Breakdown',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildStatRow('Total Cheque Challans', '${chequeChallans.length} Entries'),
+            const Divider(height: 16),
+            _buildStatRow(
+              'Cheques Cleared',
+              Formatters.currency(chequeClearedAmt),
+              valueColor: AppColors.successText,
+            ),
+            const Divider(height: 16),
+            _buildStatRow(
+              '⏳ Cheques Pending Clearance',
+              Formatters.currency(chequePendingAmt),
+              valueColor: AppColors.pendingText,
+              isBold: true,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // HEADER WITH ACTIONS (RESPONSIVE)
+            if (isMobile) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Financial & Billing Summary',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Comprehensive breakdown of billing, cash receipts, and cheque clearances',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.color
-                            ?.withValues(alpha: 0.7),
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Comprehensive breakdown of billing, cash receipts, and cheque clearances',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  if (auth.canExportReports) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: exportButtons,
                     ),
                   ],
-                ),
-                if (auth.canExportReports)
-                  Row(
+                ],
+              ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () => _quickExportPdf(context),
-                        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-                        label: const Text('Quick PDF'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      const Text(
+                        'Financial & Billing Summary',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => _quickExportExcel(context),
-                        icon: const Icon(Icons.table_chart, color: Color(0xFF15803D), size: 18),
-                        label: const Text('Quick Excel'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _openCustomReportDialog(context),
-                        icon: const Icon(Icons.tune, size: 18),
-                        label: const Text('Custom Report Generator'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Comprehensive breakdown of billing, cash receipts, and cheque clearances',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
                   ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // OVERVIEW TILES
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetricTile(
-                    'TOTAL BILLED',
-                    Formatters.currency(totalFinal),
-                    'Gross Challan: ${Formatters.currency(totalChallan)}',
-                    AppColors.primary,
-                    Icons.account_balance_wallet,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildMetricTile(
-                    'TOTAL GST BILLED',
-                    Formatters.currency(totalGst),
-                    'Across ${challans.where((c) => c.gstBillNo.isNotEmpty).length} Invoices',
-                    const Color(0xFF7C3AED),
-                    Icons.calculate,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildMetricTile(
-                    'PENDING / UNPAID DUES',
-                    Formatters.currency(totalUnpaid),
-                    '${provider.unpaidWarningCount} Entries Require Action',
-                    AppColors.warningText,
-                    Icons.warning_amber_rounded,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // DUAL BREAKDOWN: CASH vs CHEQUE
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // CASH BREAKDOWN
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.money, color: AppColors.primary),
-                              SizedBox(width: 10),
-                              Text(
-                                'Cash Transactions Breakdown',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildStatRow('Total Cash Challans', '${cashChallans.length} Entries'),
-                          const Divider(height: 16),
-                          _buildStatRow(
-                            'Cash Received & Cleared',
-                            Formatters.currency(cashPaidAmt),
-                            valueColor: AppColors.successText,
-                          ),
-                          const Divider(height: 16),
-                          _buildStatRow(
-                            '⚠️ Cash Pending / Unpaid',
-                            Formatters.currency(cashUnpaidAmt),
-                            valueColor: AppColors.warningText,
-                            isBold: true,
-                          ),
-                        ],
-                      ),
+                  if (auth.canExportReports)
+                    Row(
+                      children: exportButtons,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 20),
+                ],
+              ),
+            ],
+            const SizedBox(height: 20),
 
-                // CHEQUE BREAKDOWN
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.account_balance, color: AppColors.primary),
-                              SizedBox(width: 10),
-                              Text(
-                                'Cheque Transactions Breakdown',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildStatRow('Total Cheque Challans', '${chequeChallans.length} Entries'),
-                          const Divider(height: 16),
-                          _buildStatRow(
-                            'Cheques Cleared',
-                            Formatters.currency(chequeClearedAmt),
-                            valueColor: AppColors.successText,
-                          ),
-                          const Divider(height: 16),
-                          _buildStatRow(
-                            '⏳ Cheques Pending Clearance',
-                            Formatters.currency(chequePendingAmt),
-                            valueColor: AppColors.pendingText,
-                            isBold: true,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // OVERVIEW TILES (RESPONSIVE)
+            if (isMobile) ...[
+              metricTile1,
+              const SizedBox(height: 12),
+              metricTile2,
+              const SizedBox(height: 12),
+              metricTile3,
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(child: metricTile1),
+                  const SizedBox(width: 14),
+                  Expanded(child: metricTile2),
+                  const SizedBox(width: 14),
+                  Expanded(child: metricTile3),
+                ],
+              ),
+            ],
+            const SizedBox(height: 20),
+
+            // DUAL BREAKDOWN: CASH vs CHEQUE (RESPONSIVE)
+            if (isMobile) ...[
+              cashCard,
+              const SizedBox(height: 16),
+              chequeCard,
+            ] else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: cashCard),
+                  const SizedBox(width: 20),
+                  Expanded(child: chequeCard),
+                ],
+              ),
+            ],
           ],
         ),
       ),

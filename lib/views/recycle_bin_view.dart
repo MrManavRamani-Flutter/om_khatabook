@@ -181,20 +181,26 @@ class _RecycleBinViewState extends State<RecycleBinView> {
             if (totalDeleted > 0 && auth.canPurgeRecycleBin)
               Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.warningText,
-                    side: const BorderSide(color: AppColors.warningText),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  icon: const Icon(Icons.delete_forever, size: 18),
-                  label: const Text(
-                    'Empty Recycle Bin',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: _confirmEmptyBin,
-                ),
+                child: MediaQuery.of(context).size.width < 600
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_forever, color: AppColors.warningText),
+                        tooltip: 'Empty Recycle Bin',
+                        onPressed: _confirmEmptyBin,
+                      )
+                    : OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.warningText,
+                          side: const BorderSide(color: AppColors.warningText),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        icon: const Icon(Icons.delete_forever, size: 18),
+                        label: const Text(
+                          'Empty Recycle Bin',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: _confirmEmptyBin,
+                      ),
               ),
           ],
           bottom: TabBar(

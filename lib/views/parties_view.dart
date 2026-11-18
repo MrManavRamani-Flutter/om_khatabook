@@ -93,60 +93,103 @@ class _PartiesViewState extends State<PartiesView> {
       return true;
     }).toList();
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // HEADER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Parties Directory',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Pre-add and manage registered parties, contact info, and GST numbers',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.color
-                              ?.withValues(alpha: 0.7),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                if (auth.canManageParties) ...[
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => _openAddParty(context),
-                    icon: const Icon(Icons.person_add, size: 20),
-                    label: const Text('Add New Party'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            // HEADER (RESPONSIVE)
+            if (isMobile) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Parties Directory',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pre-add and manage registered parties, contact info, and GST numbers',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  if (auth.canManageParties) ...[
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _openAddParty(context),
+                      icon: const Icon(Icons.person_add, size: 18),
+                      label: const Text('Add New Party'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
+              ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Parties Directory',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Pre-add and manage registered parties, contact info, and GST numbers',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
+                                ?.withValues(alpha: 0.7),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (auth.canManageParties) ...[
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _openAddParty(context),
+                      icon: const Icon(Icons.person_add, size: 20),
+                      label: const Text('Add New Party'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
 
             // SEARCH BAR
@@ -371,18 +414,25 @@ class _PartiesViewState extends State<PartiesView> {
                           : 0.0)));
     });
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // TABLE HEADER
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth = constraints.maxWidth < 900 ? 900.0 : constraints.maxWidth;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  // TABLE HEADER
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
@@ -762,6 +812,10 @@ class _PartiesViewState extends State<PartiesView> {
           ),
         ],
       ),
+    ),
+  ),
+);
+      },
     );
   }
 
@@ -833,16 +887,14 @@ class _PartiesViewState extends State<PartiesView> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 2,
                           children: [
-                            if (party.phone.isNotEmpty) ...[
+                            if (party.phone.isNotEmpty)
                               Text('📞 ${party.phone}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                              const SizedBox(width: 8),
-                            ],
-                            if (party.address.isNotEmpty) ...[
+                            if (party.address.isNotEmpty)
                               Text('📍 ${provider.formatCasedText(party.address)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                              const SizedBox(width: 8),
-                            ],
                             if (party.gstNumber.isNotEmpty)
                               Text('GST: ${party.gstNumber}', style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
                           ],

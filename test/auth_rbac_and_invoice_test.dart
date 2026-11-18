@@ -13,7 +13,7 @@ import 'package:om_khatabook/utils/formatters.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Single-User Direct Access & Full Permissions Tests', () {
+  group('Master User Login & Unrestricted Permissions Tests', () {
     late StorageService storage;
     late AuthProvider auth;
 
@@ -25,8 +25,23 @@ void main() {
       await auth.initialize();
     });
 
-    test('Single-user mode starts immediately authenticated with full access', () {
+    test('Initial unauthenticated state requires master login', () {
+      expect(auth.isAuthenticated, isFalse);
+      expect(auth.currentUser, isNull);
+    });
+
+    test('Login with invalid credentials fails and stays unauthenticated', () async {
+      final success = await auth.login('wrong_user', 'wrong_pass');
+      expect(success, isFalse);
+      expect(auth.isAuthenticated, isFalse);
+    });
+
+    test('Login with OMMAVTAR36 / OMMAVTAR36 grants full master access', () async {
+      final success = await auth.login('OMMAVTAR36', 'OMMAVTAR36');
+      expect(success, isTrue);
       expect(auth.isAuthenticated, isTrue);
+      expect(auth.currentUser, isNotNull);
+      expect(auth.currentUser?.username, equals('OMMAVTAR36'));
       expect(auth.isDeveloper, isTrue);
       expect(auth.isAdmin, isTrue);
       expect(auth.canCreateChallan, isTrue);
@@ -40,11 +55,6 @@ void main() {
       expect(auth.canPrintInvoice, isTrue);
       expect(auth.canViewAuditLogs, isTrue);
       expect(auth.canManageSettings, isTrue);
-    });
-
-    test('Default user profile is loaded without login barrier', () {
-      expect(auth.currentUser, isNotNull);
-      expect(auth.currentUser?.displayName, isNotEmpty);
     });
   });
 

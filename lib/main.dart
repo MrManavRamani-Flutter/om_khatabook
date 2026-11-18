@@ -4,6 +4,7 @@ import 'providers/auth_provider.dart';
 import 'providers/challan_provider.dart';
 import 'services/storage_service.dart';
 import 'theme/app_theme.dart';
+import 'views/login_view.dart';
 import 'views/main_layout.dart';
 
 void main() async {
@@ -44,7 +45,14 @@ class OmKhataBookApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      home: const MainLayout(),
+      home: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (!auth.isAuthenticated) {
+            return const LoginView();
+          }
+          return const MainLayout();
+        },
+      ),
     );
   }
 }

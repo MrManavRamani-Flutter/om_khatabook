@@ -269,77 +269,135 @@ class ChallanListView extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final entries = provider.filteredChallans;
     final parties = provider.parties;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(isMobile ? 12 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // TOP HEADER WITH PRIMARY ACTIONS
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // TOP HEADER WITH PRIMARY ACTIONS (RESPONSIVE)
+            if (isMobile)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Challan & Billing Ledger',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Manage challan entries, GST billing, and cash/cheque clearance',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.color
+                          ?.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      const Text(
-                        'Challan & Billing Ledger',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openExportDialog(context),
+                          icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 16),
+                          label: const Text('Export PDF/Excel', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage challan entries, GST billing, cash clearance, and cheque tracking',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.color
-                              ?.withValues(alpha: 0.7),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openAddDialog(context),
+                          icon: const Icon(Icons.add_circle, size: 18),
+                          label: const Text('Add Entry', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Row(
-                  children: [
-                    if (auth.canExportReports)
-                      OutlinedButton.icon(
-                        onPressed: () => _openExportDialog(context),
-                        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-                        label: const Text('Generate PDF / Excel'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          side: const BorderSide(color: AppColors.primary),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Challan & Billing Ledger',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                    if (auth.canExportReports && auth.canCreateChallan)
-                      const SizedBox(width: 10),
-                    if (auth.canCreateChallan)
-                      ElevatedButton.icon(
-                        onPressed: () => _openAddDialog(context),
-                        icon: const Icon(Icons.add_circle, size: 20),
-                        label: const Text('Add Challan Entry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Manage challan entries, GST billing, cash clearance, and cheque tracking',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
+                                ?.withValues(alpha: 0.7),
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Row(
+                    children: [
+                      if (auth.canExportReports)
+                        OutlinedButton.icon(
+                          onPressed: () => _openExportDialog(context),
+                          icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                          label: const Text('Generate PDF / Excel'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            side: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      if (auth.canExportReports && auth.canCreateChallan)
+                        const SizedBox(width: 10),
+                      if (auth.canCreateChallan)
+                        ElevatedButton.icon(
+                          onPressed: () => _openAddDialog(context),
+                          icon: const Icon(Icons.add_circle, size: 20),
+                          label: const Text('Add Challan Entry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            const SizedBox(height: 18),
 
             // 4 SUMMARY KPI CARDS
             LayoutBuilder(
@@ -351,9 +409,9 @@ class ChallanListView extends StatelessWidget {
                   crossAxisCount: crossCount,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: isWide ? 1.7 : 2.2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: isWide ? 1.7 : (constraints.maxWidth < 450 ? 1.55 : 2.0),
                   children: [
                     _buildKpiCard(
                       context,
@@ -393,118 +451,208 @@ class ChallanListView extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // FILTERS & SEARCH TOOLBAR
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
                 child: Column(
                   children: [
-                    // ROW 1: SEARCH, PARTY DROPDOWN, MULTI-PARTY BUTTON, PAYMENT OPTION, RESET
-                    Row(
-                      children: [
-                        // SEARCH
-                        Expanded(
-                          flex: 4,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search by Challan No, Party, GST Bill, or Cheque...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              isDense: true,
-                              suffixIcon: provider.searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
-                                      onPressed: () => provider.setSearchQuery(''),
-                                    )
+                    // ROW 1: SEARCH, PARTY DROPDOWN, MULTI-PARTY BUTTON, PAYMENT OPTION, RESET (RESPONSIVE)
+                    if (isMobile) ...[
+                      // MOBILE STACKED FILTER BAR
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search Challan No, Party, GST Bill, or Cheque...',
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                          suffixIcon: provider.searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  onPressed: () => provider.setSearchQuery(''),
+                                )
+                              : null,
+                        ),
+                        controller: TextEditingController(text: provider.searchQuery)
+                          ..selection = TextSelection.fromPosition(
+                            TextPosition(offset: provider.searchQuery.length),
+                          ),
+                        onChanged: (val) => provider.setSearchQuery(val),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String?>(
+                              initialValue: provider.selectedSinglePartyId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: provider.selectedPartyIds.length > 1
+                                    ? '${provider.selectedPartyIds.length} Parties Selected'
+                                    : 'Party Filter',
+                                isDense: true,
+                                prefixIcon: const Icon(Icons.business, size: 18),
+                              ),
+                              items: [
+                                const DropdownMenuItem(value: null, child: Text('All Parties')),
+                                ...parties.map((p) => DropdownMenuItem(
+                                      value: p.id,
+                                      child: Text(p.name, overflow: TextOverflow.ellipsis),
+                                    )),
+                              ],
+                              onChanged: (val) => provider.setSelectedPartyId(val),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => _showMultiPartyDialog(context, provider),
+                            icon: const Icon(Icons.checklist, size: 16),
+                            label: Text(
+                              provider.selectedPartyIds.length > 1
+                                  ? '${provider.selectedPartyIds.length}'
+                                  : 'Multi',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<PaymentOption?>(
+                              initialValue: provider.paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) => provider.setPaymentOptionFilter(val),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            tooltip: 'Reset All Filters',
+                            icon: const Icon(Icons.filter_alt_off, size: 18),
+                            onPressed: () => provider.resetFilters(),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // DESKTOP HORIZONTAL ROW
+                      Row(
+                        children: [
+                          // SEARCH
+                          Expanded(
+                            flex: 4,
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Search by Challan No, Party, GST Bill, or Cheque...',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                isDense: true,
+                                suffixIcon: provider.searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 18),
+                                        onPressed: () => provider.setSearchQuery(''),
+                                      )
+                                    : null,
+                              ),
+                              controller: TextEditingController(text: provider.searchQuery)
+                                ..selection = TextSelection.fromPosition(
+                                  TextPosition(offset: provider.searchQuery.length),
+                                ),
+                              onChanged: (val) => provider.setSearchQuery(val),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // PARTY DROPDOWN (SINGLE / ALL)
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButtonFormField<String?>(
+                              initialValue: provider.selectedSinglePartyId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: provider.selectedPartyIds.length > 1
+                                    ? '${provider.selectedPartyIds.length} Parties Selected'
+                                    : 'Party Filter',
+                                isDense: true,
+                                prefixIcon: const Icon(Icons.business, size: 18),
+                              ),
+                              items: [
+                                const DropdownMenuItem(value: null, child: Text('All Parties')),
+                                ...parties.map((p) => DropdownMenuItem(
+                                      value: p.id,
+                                      child: Text(p.name, overflow: TextOverflow.ellipsis),
+                                    )),
+                              ],
+                              onChanged: (val) => provider.setSelectedPartyId(val),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // MULTI-PARTY SELECTION BUTTON
+                          OutlinedButton.icon(
+                            onPressed: () => _showMultiPartyDialog(context, provider),
+                            icon: const Icon(Icons.checklist, size: 16),
+                            label: Text(
+                              provider.selectedPartyIds.length > 1
+                                  ? '${provider.selectedPartyIds.length} Selected'
+                                  : 'Multi-Party',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
+                              side: BorderSide(
+                                color: provider.selectedPartyIds.length > 1
+                                    ? AppColors.primary
+                                    : Theme.of(context).dividerColor.withValues(alpha: 0.3),
+                              ),
+                              backgroundColor: provider.selectedPartyIds.length > 1
+                                  ? AppColors.primary.withValues(alpha: 0.1)
                                   : null,
                             ),
-                            controller: TextEditingController(text: provider.searchQuery)
-                              ..selection = TextSelection.fromPosition(
-                                TextPosition(offset: provider.searchQuery.length),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // PAYMENT OPTION FILTER
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButtonFormField<PaymentOption?>(
+                              initialValue: provider.paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
                               ),
-                            onChanged: (val) => provider.setSearchQuery(val),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // PARTY DROPDOWN (SINGLE / ALL)
-                        Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<String?>(
-                            initialValue: provider.selectedSinglePartyId,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: provider.selectedPartyIds.length > 1
-                                  ? '${provider.selectedPartyIds.length} Parties Selected'
-                                  : 'Party Filter',
-                              isDense: true,
-                              prefixIcon: const Icon(Icons.business, size: 18),
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) => provider.setPaymentOptionFilter(val),
                             ),
-                            items: [
-                              const DropdownMenuItem(value: null, child: Text('All Parties')),
-                              ...parties.map((p) => DropdownMenuItem(
-                                    value: p.id,
-                                    child: Text(p.name, overflow: TextOverflow.ellipsis),
-                                  )),
-                            ],
-                            onChanged: (val) => provider.setSelectedPartyId(val),
                           ),
-                        ),
-                        const SizedBox(width: 8),
+                          const SizedBox(width: 12),
 
-                        // MULTI-PARTY SELECTION BUTTON
-                        OutlinedButton.icon(
-                          onPressed: () => _showMultiPartyDialog(context, provider),
-                          icon: const Icon(Icons.checklist, size: 16),
-                          label: Text(
-                            provider.selectedPartyIds.length > 1
-                                ? '${provider.selectedPartyIds.length} Selected'
-                                : 'Multi-Party',
-                            style: const TextStyle(fontSize: 12),
+                          // RESET FILTERS
+                          IconButton.filledTonal(
+                            tooltip: 'Reset All Filters',
+                            icon: const Icon(Icons.filter_alt_off, size: 18),
+                            onPressed: () => provider.resetFilters(),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-                            side: BorderSide(
-                              color: provider.selectedPartyIds.length > 1
-                                  ? AppColors.primary
-                                  : Theme.of(context).dividerColor.withValues(alpha: 0.3),
-                            ),
-                            backgroundColor: provider.selectedPartyIds.length > 1
-                                ? AppColors.primary.withValues(alpha: 0.1)
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // PAYMENT OPTION FILTER
-                        Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<PaymentOption?>(
-                            initialValue: provider.paymentOptionFilter,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Payment Option',
-                              isDense: true,
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: null, child: Text('All Modes')),
-                              DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
-                              DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
-                            ],
-                            onChanged: (val) => provider.setPaymentOptionFilter(val),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // RESET FILTERS
-                        IconButton.filledTonal(
-                          tooltip: 'Reset All Filters',
-                          icon: const Icon(Icons.filter_alt_off, size: 18),
-                          onPressed: () => provider.resetFilters(),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
 
                     // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC (NO HORIZONTAL SCROLL)
@@ -1083,19 +1231,26 @@ class ChallanListView extends StatelessWidget {
     final sumDue = entries.fold(0.0, (s, c) => s + (c.paymentOption == PaymentOption.cash ? c.remainingAmount : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0)));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth = constraints.maxWidth < 1000 ? 1000.0 : constraints.maxWidth;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            child: Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
           // EXCEL TABLE HEADER ROW
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1418,6 +1573,10 @@ class ChallanListView extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  ),
+);
+      },
     );
   }
 

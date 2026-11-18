@@ -23,7 +23,7 @@ void main() {
 
     final authProvider = AuthProvider(storageService);
     await authProvider.initialize();
-    await authProvider.login('admin', 'admin123');
+    await authProvider.login('OMMAVTAR36', 'OMMAVTAR36');
 
     await tester.pumpWidget(
       MultiProvider(
