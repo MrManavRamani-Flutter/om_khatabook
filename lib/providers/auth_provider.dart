@@ -20,27 +20,28 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider(this._storage);
 
   bool get isLoading => _isLoading;
-  bool get isAuthenticated => _currentUser != null;
-  AppUser? get currentUser => _currentUser;
+  bool get isAuthenticated => true;
+  AppUser? get currentUser => _currentUser ?? AppUser(
+        id: 'user_admin_default',
+        username: 'admin',
+        password: '',
+        displayName: 'OM Mavtar Admin',
+        roleId: AppRole.adminId,
+        role: UserRole.admin,
+        createdAt: DateTime.now(),
+        createdBy: 'system',
+      );
   List<AppUser> get users => List.unmodifiable(_users);
   List<AppRole> get customRoles => List.unmodifiable(_customRoles);
 
-  String get currentRoleId => _currentUser?.roleId ?? 'clerk';
-  UserRole get currentRole => _currentUser?.role ?? UserRole.clerk;
+  String get currentRoleId => _currentUser?.roleId ?? 'admin';
+  UserRole get currentRole => _currentUser?.role ?? UserRole.admin;
 
-  /// System Developer has supreme access and master supervision across all records & logs
-  bool get isDeveloper =>
-      _currentUser?.role == UserRole.developer ||
-      _currentUser?.roleId == AppRole.developerId;
-
-  /// Administrator has full administrative access (except viewing Developer role & permanent user delete)
-  bool get isAdmin =>
-      isDeveloper ||
-      currentRole == UserRole.admin ||
-      currentRoleId == AppRole.adminId;
-
-  bool get isManager => currentRole == UserRole.manager || currentRoleId == AppRole.managerId;
-  bool get isClerk => currentRole == UserRole.clerk || currentRoleId == AppRole.clerkId;
+  /// Full access granted when login/role restriction is removed
+  bool get isDeveloper => true;
+  bool get isAdmin => true;
+  bool get isManager => true;
+  bool get isClerk => true;
 
   /// All roles registered in the system (built-in + user-defined custom roles)
   List<AppRole> get allRoles => [
@@ -90,41 +91,38 @@ class AuthProvider extends ChangeNotifier {
 
   RolePermissions permissionsFor(UserRole role) => permissionsForId(role.name);
 
-  // 1. 👁️ View
-  bool get canViewChallans => currentPermissions.canViewChallans;
-  bool get canViewParties => currentPermissions.canViewParties;
-  bool get canViewReports => currentPermissions.canViewReports;
-  bool get canExportReports => currentPermissions.canViewReports;
-  bool get canPrintInvoice => currentPermissions.canPrintInvoice;
+  // 1. 👁️ View - Unrestricted
+  bool get canViewChallans => true;
+  bool get canViewParties => true;
+  bool get canViewReports => true;
+  bool get canExportReports => true;
+  bool get canPrintInvoice => true;
 
-  // 2. ➕ Add
-  bool get canCreateChallan => currentPermissions.canCreateChallan;
-  bool get canManageParties => currentPermissions.canManageParties;
-  bool get canAddUsers => currentPermissions.canAddUsers;
+  // 2. ➕ Add - Unrestricted
+  bool get canCreateChallan => true;
+  bool get canManageParties => true;
+  bool get canAddUsers => true;
 
-  // 3. ✏️ Edit
-  bool get canEditChallan => currentPermissions.canEditChallan;
-  bool get canEditUsers => currentPermissions.canEditUsers;
-  bool get canManageSettings => isDeveloper || isAdmin || currentPermissions.canManageSettings;
+  // 3. ✏️ Edit - Unrestricted
+  bool get canEditChallan => true;
+  bool get canEditUsers => true;
+  bool get canManageSettings => true;
 
-  // 4. 🗑️ Delete & Recovery
-  bool get canDelete => currentPermissions.canDeleteChallan;
-  bool get canDeleteChallan => currentPermissions.canDeleteChallan;
-  bool get canRestoreFromBin => currentPermissions.canRestoreChallan;
-  bool get canPurgeRecycleBin => currentPermissions.canPurgeRecycleBin;
-  bool get canDeleteUsers => currentPermissions.canDeleteUsers;
-  bool get canPermanentDeleteUsers => isDeveloper && currentPermissions.canPermanentDeleteUsers;
-  bool get canBlockUsers => isDeveloper;
+  // 4. 🗑️ Delete & Recovery - Unrestricted
+  bool get canDelete => true;
+  bool get canDeleteChallan => true;
+  bool get canRestoreFromBin => true;
+  bool get canPurgeRecycleBin => true;
+  bool get canDeleteUsers => true;
+  bool get canPermanentDeleteUsers => true;
+  bool get canBlockUsers => true;
 
-  // 5. 📜 Log & Audit
-  bool get canViewAuditLogs => isDeveloper || currentPermissions.canViewAuditLogs;
-  bool get canClearAuditLogs => isDeveloper && currentPermissions.canClearAuditLogs;
+  // 5. 📜 Log & Audit - Unrestricted
+  bool get canViewAuditLogs => true;
+  bool get canClearAuditLogs => true;
 
-  bool get canManageUsers => isDeveloper || isAdmin || currentPermissions.canManageUsers;
-
-  /// Supreme & Administrative Right:
-  /// ONLY Developer and Admin have authority to configure, grant, create, or modify dynamic role permissions!
-  bool get canManagePermissions => isDeveloper || isAdmin;
+  bool get canManageUsers => true;
+  bool get canManagePermissions => true;
 
   String roleNameFor(String roleId) {
     final matched = allRoles.where((r) => r.id == roleId).toList();
@@ -244,10 +242,12 @@ class AuthProvider extends ChangeNotifier {
           _users.where((u) => u.id == savedUser.id && u.isActive).toList();
       if (matched.isNotEmpty && !matched.first.isDeleted && !matched.first.isBlocked) {
         _currentUser = matched.first;
-      } else {
-        await _storage.saveActiveSessionUser(null);
       }
     }
+    _currentUser ??= _users.firstWhere(
+      (u) => u.username == 'admin',
+      orElse: () => _users.first,
+    );
 
     _isLoading = false;
     notifyListeners();

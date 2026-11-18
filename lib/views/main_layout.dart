@@ -37,41 +37,6 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  void _confirmLogout(BuildContext context, AuthProvider auth) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.logout, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Sign Out?'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to log out from ${auth.currentUser?.displayName ?? "Khata Book"}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              auth.logout();
-            },
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChallanProvider>();
@@ -97,71 +62,22 @@ class _MainLayoutState extends State<MainLayout> {
       );
     }
 
-    // Auto-fallback if the current user doesn't have permission for the selected index
-    int effectiveIndex = _selectedIndex;
-    if (effectiveIndex == 0 && !auth.canViewChallans) {
-      if (auth.canViewParties) {
-        effectiveIndex = 1;
-      } else if (auth.canViewReports) {
-        effectiveIndex = 2;
-      } else {
-        effectiveIndex = 5;
-      }
-    }
-
     Widget contentBody;
-    switch (effectiveIndex) {
+    switch (_selectedIndex) {
       case 0:
-        contentBody = auth.canViewChallans
-            ? const ChallanListView()
-            : _buildAccessDeniedView(
-                title: 'Challan Ledger Access Restricted',
-                message:
-                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view delivery challans. Please request access from Administrator or Developer.',
-                icon: Icons.receipt_long_outlined,
-              );
+        contentBody = const ChallanListView();
         break;
       case 1:
-        contentBody = auth.canViewParties
-            ? const PartiesView()
-            : _buildAccessDeniedView(
-                title: 'Parties Directory Access Restricted',
-                message:
-                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view the counterparties directory.',
-                icon: Icons.people_outline,
-              );
+        contentBody = const PartiesView();
         break;
       case 2:
-        contentBody = auth.canViewReports
-            ? const SummaryReportsView()
-            : _buildAccessDeniedView(
-                title: 'Financial Reports Access Restricted',
-                message:
-                    'Your assigned role [${auth.currentRoleLabel}] does not have permission to view aggregate financial reports.',
-                icon: Icons.bar_chart_outlined,
-              );
+        contentBody = const SummaryReportsView();
         break;
       case 3:
-        contentBody = (auth.canDeleteChallan ||
-                auth.canPurgeRecycleBin ||
-                auth.canRestoreFromBin)
-            ? const RecycleBinView()
-            : _buildAccessDeniedView(
-                title: 'Recycle Bin Access Restricted',
-                message:
-                    'Your assigned role [${auth.currentRoleLabel}] does not have permissions to access deleted records.',
-                icon: Icons.delete_outline,
-              );
+        contentBody = const RecycleBinView();
         break;
       case 4:
-        contentBody = auth.canViewAuditLogs
-            ? const AuditLogView()
-            : _buildAccessDeniedView(
-                title: 'Audit Logs Access Restricted',
-                message:
-                    'Audit trail inspection is restricted to authorized supervisory personnel.',
-                icon: Icons.history_outlined,
-              );
+        contentBody = const AuditLogView();
         break;
       case 5:
         contentBody = SettingsView(
@@ -197,11 +113,6 @@ class _MainLayoutState extends State<MainLayout> {
               tooltip: 'Toggle Theme',
               onPressed: () => provider.toggleTheme(),
             ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Sign Out',
-              onPressed: () => _confirmLogout(context, auth),
-            ),
           ],
         ),
         drawer: Drawer(
@@ -216,14 +127,12 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
         body: contentBody,
-        floatingActionButton: auth.canCreateChallan
-            ? FloatingActionButton(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                onPressed: () => _openAddChallan(context),
-                child: const Icon(Icons.add),
-              )
-            : null,
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          onPressed: () => _openAddChallan(context),
+          child: const Icon(Icons.add),
+        ),
       );
     }
 
@@ -269,11 +178,7 @@ class _MainLayoutState extends State<MainLayout> {
     required int recycleBinCount,
     required bool isDrawer,
   }) {
-    final currentUser = auth.currentUser;
-    final userName = currentUser?.displayName ?? provider.adminName;
-    final roleName = currentUser != null
-        ? auth.roleNameFor(currentUser.roleId)
-        : 'ADMIN';
+    final userName = provider.adminName.isNotEmpty ? provider.adminName : 'OM Mavtar Admin';
 
     return Column(
       children: [
@@ -284,11 +189,11 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Column(
                   children: [
                     Tooltip(
-                      message: 'OM Mavtar Admin (Click to customize Profile & Logo)',
+                      message: '$userName (Click to customize Profile & Logo)',
                       child: AppLogoWidget(
                         size: 40,
                         showEditBadge: true,
-                        onTap: () => _navigateToSettings(categoryIndex: 2),
+                        onTap: () => _navigateToSettings(categoryIndex: 0),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -309,13 +214,13 @@ class _MainLayoutState extends State<MainLayout> {
                       child: AppLogoWidget(
                         size: 42,
                         showEditBadge: true,
-                        onTap: () => _navigateToSettings(categoryIndex: 2),
+                        onTap: () => _navigateToSettings(categoryIndex: 0),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: InkWell(
-                        onTap: () => _navigateToSettings(categoryIndex: 2),
+                        onTap: () => _navigateToSettings(categoryIndex: 0),
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -366,62 +271,57 @@ class _MainLayoutState extends State<MainLayout> {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
             children: [
-              if (auth.canViewChallans)
-                _buildNavItem(
-                  index: 0,
-                  icon: Icons.receipt_long_outlined,
-                  activeIcon: Icons.receipt_long,
-                  label: 'Challan Ledger',
-                  badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
-                  isWarningBadge: warningCount > 0,
-                  isCollapsed: isCollapsed,
-                  isDrawer: isDrawer,
-                ),
-              if (auth.canViewParties)
-                _buildNavItem(
-                  index: 1,
-                  icon: Icons.people_outline,
-                  activeIcon: Icons.people,
-                  label: 'Parties Directory',
-                  badge: '${provider.parties.length}',
-                  isCollapsed: isCollapsed,
-                  isDrawer: isDrawer,
-                ),
-              if (auth.canViewReports)
-                _buildNavItem(
-                  index: 2,
-                  icon: Icons.bar_chart_outlined,
-                  activeIcon: Icons.bar_chart,
-                  label: 'Financial Reports',
-                  isCollapsed: isCollapsed,
-                  isDrawer: isDrawer,
-                ),
-              if (auth.canDeleteChallan || auth.canPurgeRecycleBin || auth.canRestoreFromBin)
-                _buildNavItem(
-                  index: 3,
-                  icon: Icons.delete_outline,
-                  activeIcon: Icons.delete,
-                  label: 'Recycle Bin',
-                  badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
-                  isWarningBadge: false,
-                  isCollapsed: isCollapsed,
-                  isDrawer: isDrawer,
-                ),
-              if (auth.canViewAuditLogs)
-                _buildNavItem(
-                  index: 4,
-                  icon: Icons.history_outlined,
-                  activeIcon: Icons.history,
-                  label: 'Audit History',
-                  badge: '${provider.auditLogs.length}',
-                  isCollapsed: isCollapsed,
-                  isDrawer: isDrawer,
-                ),
+              _buildNavItem(
+                index: 0,
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long,
+                label: 'Challan Ledger',
+                badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
+                isWarningBadge: warningCount > 0,
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 1,
+                icon: Icons.people_outline,
+                activeIcon: Icons.people,
+                label: 'Parties Directory',
+                badge: '${provider.parties.length}',
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.bar_chart_outlined,
+                activeIcon: Icons.bar_chart,
+                label: 'Financial Reports',
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 3,
+                icon: Icons.delete_outline,
+                activeIcon: Icons.delete,
+                label: 'Recycle Bin',
+                badge: recycleBinCount > 0 ? '$recycleBinCount' : null,
+                isWarningBadge: false,
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 4,
+                icon: Icons.history_outlined,
+                activeIcon: Icons.history,
+                label: 'Audit History',
+                badge: '${provider.auditLogs.length}',
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
               _buildNavItem(
                 index: 5,
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
-                label: auth.canManagePermissions ? 'Settings & RBAC' : 'Settings & Themes',
+                label: 'Settings',
                 isCollapsed: isCollapsed,
                 isDrawer: isDrawer,
               ),
@@ -429,75 +329,66 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
 
-        // PRIMARY ACTION BUTTON IN SIDEBAR (GATED BY RBAC)
-        if (auth.canCreateChallan)
-          Padding(
-            padding: EdgeInsets.all(isCollapsed ? 8 : 14),
-            child: isCollapsed
-                ? Tooltip(
-                    message: 'New Challan Entry',
-                    child: IconButton.filled(
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+        // PRIMARY ACTION BUTTON IN SIDEBAR
+        Padding(
+          padding: EdgeInsets.all(isCollapsed ? 8 : 14),
+          child: isCollapsed
+              ? Tooltip(
+                  message: 'New Challan Entry',
+                  child: IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      icon: const Icon(Icons.add, size: 20),
-                      onPressed: () => _openAddChallan(context),
                     ),
-                  )
-                : SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text(
-                        'New Challan Entry',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () {
-                        if (isDrawer) Navigator.of(context).pop();
-                        _openAddChallan(context);
-                      },
-                    ),
+                    icon: const Icon(Icons.add, size: 20),
+                    onPressed: () => _openAddChallan(context),
                   ),
-          ),
+                )
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text(
+                      'New Challan Entry',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      if (isDrawer) Navigator.of(context).pop();
+                      _openAddChallan(context);
+                    },
+                  ),
+                ),
+        ),
 
         const Divider(height: 1),
 
-        // FOOTER: USER, ROLE & LOGOUT
+        // FOOTER: USER & THEME
         isCollapsed
             ? Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Column(
                   children: [
                     Tooltip(
-                      message: '$userName [$roleName] (Click to customize Profile)',
+                      message: '$userName (Click to customize Profile)',
                       child: ProfileAvatarWidget(
                         radius: 17,
                         showEditBadge: true,
-                        onTap: () => _navigateToSettings(categoryIndex: 2),
+                        onTap: () => _navigateToSettings(categoryIndex: 0),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    if (auth.canManageUsers) ...[
-                      IconButton(
-                        icon: const Icon(Icons.manage_accounts_outlined, size: 18),
-                        tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => _navigateToSettings(categoryIndex: 0),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
                     IconButton(
                       icon: Icon(
                         provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
@@ -506,21 +397,15 @@ class _MainLayoutState extends State<MainLayout> {
                       tooltip: 'Toggle Theme',
                       onPressed: () => provider.toggleTheme(),
                     ),
-                    const SizedBox(height: 4),
-                    IconButton(
-                      icon: const Icon(Icons.logout, size: 18, color: AppColors.warningText),
-                      tooltip: 'Sign Out ($userName)',
-                      onPressed: () => _confirmLogout(context, auth),
-                    ),
                   ],
                 ),
               )
             : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => _navigateToSettings(categoryIndex: 2),
+                      onTap: () => _navigateToSettings(categoryIndex: 0),
                       borderRadius: BorderRadius.circular(20),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -528,54 +413,24 @@ class _MainLayoutState extends State<MainLayout> {
                           ProfileAvatarWidget(
                             radius: 16,
                             showEditBadge: true,
-                            onTap: () => _navigateToSettings(categoryIndex: 2),
+                            onTap: () => _navigateToSettings(categoryIndex: 0),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 80),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  userName,
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Text(
-                                    roleName,
-                                    style: const TextStyle(
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            constraints: const BoxConstraints(maxWidth: 130),
+                            child: Text(
+                              userName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
                     const Spacer(),
-                    if (auth.canManageUsers)
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        icon: const Icon(Icons.manage_accounts_outlined, size: 18),
-                        tooltip: 'Users & Dynamic RBAC Permissions',
-                        onPressed: () => _navigateToSettings(categoryIndex: 0),
-                      ),
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.all(4),
@@ -586,14 +441,6 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                       tooltip: 'Toggle Theme',
                       onPressed: () => provider.toggleTheme(),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      icon: const Icon(Icons.logout, size: 18, color: AppColors.warningText),
-                      tooltip: 'Sign Out',
-                      onPressed: () => _confirmLogout(context, auth),
                     ),
                   ],
                 ),
@@ -714,86 +561,6 @@ class _MainLayoutState extends State<MainLayout> {
             if (isDrawer) Navigator.of(context).pop();
             setState(() => _selectedIndex = index);
           },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccessDeniedView({
-    required String title,
-    required String message,
-    required IconData icon,
-  }) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        padding: const EdgeInsets.all(32),
-        margin: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.warningBgDark.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 40, color: AppColors.warningText),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.color
-                    ?.withValues(alpha: 0.8),
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text(
-                'Permission controlled dynamically by Developer / Admin',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
