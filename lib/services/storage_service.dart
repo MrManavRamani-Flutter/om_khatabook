@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../models/app_user.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
+import '../models/income_expense_entry.dart';
 import '../models/party.dart';
 
 class StorageService {
@@ -30,6 +31,7 @@ class StorageService {
   static const String _keyAuditLogs = 'om_audit_logs_v2';
   static const String _keyRolePermissions = 'om_role_permissions_v2';
   static const String _keyCustomRoles = 'om_custom_roles_v2';
+  static const String _keyIncomeExpenseEntries = 'om_income_expense_entries_v1';
 
   late SharedPreferences _prefs;
 
@@ -300,6 +302,78 @@ class StorageService {
     await _prefs.setString(_keyAuditLogs, jsonEncode(list));
   }
 
+  // --- INCOME & EXPENSE LEDGER ENTRIES (PROFIT & LOSS) ---
+  Future<List<IncomeExpenseEntry>> loadIncomeExpenseEntries() async {
+    final str = _prefs.getString(_keyIncomeExpenseEntries);
+    if (str == null || str.isEmpty) {
+      // Seed default sample entries matching the notebook breakdown:
+      // Expenses: લાઈટ બિલ (50), પગાર (50)
+      // Income: ઓમ્ કિરણ (10), પ્રદિપ (20)
+      final now = DateTime.now();
+      return [
+        IncomeExpenseEntry(
+          id: 'exp_default_1',
+          type: EntryType.expense,
+          date: now,
+          particular: 'લાઈટ બિલ (Electricity)',
+          amount: 50.0,
+          category: 'Utility & Bills',
+          paymentMode: 'Cash',
+          createdAt: now,
+          createdBy: 'OM MAVTAR',
+        ),
+        IncomeExpenseEntry(
+          id: 'exp_default_2',
+          type: EntryType.expense,
+          date: now,
+          particular: 'પગાર (Staff Salary)',
+          amount: 50.0,
+          category: 'Salary & Wages',
+          paymentMode: 'Cash',
+          createdAt: now,
+          createdBy: 'OM MAVTAR',
+        ),
+        IncomeExpenseEntry(
+          id: 'inc_default_1',
+          type: EntryType.income,
+          date: now,
+          particular: 'ઓમ્ કિરણ (Om Kiran)',
+          amount: 10.0,
+          category: 'Party Sales',
+          paymentMode: 'Cash',
+          createdAt: now,
+          createdBy: 'OM MAVTAR',
+        ),
+        IncomeExpenseEntry(
+          id: 'inc_default_2',
+          type: EntryType.income,
+          date: now,
+          particular: 'પ્રદિપ (Pradip)',
+          amount: 20.0,
+          category: 'Party Sales',
+          paymentMode: 'Cash',
+          createdAt: now,
+          createdBy: 'OM MAVTAR',
+        ),
+      ];
+    }
+    try {
+      final List decoded = jsonDecode(str) as List;
+      return decoded
+          .map((e) => IncomeExpenseEntry.fromJson(e as Map<String, dynamic>))
+          .where((e) => !e.isDeleted)
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading income/expense entries: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveIncomeExpenseEntries(List<IncomeExpenseEntry> entries) async {
+    final list = entries.map((e) => e.toJson()).toList();
+    await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(list));
+  }
+
   // --- BACKUP & RESTORE ---
   Future<String> exportBackupJson() async {
     final partiesStr = _prefs.getString(_keyParties) ?? '[]';
@@ -308,6 +382,7 @@ class StorageService {
     final auditStr = _prefs.getString(_keyAuditLogs) ?? '[]';
     final permissionsStr = _prefs.getString(_keyRolePermissions) ?? '{}';
     final customRolesStr = _prefs.getString(_keyCustomRoles) ?? '[]';
+    final entriesStr = _prefs.getString(_keyIncomeExpenseEntries) ?? '[]';
 
     final data = {
       'app': 'OM Mavtar Group Khata Book',
@@ -319,6 +394,7 @@ class StorageService {
       'auditLogs': jsonDecode(auditStr),
       'rolePermissions': jsonDecode(permissionsStr),
       'customRoles': jsonDecode(customRolesStr),
+      'incomeExpenseEntries': jsonDecode(entriesStr),
       'branding': {
         'companyName': companyName,
         'companyTagline': companyTagline,
@@ -387,6 +463,9 @@ class StorageService {
       if (data.containsKey('customRoles')) {
         await _prefs.setString(_keyCustomRoles, jsonEncode(data['customRoles']));
       }
+      if (data.containsKey('incomeExpenseEntries')) {
+        await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(data['incomeExpenseEntries']));
+      }
       if (data.containsKey('branding') &&
           data['branding'] is Map<String, dynamic>) {
         final b = data['branding'] as Map<String, dynamic>;
@@ -422,5 +501,6 @@ class StorageService {
     await _prefs.remove(_keyAuditLogs);
     await _prefs.remove(_keyRolePermissions);
     await _prefs.remove(_keyCustomRoles);
+    await _prefs.remove(_keyIncomeExpenseEntries);
   }
 }

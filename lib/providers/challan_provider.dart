@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
+import '../models/income_expense_entry.dart';
 import '../models/party.dart';
 import '../services/storage_service.dart';
 import '../utils/formatters.dart';
@@ -14,11 +15,30 @@ enum BackupImportMode {
   replace, // Clean overwrite / erase existing data
 }
 
+class ProfitLossCalculation {
+  final List<IncomeExpenseEntry> expenses;
+  final List<IncomeExpenseEntry> incomes;
+  final double totalExpenses;
+  final double totalIncome;
+  final double netAmount;
+  final bool isProfit;
+
+  ProfitLossCalculation({
+    required this.expenses,
+    required this.incomes,
+    required this.totalExpenses,
+    required this.totalIncome,
+    required this.netAmount,
+    required this.isProfit,
+  });
+}
+
 class BackupAnalysisResult {
   final bool isValid;
   final String? errorMessage;
   final List<ChallanEntry> challans;
   final List<Party> parties;
+  final List<IncomeExpenseEntry> incomeExpenseEntries;
   final Map<String, dynamic>? branding;
   final bool isPartialOrLegacy;
   final int totalChallans;
@@ -29,6 +49,7 @@ class BackupAnalysisResult {
     this.errorMessage,
     this.challans = const [],
     this.parties = const [],
+    this.incomeExpenseEntries = const [],
     this.branding,
     this.isPartialOrLegacy = false,
     this.totalChallans = 0,
@@ -99,6 +120,7 @@ class ChallanProvider extends ChangeNotifier {
   String _adminRole = 'Administrator';
   bool _isSidebarCollapsed = false;
   List<AuditLogEntry> _auditLogs = [];
+  List<IncomeExpenseEntry> _incomeExpenseEntries = [];
 
   ChallanProvider(this._storage);
 
@@ -235,6 +257,7 @@ class ChallanProvider extends ChangeNotifier {
     _challans = await _storage.loadChallans();
     _challans.sort((a, b) => b.date.compareTo(a.date));
     _auditLogs = await _storage.loadAuditLogs();
+    _incomeExpenseEntries = await _storage.loadIncomeExpenseEntries();
 
     if (!_storage.isCleanDataMigrated) {
       await _cleanAndSeedRealParties();
@@ -491,6 +514,9 @@ class ChallanProvider extends ChangeNotifier {
   double get totalFinalAmount =>
       filteredChallans.fold(0.0, (sum, item) => sum + item.finalAmount);
 
+  double get totalPaidAmount =>
+      filteredChallans.fold(0.0, (sum, item) => sum + item.paidAmount);
+
   double get totalGstAmount =>
       filteredChallans.fold(0.0, (sum, item) => sum + item.gstAmount);
 
@@ -522,6 +548,166 @@ class ChallanProvider extends ChangeNotifier {
 
   int get unpaidWarningCount =>
       filteredChallans.where((c) => c.hasWarning).length;
+
+  // --- PROFIT & LOSS / INCOME & EXPENSES ---
+  List<IncomeExpenseEntry> get incomeExpenseEntries =>
+      _incomeExpenseEntries.where((e) => !e.isDeleted).toList();
+
+  List<IncomeExpenseEntry> get allExpenses =>
+      incomeExpenseEntries.where((e) => e.isExpense).toList();
+
+  List<IncomeExpenseEntry> get allCustomIncomes =>
+      incomeExpenseEntries.where((e) => e.isIncome).toList();
+
+  Future<void> addIncomeExpenseEntry(IncomeExpenseEntry entry) async {
+    _incomeExpenseEntries.insert(0, entry);
+    await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
+    await logAction(
+      action: AuditAction.create,
+      entityType: AuditEntityType.challan,
+      entityId: entry.id,
+      entityTitle: '${entry.type.name.toUpperCase()}: ${entry.particular}',
+      performedBy: 'OM MAVTAR',
+      userRole: 'MASTER',
+      description: 'Added ${entry.type.name} entry: ${entry.particular} (${Formatters.currency(entry.amount)})',
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateIncomeExpenseEntry(IncomeExpenseEntry updated) async {
+    final idx = _incomeExpenseEntries.indexWhere((e) => e.id == updated.id);
+    if (idx != -1) {
+      _incomeExpenseEntries[idx] = updated;
+      await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
+      await logAction(
+        action: AuditAction.update,
+        entityType: AuditEntityType.challan,
+        entityId: updated.id,
+        entityTitle: '${updated.type.name.toUpperCase()}: ${updated.particular}',
+        performedBy: 'OM MAVTAR',
+        userRole: 'MASTER',
+        description: 'Updated ${updated.type.name} entry: ${updated.particular} (${Formatters.currency(updated.amount)})',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteIncomeExpenseEntry(String id) async {
+    final idx = _incomeExpenseEntries.indexWhere((e) => e.id == id);
+    if (idx != -1) {
+      final removed = _incomeExpenseEntries[idx];
+      _incomeExpenseEntries.removeAt(idx);
+      await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
+      await logAction(
+        action: AuditAction.permanentDelete,
+        entityType: AuditEntityType.challan,
+        entityId: removed.id,
+        entityTitle: '${removed.type.name.toUpperCase()}: ${removed.particular}',
+        performedBy: 'OM MAVTAR',
+        userRole: 'MASTER',
+        description: 'Deleted ${removed.type.name} entry: ${removed.particular}',
+      );
+      notifyListeners();
+    }
+  }
+
+  /// All unique months formatted as 'yyyy-MM' present across challans & expense entries
+  List<String> get availableProfitLossMonths {
+    final Set<String> months = {};
+    final now = DateTime.now();
+    months.add('${now.year}-${now.month.toString().padLeft(2, '0')}');
+
+    for (var c in challans) {
+      months.add('${c.date.year}-${c.date.month.toString().padLeft(2, '0')}');
+    }
+    for (var e in incomeExpenseEntries) {
+      months.add('${e.date.year}-${e.date.month.toString().padLeft(2, '0')}');
+    }
+
+    final list = months.toList();
+    list.sort((a, b) => b.compareTo(a)); // Newest first
+    return list;
+  }
+
+  ProfitLossCalculation computeProfitLoss({
+    Set<String>? selectedMonthKeys,
+    String searchQuery = '',
+  }) {
+    final cleanQuery = searchQuery.trim().toLowerCase();
+
+    // 1. Filter Expenses
+    final expList = <IncomeExpenseEntry>[];
+    for (var e in allExpenses) {
+      if (selectedMonthKeys != null && selectedMonthKeys.isNotEmpty) {
+        final key = '${e.date.year}-${e.date.month.toString().padLeft(2, '0')}';
+        if (!selectedMonthKeys.contains(key)) continue;
+      }
+      if (cleanQuery.isNotEmpty) {
+        final matchesPart = e.particular.toLowerCase().contains(cleanQuery);
+        final matchesCat = e.category.toLowerCase().contains(cleanQuery);
+        if (!matchesPart && !matchesCat) continue;
+      }
+      expList.add(e);
+    }
+    expList.sort((a, b) => b.date.compareTo(a.date));
+
+    // 2. Filter Incomes (Challan collections from parties + custom incomes)
+    final partyMap = <String, double>{};
+    for (var c in challans) {
+      if (selectedMonthKeys != null && selectedMonthKeys.isNotEmpty) {
+        final key = '${c.date.year}-${c.date.month.toString().padLeft(2, '0')}';
+        if (!selectedMonthKeys.contains(key)) continue;
+      }
+      if (c.paidAmount > 0) {
+        final pName = c.partyName.trim();
+        partyMap[pName] = (partyMap[pName] ?? 0.0) + c.paidAmount;
+      }
+    }
+
+    final incList = <IncomeExpenseEntry>[];
+    partyMap.forEach((partyName, amt) {
+      if (cleanQuery.isNotEmpty && !partyName.toLowerCase().contains(cleanQuery)) {
+        return;
+      }
+      incList.add(IncomeExpenseEntry(
+        id: 'party_inc_$partyName',
+        type: EntryType.income,
+        date: DateTime.now(),
+        particular: partyName,
+        amount: amt,
+        category: 'Party Challan Collection',
+        paymentMode: 'Ledger Collection',
+        createdAt: DateTime.now(),
+      ));
+    });
+
+    for (var e in allCustomIncomes) {
+      if (selectedMonthKeys != null && selectedMonthKeys.isNotEmpty) {
+        final key = '${e.date.year}-${e.date.month.toString().padLeft(2, '0')}';
+        if (!selectedMonthKeys.contains(key)) continue;
+      }
+      if (cleanQuery.isNotEmpty) {
+        final matchesPart = e.particular.toLowerCase().contains(cleanQuery);
+        final matchesCat = e.category.toLowerCase().contains(cleanQuery);
+        if (!matchesPart && !matchesCat) continue;
+      }
+      incList.add(e);
+    }
+    incList.sort((a, b) => b.amount.compareTo(a.amount));
+
+    final totalExp = expList.fold(0.0, (sum, e) => sum + e.amount);
+    final totalInc = incList.fold(0.0, (sum, e) => sum + e.amount);
+    final net = totalInc - totalExp;
+
+    return ProfitLossCalculation(
+      expenses: expList,
+      incomes: incList,
+      totalExpenses: totalExp,
+      totalIncome: totalInc,
+      netAmount: net.abs(),
+      isProfit: net >= 0,
+    );
+  }
 
   // --- AUDIT TRAIL & HISTORY LOGGING ---
   Future<void> addAuditLog(AuditLogEntry entry) async {
@@ -934,6 +1120,7 @@ class ChallanProvider extends ChangeNotifier {
       final decoded = jsonDecode(trimmed);
       List<dynamic> rawChallans = [];
       List<dynamic> rawParties = [];
+      List<dynamic> rawEntries = [];
       Map<String, dynamic>? brandingMap;
       bool isPartial = false;
 
@@ -984,6 +1171,10 @@ class ChallanProvider extends ChangeNotifier {
         } else if (map['settings'] is Map) {
           brandingMap = Map<String, dynamic>.from(map['settings'] as Map);
         }
+
+        if (map['incomeExpenseEntries'] is List) {
+          rawEntries = map['incomeExpenseEntries'] as List;
+        }
       } else {
         return BackupAnalysisResult(
           isValid: false,
@@ -1031,7 +1222,16 @@ class ChallanProvider extends ChangeNotifier {
         }
       }
 
-      if (parsedChallans.isEmpty && parsedParties.isEmpty && brandingMap == null) {
+      final parsedEntries = <IncomeExpenseEntry>[];
+      for (var item in rawEntries) {
+        if (item is Map) {
+          try {
+            parsedEntries.add(IncomeExpenseEntry.fromJson(Map<String, dynamic>.from(item)));
+          } catch (_) {}
+        }
+      }
+
+      if (parsedChallans.isEmpty && parsedParties.isEmpty && parsedEntries.isEmpty && brandingMap == null) {
         return BackupAnalysisResult(
           isValid: false,
           errorMessage: 'No challan records or parties could be identified in the provided file.',
@@ -1042,6 +1242,7 @@ class ChallanProvider extends ChangeNotifier {
         isValid: true,
         challans: parsedChallans,
         parties: parsedParties,
+        incomeExpenseEntries: parsedEntries,
         branding: brandingMap,
         isPartialOrLegacy: isPartial,
         totalChallans: parsedChallans.length,
@@ -1105,6 +1306,8 @@ class ChallanProvider extends ChangeNotifier {
 
       await _storage.saveParties(_parties);
       await _storage.saveChallans(_challans);
+      _incomeExpenseEntries = List.from(analysis.incomeExpenseEntries);
+      await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
 
       if (importBranding && analysis.branding != null) {
         await _applyBranding(analysis.branding!);
@@ -1244,6 +1447,13 @@ class ChallanProvider extends ChangeNotifier {
 
       await _storage.saveParties(_parties);
       await _storage.saveChallans(_challans);
+      // Merge income/expense entries without duplicates
+      for (var entry in analysis.incomeExpenseEntries) {
+        if (!_incomeExpenseEntries.any((e) => e.id == entry.id)) {
+          _incomeExpenseEntries.add(entry);
+        }
+      }
+      await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
 
       if (importBranding && analysis.branding != null) {
         await _applyBranding(analysis.branding!);

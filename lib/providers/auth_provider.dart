@@ -39,6 +39,16 @@ class AuthProvider extends ChangeNotifier {
     return master.password;
   }
 
+  /// Validates password for confirmation security gates (e.g. Party Add, Edit, Delete)
+  bool verifyPassword(String enteredPassword) {
+    final clean = enteredPassword.trim();
+    if (clean.isEmpty) return false;
+    if (_currentUser != null && clean == _currentUser!.password) {
+      return true;
+    }
+    return clean == masterPassword || clean == defaultPassword;
+  }
+
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
   AppUser? get currentUser => _currentUser;

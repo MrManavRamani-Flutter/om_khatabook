@@ -4,6 +4,7 @@ import '../models/challan_entry.dart';
 import '../models/party.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
+import 'password_confirmation_dialog.dart';
 
 class AddEditPartyDialog extends StatefulWidget {
   final Party? partyToEdit;
@@ -53,6 +54,20 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
 
     const uName = 'OM MAVTAR';
     const uRole = 'MASTER';
+
+    final isEdit = widget.partyToEdit != null;
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: isEdit ? 'Confirm Edit Party' : 'Confirm Add Party',
+      message: isEdit
+          ? 'Enter password to confirm updating party "$formattedName".'
+          : 'Enter password to confirm adding new party "$formattedName".',
+      actionLabel: isEdit ? 'Save Changes' : 'Add Party',
+      icon: isEdit ? Icons.edit : Icons.person_add,
+      iconColor: AppColors.primary,
+    );
+
+    if (!confirmed) return;
 
     if (widget.partyToEdit != null) {
       final updated = widget.partyToEdit!.copyWith(

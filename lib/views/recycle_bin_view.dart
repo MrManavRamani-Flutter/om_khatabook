@@ -6,6 +6,7 @@ import '../models/party.dart';
 import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/password_confirmation_dialog.dart';
 
 class RecycleBinView extends StatefulWidget {
   const RecycleBinView({super.key});
@@ -105,44 +106,27 @@ class _RecycleBinViewState extends State<RecycleBinView> {
     );
   }
 
-  void _confirmPermanentDeleteParty(Party party) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Party Permanently?'),
-        content: Text(
-          'Are you sure you want to permanently erase "${party.name}"?\n\n'
-          'This party record will be destroyed and cannot be recovered.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await context
-                  .read<ChallanProvider>()
-                  .deletePermanentlyParty(party.id);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Party "${party.name}" permanently deleted.'),
-                    backgroundColor: Colors.red.shade800,
-                  ),
-                );
-              }
-            },
-            child: const Text('Delete Permanently'),
-          ),
-        ],
-      ),
+  Future<void> _confirmPermanentDeleteParty(Party party) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Permanently Erase Party',
+      message: 'Enter your password to confirm permanently erasing "${party.name}". This action cannot be undone.',
+      actionLabel: 'Erase Permanently',
+      icon: Icons.delete_forever,
+      iconColor: AppColors.warningText,
     );
+
+    if (!confirmed || !mounted) return;
+
+    await context.read<ChallanProvider>().deletePermanentlyParty(party.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Party "${party.name}" permanently deleted.'),
+          backgroundColor: Colors.red.shade800,
+        ),
+      );
+    }
   }
 
   @override

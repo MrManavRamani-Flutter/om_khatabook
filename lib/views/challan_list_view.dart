@@ -423,9 +423,9 @@ class ChallanListView extends StatelessWidget {
                     ),
                     _buildKpiCard(
                       context,
-                      title: 'TOTAL FINAL AMOUNT',
-                      amount: Formatters.currency(provider.totalFinalAmount),
-                      icon: Icons.account_balance_wallet,
+                      title: 'TOTAL PAID AMOUNT',
+                      amount: Formatters.currency(provider.totalPaidAmount),
+                      icon: Icons.payments_outlined,
                       color: const Color(0xFF0284C7),
                       bgColor: const Color(0xFFE0F2FE),
                     ),

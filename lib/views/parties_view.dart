@@ -7,6 +7,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_party_dialog.dart';
+import '../widgets/password_confirmation_dialog.dart';
 import 'party_ledger_detail_view.dart';
 
 class PartiesView extends StatefulWidget {
@@ -33,43 +34,29 @@ class _PartiesViewState extends State<PartiesView> {
     );
   }
 
-  void _confirmDelete(BuildContext context, Party party) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Move Party to Recycle Bin?'),
-        content: Text(
-          'Are you sure you want to move ${party.name} to the Recycle Bin? Existing challans linked to this party will remain preserved, and you can restore or permanently delete this party anytime from the Recycle Bin.',
+  Future<void> _confirmDelete(BuildContext context, Party party) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Confirm Delete Party',
+      message: 'Enter your password to confirm moving "${party.name}" to the Recycle Bin. Linked challans will remain preserved.',
+      actionLabel: 'Move to Bin',
+      icon: Icons.delete_outline,
+      iconColor: AppColors.warningText,
+    );
+
+    if (!confirmed || !context.mounted) return;
+
+    context.read<ChallanProvider>().moveToBinParty(party.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${party.name} moved to Recycle Bin'),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.amberAccent,
+          onPressed: () {
+            context.read<ChallanProvider>().restoreParty(party.id);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<ChallanProvider>().moveToBinParty(party.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${party.name} moved to Recycle Bin'),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: Colors.amberAccent,
-                    onPressed: () {
-                      context.read<ChallanProvider>().restoreParty(party.id);
-                    },
-                  ),
-                ),
-              );
-            },
-            child: const Text('Move to Bin'),
-          ),
-        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/branding_dialogs.dart';
 import 'challan_list_view.dart';
+import 'net_profit_loss_view.dart';
 import 'parties_view.dart';
 import 'recycle_bin_view.dart';
 import 'settings_view.dart';
@@ -24,7 +25,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   void _navigateToSettings({int categoryIndex = 0}) {
     setState(() {
-      _selectedIndex = 4;
+      _selectedIndex = 5;
       _settingsCategoryIndex = categoryIndex;
     });
   }
@@ -70,12 +71,15 @@ class _MainLayoutState extends State<MainLayout> {
         contentBody = const PartiesView();
         break;
       case 2:
-        contentBody = const SummaryReportsView();
+        contentBody = const NetProfitLossView();
         break;
       case 3:
-        contentBody = const RecycleBinView();
+        contentBody = const SummaryReportsView();
         break;
       case 4:
+        contentBody = const RecycleBinView();
+        break;
+      case 5:
         contentBody = SettingsView(
           key: ValueKey('settings_category_$_settingsCategoryIndex'),
           initialCategoryIndex: _settingsCategoryIndex,
@@ -288,6 +292,14 @@ class _MainLayoutState extends State<MainLayout> {
               ),
               _buildNavItem(
                 index: 2,
+                icon: Icons.analytics_outlined,
+                activeIcon: Icons.analytics,
+                label: 'Net Profit - Loss',
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 3,
                 icon: Icons.bar_chart_outlined,
                 activeIcon: Icons.bar_chart,
                 label: 'Financial Reports',
@@ -295,7 +307,7 @@ class _MainLayoutState extends State<MainLayout> {
                 isDrawer: isDrawer,
               ),
               _buildNavItem(
-                index: 3,
+                index: 4,
                 icon: Icons.delete_outline,
                 activeIcon: Icons.delete,
                 label: 'Recycle Bin',
@@ -305,7 +317,7 @@ class _MainLayoutState extends State<MainLayout> {
                 isDrawer: isDrawer,
               ),
               _buildNavItem(
-                index: 4,
+                index: 5,
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
                 label: 'Settings',
