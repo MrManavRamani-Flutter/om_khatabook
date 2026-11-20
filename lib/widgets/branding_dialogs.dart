@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/challan_provider.dart';
@@ -102,19 +103,27 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(14),
-                              child: currentBase64.isNotEmpty
-                                  ? Image.memory(
-                                      base64Decode(currentBase64),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                                        'assets/logo/app_logo.png',
+                              child: Builder(
+                                builder: (context) {
+                                  if (currentBase64.isNotEmpty) {
+                                    try {
+                                      final bytes = base64Decode(currentBase64);
+                                      return Image.memory(
+                                        bytes,
                                         fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  : Image.asset(
-                                      'assets/logo/app_logo.png',
-                                      fit: BoxFit.cover,
-                                    ),
+                                        errorBuilder: (context, error, stackTrace) => Image.asset(
+                                          'assets/logo/app_logo.png',
+                                          fit: BoxFit.cover,
+                                        ),
+                                      );
+                                    } catch (_) {}
+                                  }
+                                  return Image.asset(
+                                    'assets/logo/app_logo.png',
+                                    fit: BoxFit.cover,
+                                  );
+                                },
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -302,24 +311,34 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                     Center(
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 38,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                            backgroundImage: currentBase64.isNotEmpty
-                                ? MemoryImage(base64Decode(currentBase64))
-                                : null,
-                            child: currentBase64.isEmpty
-                                ? Text(
-                                    provider.adminName.isNotEmpty
-                                        ? provider.adminName[0].toUpperCase()
-                                        : 'O',
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  )
-                                : null,
+                          Builder(
+                            builder: (context) {
+                              Uint8List? previewBytes;
+                              if (currentBase64.isNotEmpty) {
+                                try {
+                                  previewBytes = base64Decode(currentBase64);
+                                } catch (_) {
+                                  previewBytes = null;
+                                }
+                              }
+                              return CircleAvatar(
+                                radius: 38,
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                                backgroundImage: previewBytes != null ? MemoryImage(previewBytes) : null,
+                                child: previewBytes == null
+                                    ? Text(
+                                        provider.adminName.isNotEmpty
+                                            ? provider.adminName[0].toUpperCase()
+                                            : 'O',
+                                        style: const TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : null,
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -593,12 +612,21 @@ class ProfileAvatarWidget extends StatelessWidget {
     final profileBase64 = provider.profileLogoBase64;
     final initial = provider.adminName.isNotEmpty ? provider.adminName[0].toUpperCase() : 'O';
 
+    Uint8List? avatarBytes;
+    if (profileBase64.isNotEmpty) {
+      try {
+        avatarBytes = base64Decode(profileBase64);
+      } catch (_) {
+        avatarBytes = null;
+      }
+    }
+
     Widget avatarWidget = CircleAvatar(
       radius: radius,
       backgroundColor: AppColors.primary.withValues(alpha: 0.15),
       foregroundColor: AppColors.primary,
-      backgroundImage: profileBase64.isNotEmpty ? MemoryImage(base64Decode(profileBase64)) : null,
-      child: profileBase64.isEmpty
+      backgroundImage: avatarBytes != null ? MemoryImage(avatarBytes) : null,
+      child: avatarBytes == null
           ? Text(
               initial,
               style: TextStyle(

@@ -119,6 +119,20 @@ class _SettingsViewState extends State<SettingsView> {
 
   // --- BACKUP & RESTORE ACTIONS ---
 
+  Future<void> _revealFileInExplorer(String path) async {
+    try {
+      if (Platform.isMacOS) {
+        await Process.run('open', ['-R', path]);
+      } else if (Platform.isWindows) {
+        await Process.run('explorer.exe', ['/select,', path]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [File(path).parent.path]);
+      }
+    } catch (e) {
+      debugPrint('Error revealing file: $e');
+    }
+  }
+
   Future<void> _exportBackup(BuildContext context) async {
     try {
       final path = await context.read<ChallanProvider>().exportBackup();
@@ -126,11 +140,12 @@ class _SettingsViewState extends State<SettingsView> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             title: const Row(
               children: [
                 Icon(Icons.check_circle, color: AppColors.successText),
                 SizedBox(width: 8),
-                Text('Backup Exported!'),
+                Text('Backup Exported Successfully!'),
               ],
             ),
             content: Column(
@@ -145,15 +160,24 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'You can copy this file to an external drive or keep it safe on your PC/Mac.',
+                  'You can upload this exact .json file in "Restore Data" to recover or merge records at any time.',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
             actions: [
-              TextButton(
+              OutlinedButton.icon(
+                icon: const Icon(Icons.folder_open, size: 16),
+                label: const Text('Show in Folder / Finder'),
+                onPressed: () => _revealFileInExplorer(path),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Close'),
+                child: const Text('OK'),
               ),
             ],
           ),

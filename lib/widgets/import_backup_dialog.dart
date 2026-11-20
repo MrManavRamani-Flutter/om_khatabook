@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -17,8 +19,13 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
   BackupImportMode _selectedMode = BackupImportMode.merge; // Recommended default
   bool _importBranding = true;
   bool _isLoading = false;
+  bool _isPickingFile = false;
   List<File> _recentFiles = [];
   File? _selectedFile;
+  String? _selectedFileName;
+  String? _selectedFileSize;
+  String? _selectedFilePath;
+  String? _fileError;
   BackupAnalysisResult? _analysis;
 
   @override
@@ -60,31 +67,139 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
     });
   }
 
-  Future<void> _pasteFromClipboard() async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data?.text != null && data!.text!.isNotEmpty) {
-      _textController.text = data.text!;
-      _selectedFile = null;
+  Future<void> _pickBackupFile() async {
+    setState(() {
+      _isPickingFile = true;
+      _fileError = null;
+    });
+
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        dialogTitle: 'Select OM Mavtar Backup JSON File',
+      );
+
+      if (picked != null) {
+        String? content;
+
+        if (picked.path != null) {
+          final file = File(picked.path!);
+          if (await file.exists()) {
+            content = await file.readAsString();
+            _selectedFile = file;
+          }
+        }
+
+        if (content == null || content.isEmpty) {
+          try {
+            final bytes = await picked.readAsBytes();
+            if (bytes.isNotEmpty) {
+              content = utf8.decode(bytes);
+            }
+          } catch (e) {
+            debugPrint('Failed reading bytes: $e');
+          }
+        }
+
+        if (content != null && content.trim().isNotEmpty) {
+          final fileLength = picked.lengthSync() ?? (await picked.length()) ?? 0;
+          setState(() {
+            _selectedFileName = picked.name;
+            _selectedFileSize = (fileLength / 1024).toStringAsFixed(1);
+            _selectedFilePath = picked.path;
+            _textController.text = content!;
+            _fileError = null;
+          });
+        } else {
+          setState(() {
+            _fileError = 'Selected backup file is empty or could not be read.';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('FilePicker error: $e');
+      // Native macOS fallback in case sandbox or plugin issue occurs
+      if (Platform.isMacOS) {
+        try {
+          final res = await Process.run('osascript', [
+            '-e',
+            'POSIX path of (choose file of type {"json"} with prompt "Select OM Mavtar Backup JSON File")',
+          ]);
+          if (res.exitCode == 0) {
+            final p = res.stdout.toString().trim();
+            if (p.isNotEmpty) {
+              final file = File(p);
+              if (await file.exists()) {
+                final content = await file.readAsString();
+                final stat = await file.stat();
+                setState(() {
+                  _selectedFileName = file.uri.pathSegments.last;
+                  _selectedFileSize = (stat.size / 1024).toStringAsFixed(1);
+                  _selectedFilePath = p;
+                  _selectedFile = file;
+                  _textController.text = content;
+                  _fileError = null;
+                });
+                return;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      setState(() {
+        _fileError = 'Error selecting file: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _isPickingFile = false);
     }
   }
 
-  Future<void> _onFileSelected(File? file) async {
-    if (file == null) return;
+  void _clearSelectedFile() {
     setState(() {
-      _selectedFile = file;
+      _selectedFile = null;
+      _selectedFileName = null;
+      _selectedFileSize = null;
+      _selectedFilePath = null;
+      _fileError = null;
+      _textController.clear();
+      _analysis = null;
     });
+  }
+
+  Future<void> _onRecentFileSelected(File? file) async {
+    if (file == null) return;
     try {
       final content = await file.readAsString();
-      _textController.text = content;
+      final stat = await file.stat();
+      setState(() {
+        _selectedFile = file;
+        _selectedFileName = file.uri.pathSegments.last;
+        _selectedFileSize = (stat.size / 1024).toStringAsFixed(1);
+        _selectedFilePath = file.path;
+        _textController.text = content;
+        _fileError = null;
+      });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not read backup file: $e'),
-            backgroundColor: AppColors.warningText,
-          ),
-        );
+        setState(() {
+          _fileError = 'Could not read backup file: $e';
+        });
       }
+    }
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.isNotEmpty) {
+      setState(() {
+        _selectedFile = null;
+        _selectedFileName = 'Pasted_Clipboard_Data.json';
+        _selectedFileSize = (data.text!.length / 1024).toStringAsFixed(1);
+        _selectedFilePath = null;
+        _textController.text = data.text!;
+        _fileError = null;
+      });
     }
   }
 
@@ -142,7 +257,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Strategy: ${summary.mode == BackupImportMode.merge ? "Combine & Merge" : "Clean Overwrite (Replace)"}',
+                    'Strategy: ${summary.mode == BackupImportMode.merge ? "Combine & Merge (मर्ज)" : "Clean Overwrite (पुराना रिप्लेस)"}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
@@ -175,7 +290,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
-    final dialogWidth = screenWidth > 640 ? 580.0 : screenWidth * 0.92;
+    final dialogWidth = screenWidth > 640 ? 590.0 : screenWidth * 0.94;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -202,7 +317,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Recover records or merge backup data seamlessly',
+                  'Upload an exported backup file to restore or merge records',
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -219,112 +334,249 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
             children: [
               const SizedBox(height: 8),
 
-              // RECENT EXPORTED BACKUP FILES DROPDOWN (IF ANY)
-              if (_recentFiles.isNotEmpty) ...[
+              // 1. FILE UPLOAD BOX (PRIMARY INTERACTION)
+              if (_selectedFileName == null) ...[
+                // DROP/CLICK UPLOAD AREA
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.primary.withValues(alpha: isDark ? 0.08 : 0.04),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      width: 1.5,
                     ),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.folder_open, size: 16, color: AppColors.primary),
-                          SizedBox(width: 6),
-                          Text(
-                            'Quick Select Recent Backup File (Documents):',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<File>(
-                          value: _selectedFile,
-                          isExpanded: true,
-                          hint: const Text('Select an exported backup file...', style: TextStyle(fontSize: 12)),
-                          items: _recentFiles.map((f) {
-                            final name = f.uri.pathSegments.last;
-                            final stat = f.statSync();
-                            final sizeKb = (stat.size / 1024).toStringAsFixed(1);
-                            return DropdownMenuItem<File>(
-                              value: f,
-                              child: Text(
-                                '$name ($sizeKb KB)',
-                                style: const TextStyle(fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: _onFileSelected,
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(
+                          Icons.upload_file_rounded,
+                          size: 34,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Upload Backup JSON File',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Browse and upload the exact .json file exported from OM Mavtar Group Khata Book.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 1,
+                        ),
+                        icon: _isPickingFile
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.folder_open_rounded, size: 20),
+                        label: Text(
+                          _isPickingFile ? 'Selecting File...' : 'Browse & Upload JSON File',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        onPressed: _isPickingFile ? null : _pickBackupFile,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-              ],
 
-              // JSON INPUT TEXTAREA WITH QUICK ACTIONS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Backup JSON Data:',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        icon: const Icon(Icons.content_paste, size: 14),
-                        label: const Text('Paste JSON', style: TextStyle(fontSize: 11.5)),
-                        onPressed: _pasteFromClipboard,
+                // QUICK SELECT FROM RECENT EXPORTED FILES (IF ANY)
+                if (_recentFiles.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
                       ),
-                      if (_textController.text.isNotEmpty)
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            visualDensity: VisualDensity.compact,
-                            foregroundColor: Colors.grey,
-                          ),
-                          onPressed: () {
-                            _textController.clear();
-                            setState(() {
-                              _selectedFile = null;
-                            });
-                          },
-                          child: const Text('Clear', style: TextStyle(fontSize: 11.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.history, size: 16, color: AppColors.primary),
+                            SizedBox(width: 6),
+                            Text(
+                              'Or Select Recent Export (Documents Folder):',
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                    ],
+                        const SizedBox(height: 6),
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<File>(
+                            value: _selectedFile,
+                            isExpanded: true,
+                            hint: const Text('Choose recently exported backup...', style: TextStyle(fontSize: 12)),
+                            items: _recentFiles.map((f) {
+                              final name = f.uri.pathSegments.last;
+                              final stat = f.statSync();
+                              final sizeKb = (stat.size / 1024).toStringAsFixed(1);
+                              return DropdownMenuItem<File>(
+                                value: f,
+                                child: Text(
+                                  '$name ($sizeKb KB)',
+                                  style: const TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: _onRecentFileSelected,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _textController,
-                maxLines: 5,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                decoration: InputDecoration(
-                  hintText: '{\n  "app": "OM Mavtar Group Khata Book",\n  "challans": [ ... ],\n  "parties": [ ... ]\n}',
-                  hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.all(12),
+              ] else ...[
+                // 2. SELECTED FILE SUMMARY CARD (LOADED SUCCESSFULLY)
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.insert_drive_file_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedFileName ?? 'Backup File',
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'File Size: ${_selectedFileSize ?? "0"} KB • JSON Backup Ready',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                              ),
+                            ),
+                            if (_selectedFilePath != null && _selectedFilePath!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedFilePath!,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                  fontFamily: 'monospace',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                                  ),
+                                  icon: const Icon(Icons.folder_open, size: 14),
+                                  label: const Text('Change File', style: TextStyle(fontSize: 11)),
+                                  onPressed: _pickBackupFile,
+                                ),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    foregroundColor: AppColors.warningText,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    side: BorderSide(color: AppColors.warningText.withValues(alpha: 0.5)),
+                                  ),
+                                  icon: const Icon(Icons.close, size: 14),
+                                  label: const Text('Remove', style: TextStyle(fontSize: 11)),
+                                  onPressed: _clearSelectedFile,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
 
-              // LIVE INSPECTION / ANALYSIS CARD
-              if (_analysis != null) ...[
+              // ERROR BANNER
+              if (_fileError != null) ...[
                 const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF331515) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.warningText.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppColors.warningText, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _fileError!,
+                          style: const TextStyle(fontSize: 12, color: AppColors.warningText),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // 2. LIVE FILE ANALYSIS BREAKDOWN
+              if (_analysis != null) ...[
+                const SizedBox(height: 14),
                 if (_analysis!.isValid) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -358,7 +610,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                             Text(
                               _analysis!.isPartialOrLegacy
                                   ? 'Partial / Loose Structure (Auto-Recovered)'
-                                  : 'Valid Backup Package Detected',
+                                  : 'Valid Backup Package Ready',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -408,7 +660,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                 ],
               ],
 
-              // STRATEGY SELECTION SECTION (USER KO PUCHNA HAI)
+              // 3. STRATEGY SELECTION SECTION
               if (_analysis != null && _analysis!.isValid) ...[
                 const SizedBox(height: 16),
                 const Text(
@@ -437,7 +689,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                   title: 'Replace Everything (Clean Overwrite)',
                   hindiSubtitle: 'पुराना डेटा डिलीट करके नया डेटा सेट करें',
                   description:
-                      '⚠️ Warning: Purana sara data remove ho jayega aur backup file ka naya data clean install hoga.',
+                      '⚠️ Warning: Purana sara data remove ho jayega aur backup file ka data clean load hoga.',
                   icon: Icons.delete_sweep,
                   isDanger: true,
                 ),
@@ -456,6 +708,58 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                     onChanged: (val) => setState(() => _importBranding = val ?? true),
                   ),
               ],
+
+              // 4. OPTIONAL ADVANCED COLLAPSIBLE RAW JSON (FOR COPY-PASTE BACKUP)
+              const SizedBox(height: 10),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Optional: Paste or View Raw JSON Content',
+                    style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                  ),
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.content_paste, size: 14),
+                          label: const Text('Paste from Clipboard', style: TextStyle(fontSize: 11.5)),
+                          onPressed: _pasteFromClipboard,
+                        ),
+                        if (_textController.text.isNotEmpty)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              visualDensity: VisualDensity.compact,
+                              foregroundColor: Colors.grey,
+                            ),
+                            onPressed: _clearSelectedFile,
+                            child: const Text('Clear', style: TextStyle(fontSize: 11.5)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _textController,
+                      maxLines: 4,
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                      decoration: InputDecoration(
+                        hintText: 'Raw JSON backup content preview...',
+                        hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.all(10),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -582,7 +886,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                     )
                   : null,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
