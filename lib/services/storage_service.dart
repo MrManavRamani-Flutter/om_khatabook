@@ -37,6 +37,161 @@ class StorageService {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    await migrateDatabase();
+  }
+
+  /// Automatically discovers and upgrades database schemas, legacy keys,
+  /// and missing fields when installing or updating across systems.
+  Future<void> migrateDatabase() async {
+    try {
+      // 1. Migrate legacy party keys (e.g. from v1.0.0 or pre-v2 builds)
+      final currentPartiesStr = _prefs.getString(_keyParties);
+      if (currentPartiesStr == null || currentPartiesStr.trim() == '[]' || currentPartiesStr.isEmpty) {
+        final legacyPartiesStr = _prefs.getString('om_parties') ?? _prefs.getString('om_parties_data');
+        if (legacyPartiesStr != null && legacyPartiesStr.isNotEmpty && legacyPartiesStr.trim() != '[]') {
+          await _prefs.setString(_keyParties, legacyPartiesStr);
+          debugPrint('Successfully migrated legacy parties into $_keyParties');
+        }
+      }
+
+      // 2. Migrate legacy challans or transactions
+      final currentChallansStr = _prefs.getString(_keyChallans);
+      if (currentChallansStr == null || currentChallansStr.trim() == '[]' || currentChallansStr.isEmpty) {
+        final legacyChallansStr = _prefs.getString('om_challans');
+        if (legacyChallansStr != null && legacyChallansStr.isNotEmpty && legacyChallansStr.trim() != '[]') {
+          await _prefs.setString(_keyChallans, legacyChallansStr);
+          debugPrint('Successfully migrated legacy challans into $_keyChallans');
+        } else {
+          final legacyTxStr = _prefs.getString('om_transactions_data');
+          if (legacyTxStr != null && legacyTxStr.isNotEmpty && legacyTxStr.trim() != '[]') {
+            try {
+              final List txList = jsonDecode(legacyTxStr) as List;
+              final converted = txList.map((tx) {
+                if (tx is Map) {
+                  final m = Map<String, dynamic>.from(tx);
+                  final amt = (m['amount'] as num?)?.toDouble() ?? 0.0;
+                  return {
+                    'id': m['id'] ?? 'migrated_${DateTime.now().millisecondsSinceEpoch}',
+                    'challanNo': m['referenceNo'] ?? m['id'] ?? 'CH-LEGACY',
+                    'partyId': m['partyId'] ?? '',
+                    'partyName': m['partyName'] ?? 'Legacy Party',
+                    'date': m['date'] ?? DateTime.now().toIso8601String(),
+                    'challanAmount': amt,
+                    'hasGstBill': false,
+                    'gstRate': 0.0,
+                    'gstAmount': 0.0,
+                    'finalAmount': amt,
+                    'paidAmount': amt,
+                    'paymentOption': 'cash',
+                    'paymentStatus': 'paid',
+                    'notes': m['description'] ?? 'Migrated legacy transaction',
+                    'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
+                    'createdBy': 'OM MAVTAR',
+                  };
+                }
+                return tx;
+              }).toList();
+              await _prefs.setString(_keyChallans, jsonEncode(converted));
+              debugPrint('Successfully converted legacy transactions into $_keyChallans');
+            } catch (e) {
+              debugPrint('Error converting legacy transactions: $e');
+            }
+          }
+        }
+      }
+
+      // 3. Upgrade existing challans schema (ensure paidAmount & createdBy = OM MAVTAR)
+      final existingChallansJson = _prefs.getString(_keyChallans);
+      if (existingChallansJson != null && existingChallansJson.isNotEmpty) {
+        try {
+          final List list = jsonDecode(existingChallansJson) as List;
+          bool modified = false;
+          final upgraded = list.map((item) {
+            if (item is Map) {
+              final m = Map<String, dynamic>.from(item);
+              if (!m.containsKey('paidAmount') || m['paidAmount'] == null) {
+                final status = (m['paymentStatus'] as String?)?.toLowerCase();
+                final finalAmt = (m['finalAmount'] as num?)?.toDouble() ??
+                    (m['challanAmount'] as num?)?.toDouble() ??
+                    0.0;
+                if (status == 'paid') {
+                  m['paidAmount'] = finalAmt;
+                } else if (status == 'pending' || status == 'unpaid' || status == 'warning') {
+                  m['paidAmount'] = 0.0;
+                } else {
+                  m['paidAmount'] = finalAmt;
+                }
+                modified = true;
+              }
+              if (m['createdBy'] == null ||
+                  m['createdBy'] == 'system' ||
+                  m['createdBy'] == 'developer' ||
+                  m['createdBy'] == 'admin') {
+                m['createdBy'] = 'OM MAVTAR';
+                modified = true;
+              }
+              return m;
+            }
+            return item;
+          }).toList();
+          if (modified) {
+            await _prefs.setString(_keyChallans, jsonEncode(upgraded));
+            debugPrint('Upgraded existing challan entries schema (paidAmount & createdBy).');
+          }
+        } catch (e) {
+          debugPrint('Error upgrading existing challans: $e');
+        }
+      }
+
+      // 4. Migrate legacy users if needed
+      final currentUsersStr = _prefs.getString(_keyUsers);
+      if (currentUsersStr == null || currentUsersStr.trim() == '[]') {
+        final legacyUsers = _prefs.getString('om_users');
+        if (legacyUsers != null && legacyUsers.isNotEmpty) {
+          await _prefs.setString(_keyUsers, legacyUsers);
+        }
+      }
+
+      // 5. Migrate active session: normalize any developer/admin to OMMAVTAR36
+      final sessionStr = _prefs.getString(_keyActiveSession) ?? _prefs.getString('om_active_session');
+      if (sessionStr != null && sessionStr.isNotEmpty) {
+        try {
+          final sessionMap = jsonDecode(sessionStr) as Map<String, dynamic>;
+          sessionMap['id'] = 'user_ommavtar36';
+          sessionMap['username'] = 'OMMAVTAR36';
+          sessionMap['displayName'] = 'OM MAVTAR';
+          sessionMap['password'] = 'OMMAVTAR36';
+          sessionMap['role'] = 'admin';
+          sessionMap['roleId'] = 'admin';
+          sessionMap['createdAt'] = sessionMap['createdAt'] ?? DateTime.now().toIso8601String();
+          sessionMap['createdBy'] = 'system';
+          await _prefs.setString(_keyActiveSession, jsonEncode(sessionMap));
+        } catch (_) {}
+      }
+
+      // 6. Migrate branding settings if existing in old non-v2 keys
+      if (_prefs.getString(_keyCompanyName) == null) {
+        final oldName = _prefs.getString('om_company_name');
+        if (oldName != null) await _prefs.setString(_keyCompanyName, oldName);
+      }
+      if (_prefs.getString(_keyCompanyTagline) == null) {
+        final oldTagline = _prefs.getString('om_company_tagline');
+        if (oldTagline != null) await _prefs.setString(_keyCompanyTagline, oldTagline);
+      }
+      if (_prefs.getString(_keyAppLogoBase64) == null) {
+        final oldLogo = _prefs.getString('om_app_logo_base64');
+        if (oldLogo != null) await _prefs.setString(_keyAppLogoBase64, oldLogo);
+      }
+      if (_prefs.getString(_keyProfileLogoBase64) == null) {
+        final oldProfileLogo = _prefs.getString('om_profile_logo_base64');
+        if (oldProfileLogo != null) await _prefs.setString(_keyProfileLogoBase64, oldProfileLogo);
+      }
+
+      // 7. Stamp current database schema version
+      await _prefs.setString('om_database_version', '2.1.0');
+    } catch (e) {
+      debugPrint('Database migration error: $e');
+    }
   }
 
   bool get isFirstRun => !(_prefs.getBool(_keyFirstRun) ?? false);
@@ -178,9 +333,25 @@ class StorageService {
     final str = _prefs.getString(_keyActiveSession);
     if (str != null && str.isNotEmpty) {
       try {
-        return AppUser.fromJson(jsonDecode(str) as Map<String, dynamic>);
+        final map = jsonDecode(str) as Map<String, dynamic>;
+        return AppUser.fromJson(map);
       } catch (e) {
         debugPrint('Error loading active session user: $e');
+        try {
+          final map = jsonDecode(str) as Map<String, dynamic>;
+          if (map.containsKey('username')) {
+            return AppUser(
+              id: map['id'] ?? 'user_ommavtar36',
+              username: map['username'] ?? 'OMMAVTAR36',
+              password: map['password'] ?? 'OMMAVTAR36',
+              displayName: map['displayName'] ?? 'OM MAVTAR',
+              roleId: map['roleId'] ?? 'admin',
+              role: UserRole.admin,
+              createdAt: DateTime.now(),
+              createdBy: 'system',
+            );
+          }
+        } catch (_) {}
       }
     }
     return null;
@@ -421,25 +592,52 @@ class StorageService {
   }
 
   Future<List<File>> getRecentBackupFiles() async {
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final entities = dir.listSync();
-      final files = entities.whereType<File>().where((f) {
-        final name = f.uri.pathSegments.last;
-        return name.startsWith('OM_Mavtar_') && name.endsWith('.json');
-      }).toList();
-      files.sort((a, b) {
-        try {
-          return b.lastModifiedSync().compareTo(a.lastModifiedSync());
-        } catch (_) {
-          return 0;
+    final files = <File>[];
+    final seenPaths = <String>{};
+
+    void scanDir(Directory dir) {
+      try {
+        if (!dir.existsSync()) return;
+        final entities = dir.listSync();
+        for (final e in entities) {
+          if (e is File) {
+            final name = e.uri.pathSegments.last;
+            if ((name.startsWith('OM_Mavtar_') || name.startsWith('OM_Khatabook_')) &&
+                name.endsWith('.json')) {
+              if (seenPaths.add(e.path)) {
+                files.add(e);
+              }
+            }
+          }
         }
-      });
-      return files;
+      } catch (e) {
+        debugPrint('Error scanning dir ${dir.path}: $e');
+      }
+    }
+
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      scanDir(docDir);
+
+      final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+      if (home != null && home.isNotEmpty) {
+        scanDir(Directory('$home/Downloads'));
+        scanDir(Directory('$home/Documents'));
+        scanDir(Directory('$home/Desktop'));
+      }
     } catch (e) {
       debugPrint('Error listing backup files: $e');
-      return [];
     }
+
+    files.sort((a, b) {
+      try {
+        return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+      } catch (_) {
+        return 0;
+      }
+    });
+
+    return files;
   }
 
   Future<bool> importBackupJson(String jsonString) async {
@@ -450,7 +648,36 @@ class StorageService {
       }
       if (data.containsKey('challans')) {
         await _prefs.setString(_keyChallans, jsonEncode(data['challans']));
+      } else if (data.containsKey('transactions')) {
+        final txList = data['transactions'] as List;
+        final converted = txList.map((tx) {
+          if (tx is Map) {
+            final m = Map<String, dynamic>.from(tx);
+            final amt = (m['amount'] as num?)?.toDouble() ?? 0.0;
+            return {
+              'id': m['id'] ?? 'migrated_${DateTime.now().millisecondsSinceEpoch}',
+              'challanNo': m['referenceNo'] ?? m['id'] ?? 'CH-LEGACY',
+              'partyId': m['partyId'] ?? '',
+              'partyName': m['partyName'] ?? 'Legacy Party',
+              'date': m['date'] ?? DateTime.now().toIso8601String(),
+              'challanAmount': amt,
+              'hasGstBill': false,
+              'gstRate': 0.0,
+              'gstAmount': 0.0,
+              'finalAmount': amt,
+              'paidAmount': amt,
+              'paymentOption': 'cash',
+              'paymentStatus': 'paid',
+              'notes': m['description'] ?? 'Migrated from legacy backup',
+              'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
+              'createdBy': 'OM MAVTAR',
+            };
+          }
+          return tx;
+        }).toList();
+        await _prefs.setString(_keyChallans, jsonEncode(converted));
       }
+
       if (data.containsKey('users')) {
         await _prefs.setString(_keyUsers, jsonEncode(data['users']));
       }
@@ -465,7 +692,29 @@ class StorageService {
       }
       if (data.containsKey('incomeExpenseEntries')) {
         await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(data['incomeExpenseEntries']));
+      } else if (data.containsKey('dayEntries')) {
+        final deList = data['dayEntries'] as List;
+        final converted = deList.map((de) {
+          if (de is Map) {
+            final m = Map<String, dynamic>.from(de);
+            final typeStr = (m['type'] as String?)?.toLowerCase() ?? 'expense';
+            return {
+              'id': m['id'] ?? 'de_${DateTime.now().millisecondsSinceEpoch}',
+              'type': typeStr == 'income' ? 'income' : 'expense',
+              'date': m['date'] ?? DateTime.now().toIso8601String(),
+              'particular': m['description'] ?? m['particular'] ?? '',
+              'amount': (m['amount'] as num?)?.toDouble() ?? 0.0,
+              'category': m['category'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
+              'paymentMode': m['paymentMode'] ?? 'Cash',
+              'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
+              'createdBy': 'OM MAVTAR',
+            };
+          }
+          return de;
+        }).toList();
+        await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(converted));
       }
+
       if (data.containsKey('branding') &&
           data['branding'] is Map<String, dynamic>) {
         final b = data['branding'] as Map<String, dynamic>;

@@ -29,7 +29,7 @@ class AuthProvider extends ChangeNotifier {
         id: 'user_ommavtar36',
         username: 'OMMAVTAR36',
         password: defaultPassword,
-        displayName: 'OM Mavtar Group',
+        displayName: 'OM MAVTAR',
         roleId: AppRole.adminId,
         role: UserRole.admin,
         createdAt: DateTime.now(),
@@ -257,14 +257,15 @@ class AuthProvider extends ChangeNotifier {
     }
 
     // Ensure OMMAVTAR36 default master account exists
-    if (!_users.any((u) => u.username.toUpperCase() == 'OMMAVTAR36')) {
+    final masterIndex = _users.indexWhere((u) => u.username.toUpperCase() == 'OMMAVTAR36');
+    if (masterIndex == -1) {
       _users.insert(
         0,
         AppUser(
           id: 'user_ommavtar36',
           username: 'OMMAVTAR36',
           password: 'OMMAVTAR36',
-          displayName: 'OM Mavtar Group',
+          displayName: 'OM MAVTAR',
           roleId: AppRole.adminId,
           role: UserRole.admin,
           email: 'ommavtar36@ommavtar.com',
@@ -274,16 +275,24 @@ class AuthProvider extends ChangeNotifier {
         ),
       );
       await _storage.saveUsers(_users);
+    } else {
+      // Ensure displayName is OM MAVTAR
+      if (_users[masterIndex].displayName != 'OM MAVTAR') {
+        _users[masterIndex] = _users[masterIndex].copyWith(displayName: 'OM MAVTAR');
+        await _storage.saveUsers(_users);
+      }
     }
+
+    final masterUser = _users.firstWhere(
+      (u) => u.username.toUpperCase() == 'OMMAVTAR36',
+    );
 
     // Try to restore existing active session
     final savedUser = await _storage.loadActiveSessionUser();
     if (savedUser != null) {
-      final matched =
-          _users.where((u) => (u.id == savedUser.id || u.username.toUpperCase() == savedUser.username.toUpperCase()) && u.isActive).toList();
-      if (matched.isNotEmpty && !matched.first.isDeleted && !matched.first.isBlocked) {
-        _currentUser = matched.first;
-      }
+      // Automatically migrate any legacy session (e.g. developer or admin) to OMMAVTAR36
+      _currentUser = masterUser;
+      await _storage.saveActiveSessionUser(_currentUser);
     }
 
     _isLoading = false;
@@ -303,7 +312,7 @@ class AuthProvider extends ChangeNotifier {
         id: 'user_ommavtar36',
         username: 'OMMAVTAR36',
         password: defaultPassword,
-        displayName: 'OM Mavtar Group',
+        displayName: 'OM MAVTAR',
         roleId: AppRole.adminId,
         role: UserRole.admin,
         createdAt: DateTime.now(),
@@ -441,7 +450,7 @@ class AuthProvider extends ChangeNotifier {
           id: 'user_ommavtar36',
           username: 'OMMAVTAR36',
           password: cleanNew,
-          displayName: 'OM Mavtar Group',
+          displayName: 'OM MAVTAR',
           roleId: AppRole.adminId,
           role: UserRole.admin,
           createdAt: DateTime.now(),

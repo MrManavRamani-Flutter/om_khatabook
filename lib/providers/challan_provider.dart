@@ -1145,6 +1145,34 @@ class ChallanProvider extends ChangeNotifier {
 
         if (map['challans'] is List) {
           rawChallans = map['challans'] as List;
+        } else if (map['transactions'] is List) {
+          final txList = map['transactions'] as List;
+          rawChallans = txList.map((tx) {
+            if (tx is Map) {
+              final m = Map<String, dynamic>.from(tx);
+              final amt = (m['amount'] as num?)?.toDouble() ?? 0.0;
+              return {
+                'id': m['id'] ?? 'migrated_${DateTime.now().millisecondsSinceEpoch}',
+                'challanNo': m['referenceNo'] ?? m['id'] ?? 'CH-LEGACY',
+                'partyId': m['partyId'] ?? '',
+                'partyName': m['partyName'] ?? 'Legacy Party',
+                'date': m['date'] ?? DateTime.now().toIso8601String(),
+                'challanAmount': amt,
+                'hasGstBill': false,
+                'gstRate': 0.0,
+                'gstAmount': 0.0,
+                'finalAmount': amt,
+                'paidAmount': amt,
+                'paymentOption': 'cash',
+                'paymentStatus': 'paid',
+                'notes': m['description'] ?? '',
+                'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
+                'createdBy': 'OM MAVTAR',
+              };
+            }
+            return tx;
+          }).toList();
+          isPartial = true;
         } else if (map['entries'] is List) {
           rawChallans = map['entries'] as List;
           isPartial = true;
@@ -1170,10 +1198,36 @@ class ChallanProvider extends ChangeNotifier {
           brandingMap = Map<String, dynamic>.from(map['branding'] as Map);
         } else if (map['settings'] is Map) {
           brandingMap = Map<String, dynamic>.from(map['settings'] as Map);
+        } else if (map['profile'] is Map) {
+          final p = Map<String, dynamic>.from(map['profile'] as Map);
+          brandingMap = {
+            'companyName': p['groupName'] ?? 'OM Mavtar Group',
+            'adminName': p['ownerName'] ?? 'OM Mavtar Admin',
+          };
         }
 
         if (map['incomeExpenseEntries'] is List) {
           rawEntries = map['incomeExpenseEntries'] as List;
+        } else if (map['dayEntries'] is List) {
+          final deList = map['dayEntries'] as List;
+          rawEntries = deList.map((de) {
+            if (de is Map) {
+              final m = Map<String, dynamic>.from(de);
+              final typeStr = (m['type'] as String?)?.toLowerCase() ?? 'expense';
+              return {
+                'id': m['id'] ?? 'de_${DateTime.now().millisecondsSinceEpoch}',
+                'type': typeStr == 'income' ? 'income' : 'expense',
+                'date': m['date'] ?? DateTime.now().toIso8601String(),
+                'particular': m['description'] ?? m['particular'] ?? '',
+                'amount': (m['amount'] as num?)?.toDouble() ?? 0.0,
+                'category': m['category'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
+                'paymentMode': m['paymentMode'] ?? 'Cash',
+                'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
+                'createdBy': 'OM MAVTAR',
+              };
+            }
+            return de;
+          }).toList();
         }
       } else {
         return BackupAnalysisResult(
