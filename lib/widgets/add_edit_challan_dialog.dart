@@ -375,6 +375,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     final provider = context.watch<ChallanProvider>();
     final parties = provider.parties;
     final casingStyle = provider.textCasingStyle;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -930,18 +931,30 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: _cashPaymentMode == CashPaymentMode.fullyPaid
-                                  ? AppColors.successBgLight
-                                  : _cashPaymentMode == CashPaymentMode.partiallyPaid
-                                      ? const Color(0xFFFFFBEB)
-                                      : AppColors.warningBgLight,
+                              color: isDark
+                                  ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                      ? AppColors.primary.withValues(alpha: 0.08)
+                                      : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                          ? const Color(0xFFF59E0B).withValues(alpha: 0.1)
+                                          : AppColors.warningText.withValues(alpha: 0.08))
+                                  : (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                      ? AppColors.successBgLight
+                                      : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                          ? const Color(0xFFFFFBEB)
+                                          : AppColors.warningBgLight),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: _cashPaymentMode == CashPaymentMode.fullyPaid
-                                    ? AppColors.successBorder
-                                    : _cashPaymentMode == CashPaymentMode.partiallyPaid
-                                        ? const Color(0xFFFDE68A)
-                                        : AppColors.warningBorder,
+                                color: isDark
+                                    ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                        ? AppColors.primary.withValues(alpha: 0.4)
+                                        : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                            ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
+                                            : AppColors.warningText.withValues(alpha: 0.4))
+                                    : (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                        ? AppColors.successBorder
+                                        : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                            ? const Color(0xFFFDE68A)
+                                            : AppColors.warningBorder),
                                 width: 1.5,
                               ),
                             ),
@@ -956,11 +969,17 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                           : _cashPaymentMode == CashPaymentMode.partiallyPaid
                                               ? Icons.pie_chart
                                               : Icons.warning_amber_rounded,
-                                      color: _cashPaymentMode == CashPaymentMode.fullyPaid
-                                          ? AppColors.successText
-                                          : _cashPaymentMode == CashPaymentMode.partiallyPaid
-                                              ? const Color(0xFFB45309)
-                                              : AppColors.warningText,
+                                      color: isDark
+                                          ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                              ? AppColors.primary
+                                              : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                  ? const Color(0xFFFBBF24)
+                                                  : const Color(0xFFF87171))
+                                          : (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                              ? AppColors.successText
+                                              : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                  ? const Color(0xFFB45309)
+                                                  : AppColors.warningText),
                                       size: 20,
                                     ),
                                     const SizedBox(width: 8),
@@ -969,11 +988,17 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
-                                        color: _cashPaymentMode == CashPaymentMode.fullyPaid
-                                            ? AppColors.successText
-                                            : _cashPaymentMode == CashPaymentMode.partiallyPaid
-                                                ? const Color(0xFF92400E)
-                                                : AppColors.warningText,
+                                        color: isDark
+                                            ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                                ? AppColors.primary
+                                                : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                    ? const Color(0xFFFBBF24)
+                                                    : const Color(0xFFF87171))
+                                            : (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                                ? AppColors.successText
+                                                : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                    ? const Color(0xFF92400E)
+                                                    : AppColors.warningText),
                                       ),
                                     ),
                                   ],
@@ -982,7 +1007,33 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
 
                                 // 3 CASH PAYMENT MODES
                                 SegmentedButton<CashPaymentMode>(
-                                  showSelectedIcon: false,
+                                  showSelectedIcon: true,
+                                  style: SegmentedButton.styleFrom(
+                                    selectedBackgroundColor: isDark
+                                        ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                            ? AppColors.primary.withValues(alpha: 0.28)
+                                            : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                ? const Color(0xFFF59E0B).withValues(alpha: 0.28)
+                                                : AppColors.warningText.withValues(alpha: 0.28))
+                                        : (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                            ? AppColors.successText
+                                            : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                ? const Color(0xFFD97706)
+                                                : AppColors.warningText),
+                                    selectedForegroundColor: isDark
+                                        ? (_cashPaymentMode == CashPaymentMode.fullyPaid
+                                            ? AppColors.primary
+                                            : _cashPaymentMode == CashPaymentMode.partiallyPaid
+                                                ? const Color(0xFFFDE68A)
+                                                : const Color(0xFFFCA5A5))
+                                        : Colors.white,
+                                    foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    side: BorderSide(
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.15)
+                                          : Colors.grey.shade400,
+                                    ),
+                                  ),
                                   segments: const [
                                     ButtonSegment(
                                       value: CashPaymentMode.fullyPaid,
@@ -1021,12 +1072,12 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                 const SizedBox(height: 14),
 
                                 if (_cashPaymentMode == CashPaymentMode.fullyPaid) ...[
-                                  const Text(
+                                  Text(
                                     'Full cash amount has been received. This transaction will be marked as Cleared / Paid.',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.successText,
+                                      color: isDark ? AppColors.primary : AppColors.successText,
                                     ),
                                   ),
                                 ] else if (_cashPaymentMode == CashPaymentMode.partiallyPaid) ...[
@@ -1038,13 +1089,16 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                         child: TextFormField(
                                           controller: _paidAmountController,
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          decoration: const InputDecoration(
+                                          decoration: InputDecoration(
                                             labelText: 'Cash Received / Paid Amount (₹) *',
-                                            prefixIcon: Padding(
+                                            labelStyle: TextStyle(
+                                              color: isDark ? const Color(0xFFFBBF24) : null,
+                                            ),
+                                            prefixIcon: const Padding(
                                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                                               child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
                                             ),
-                                            prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                                            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                                             hintText: 'Enter partial amount received',
                                           ),
                                           validator: (v) {
@@ -1079,29 +1133,35 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                       final remaining = (finalAmt - paidAmt).clamp(0.0, double.infinity);
 
                                       return Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          color: isDark
+                                              ? Colors.black.withValues(alpha: 0.3)
+                                              : Colors.white,
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: const Color(0xFFFCD34D)),
+                                          border: Border.all(
+                                            color: isDark
+                                                ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+                                                : const Color(0xFFFCD34D),
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
                                               'Cash Received: ${Formatters.currency(paidAmt)}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
+                                              style: TextStyle(
+                                                fontSize: 12.5,
                                                 fontWeight: FontWeight.w600,
-                                                color: Color(0xFF92400E),
+                                                color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
                                               ),
                                             ),
                                             Text(
                                               'Remaining Due: ${Formatters.currency(remaining)}',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.bold,
-                                                color: AppColors.warningText,
+                                                color: isDark ? const Color(0xFFF87171) : AppColors.warningText,
                                               ),
                                             ),
                                           ],
@@ -1110,12 +1170,12 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                     },
                                   ),
                                 ] else ...[
-                                  const Text(
+                                  Text(
                                     'Warning: Zero cash received. Full amount will remain pending and highlighted in RED in ledger.',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.warningText,
+                                      color: isDark ? const Color(0xFFF87171) : AppColors.warningText,
                                     ),
                                   ),
                                 ],
