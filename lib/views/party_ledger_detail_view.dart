@@ -177,7 +177,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Confirm Move to Recycle Bin',
-      message: 'Enter your password to confirm moving Challan #${entry.challanNo} (${entry.partyName}) to the Recycle Bin.',
+      message: 'Enter password to move Challan #${entry.challanNo} to Recycle Bin.',
       actionLabel: 'Move to Bin',
       icon: Icons.delete_outline,
       iconColor: AppColors.warningText,
@@ -336,6 +336,8 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     filtered.sort((a, b) =>
         _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
 
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -351,7 +353,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              'Party Ledger • ${allPartyChallans.length} Total Entries Recorded',
+              'Party Ledger • ${allPartyChallans.length} Entries',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context)
@@ -365,32 +367,44 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         ),
         actions: [
           if (auth.canExportReports)
-            OutlinedButton.icon(
-              onPressed: () => _openExportDialog(context),
-              icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
-              label: const Text('Export Party Ledger'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
+            isMobile
+                ? IconButton(
+                    icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                    tooltip: 'Export Party Ledger',
+                    onPressed: () => _openExportDialog(context),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: () => _openExportDialog(context),
+                    icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                    label: const Text('Export Party Ledger'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
           if (auth.canCreateChallan) ...[
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: () => _openAddChallan(context, party),
-              icon: const Icon(Icons.add_circle, size: 18),
-              label: const Text('Add Challan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
+            const SizedBox(width: 6),
+            isMobile
+                ? IconButton(
+                    icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                    tooltip: 'Add Challan',
+                    onPressed: () => _openAddChallan(context, party),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () => _openAddChallan(context, party),
+                    icon: const Icon(Icons.add_circle, size: 18),
+                    label: const Text('Add Challan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
           ],
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(isMobile ? 12 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -591,66 +605,124 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // ROW 1: SEARCH & PAYMENT OPTION
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search Challan No, GST Bill, Cheque No, or Notes...',
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              isDense: true,
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18),
-                                      onPressed: () => setState(() => _searchQuery = ''),
-                                    )
-                                  : null,
-                            ),
-                            controller: TextEditingController(text: _searchQuery)
-                              ..selection = TextSelection.fromPosition(
-                                TextPosition(offset: _searchQuery.length),
+                    // ROW 1: SEARCH & PAYMENT OPTION (RESPONSIVE)
+                    if (isMobile) ...[
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search Challan No, GST Bill, Cheque No, or Notes...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          isDense: true,
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () => setState(() => _searchQuery = ''),
+                                )
+                              : null,
+                        ),
+                        controller: TextEditingController(text: _searchQuery)
+                          ..selection = TextSelection.fromPosition(
+                            TextPosition(offset: _searchQuery.length),
+                          ),
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<PaymentOption?>(
+                              initialValue: _paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
                               ),
-                            onChanged: (val) => setState(() => _searchQuery = val),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 3,
-                          child: DropdownButtonFormField<PaymentOption?>(
-                            initialValue: _paymentOptionFilter,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Payment Option',
-                              isDense: true,
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) => setState(() => _paymentOptionFilter = val),
                             ),
-                            items: const [
-                              DropdownMenuItem(value: null, child: Text('All Modes')),
-                              DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
-                              DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
-                            ],
-                            onChanged: (val) => setState(() => _paymentOptionFilter = val),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton.filledTonal(
-                          tooltip: 'Reset Filters',
-                          icon: const Icon(Icons.filter_alt_off, size: 18),
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _paymentOptionFilter = null;
-                              _statusFilter = null;
-                              _dateFilter = 'all';
-                              _selectedMonth = null;
-                              _selectedYear = null;
-                              _sortAscending = false;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            tooltip: 'Reset Filters',
+                            icon: const Icon(Icons.filter_alt_off, size: 18),
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = '';
+                                _paymentOptionFilter = null;
+                                _statusFilter = null;
+                                _dateFilter = 'all';
+                                _selectedMonth = null;
+                                _selectedYear = null;
+                                _sortAscending = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Search Challan No, GST Bill, Cheque No, or Notes...',
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                isDense: true,
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 18),
+                                        onPressed: () => setState(() => _searchQuery = ''),
+                                      )
+                                    : null,
+                              ),
+                              controller: TextEditingController(text: _searchQuery)
+                                ..selection = TextSelection.fromPosition(
+                                  TextPosition(offset: _searchQuery.length),
+                                ),
+                              onChanged: (val) => setState(() => _searchQuery = val),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButtonFormField<PaymentOption?>(
+                              initialValue: _paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) => setState(() => _paymentOptionFilter = val),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton.filledTonal(
+                            tooltip: 'Reset Filters',
+                            icon: const Icon(Icons.filter_alt_off, size: 18),
+                            onPressed: () {
+                              setState(() {
+                                _searchQuery = '';
+                                _paymentOptionFilter = null;
+                                _statusFilter = null;
+                                _dateFilter = 'all';
+                                _selectedMonth = null;
+                                _selectedYear = null;
+                                _sortAscending = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
 
                     // ROW 2: STATUS, PERIOD, SORT (IN ZERO-SCROLL WRAP)

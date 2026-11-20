@@ -70,12 +70,19 @@ class ViewChallanDialog extends StatelessWidget {
     final hasWarning = entry.hasWarning;
     final isCash = entry.paymentOption == PaymentOption.cash;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: 600,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,11 +165,11 @@ class ViewChallanDialog extends StatelessWidget {
                     Expanded(
                       child: Text(
                         entry.isPartiallyPaid
-                            ? 'ALERT: Partial Cash Payment (Paid: ${Formatters.currency(entry.paidAmount)} • Due: ${Formatters.currency(entry.remainingAmount)})'
+                            ? 'Partial Payment: Paid ${Formatters.currency(entry.paidAmount)} • Due ${Formatters.currency(entry.remainingAmount)}'
                             : hasWarning
-                                ? 'ALERT: Cash Payment is UNPAID / PENDING'
+                                ? 'Cash Payment: Pending / Due'
                                 : (isCash && entry.isCashPaid)
-                                    ? 'Cash Payment Received & Completed in Full'
+                                    ? 'Cash Payment: Fully Paid'
                                     : 'Cheque Payment: ${entry.chequeDetails?.status.label ?? "Pending"}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -297,55 +304,102 @@ class ViewChallanDialog extends StatelessWidget {
               const SizedBox(height: 24),
 
               // ACTION BUTTONS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (auth.canDelete)
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.warningText,
-                        side: const BorderSide(color: AppColors.warningBorder),
-                      ),
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Delete'),
-                      onPressed: () => _showDeleteConfirm(context),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  Row(
-                    children: [
-                      if (auth.canPrintInvoice) ...[
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                          ),
-                          icon: const Icon(Icons.receipt_long, size: 18),
-                          label: const Text('Tax Invoice (A4/A5)'),
-                          onPressed: () => _openInvoiceDialog(context),
+              if (isMobile)
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 10,
+                  children: [
+                    if (auth.canDelete)
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.warningText,
+                          side: const BorderSide(color: AppColors.warningBorder),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        label: const Text('Delete'),
+                        onPressed: () => _showDeleteConfirm(context),
                       ),
-                      if (auth.canEditChallan) ...[
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(Icons.edit, size: 18),
-                          label: const Text('Edit Entry'),
-                          onPressed: () => _openEdit(context),
+                    if (auth.canPrintInvoice)
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
+                        icon: const Icon(Icons.receipt_long, size: 16),
+                        label: const Text('Invoice'),
+                        onPressed: () => _openInvoiceDialog(context),
+                      ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                    if (auth.canEditChallan)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit Entry'),
+                        onPressed: () => _openEdit(context),
+                      ),
+                  ],
+                )
+              else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (auth.canDelete)
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.warningText,
+                          side: const BorderSide(color: AppColors.warningBorder),
+                        ),
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Delete'),
+                        onPressed: () => _showDeleteConfirm(context),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    Row(
+                      children: [
+                        if (auth.canPrintInvoice) ...[
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                            ),
+                            icon: const Icon(Icons.receipt_long, size: 18),
+                            label: const Text('Tax Invoice (A4/A5)'),
+                            onPressed: () => _openInvoiceDialog(context),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                        if (auth.canEditChallan) ...[
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('Edit Entry'),
+                            onPressed: () => _openEdit(context),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

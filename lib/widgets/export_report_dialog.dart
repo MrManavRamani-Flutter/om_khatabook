@@ -277,12 +277,19 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
         .where((c) => c.hasWarning)
         .fold(0.0, (s, c) => s + c.finalAmount);
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 820),
+        constraints: BoxConstraints(
+          maxWidth: 720,
+          maxHeight: MediaQuery.of(context).size.height * 0.92,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 14 : 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -328,12 +335,12 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                         segments: const [
                           ButtonSegment(
                             value: ExportFormat.pdf,
-                            label: Text('PDF Document (.pdf)'),
+                            label: Text('PDF Report'),
                             icon: Icon(Icons.picture_as_pdf),
                           ),
                           ButtonSegment(
                             value: ExportFormat.excel,
-                            label: Text('Excel Spreadsheet (.xlsx)'),
+                            label: Text('Excel Table'),
                             icon: Icon(Icons.table_chart),
                           ),
                         ],
@@ -350,14 +357,15 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           ChoiceChip(
                             label: const Text('All Parties'),
                             selected: _partyScope == PartyScope.all,
                             onSelected: (_) => setState(() => _partyScope = PartyScope.all),
                           ),
-                          const SizedBox(width: 8),
                           ChoiceChip(
                             label: const Text('Single Party'),
                             selected: _partyScope == PartyScope.single,
@@ -370,7 +378,6 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                               });
                             },
                           ),
-                          const SizedBox(width: 8),
                           ChoiceChip(
                             label: Text('Multiple Parties (${_selectedPartyIds.length})'),
                             selected: _partyScope == PartyScope.multiple,
@@ -477,12 +484,12 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                             onSelected: (_) => setState(() => _dateScope = DateScope.currentFilter),
                           ),
                           ChoiceChip(
-                            label: const Text('🗓️ Specific Month (Monthly Report)'),
+                            label: const Text('🗓️ Specific Month'),
                             selected: _dateScope == DateScope.specificMonth,
                             onSelected: (_) => setState(() => _dateScope = DateScope.specificMonth),
                           ),
                           ChoiceChip(
-                            label: const Text('All Over Data (All Time)'),
+                            label: const Text('All Time'),
                             selected: _dateScope == DateScope.allTime,
                             onSelected: (_) => setState(() => _dateScope = DateScope.allTime),
                           ),
@@ -587,16 +594,17 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           ChoiceChip(
-                            label: const Text('↓ Newest Date First (Desc)'),
+                            label: const Text('↓ Newest First'),
                             selected: !_sortAscending,
                             onSelected: (_) => setState(() => _sortAscending = false),
                           ),
-                          const SizedBox(width: 8),
                           ChoiceChip(
-                            label: const Text('↑ Oldest Date First (Asc)'),
+                            label: const Text('↑ Oldest First'),
                             selected: _sortAscending,
                             onSelected: (_) => setState(() => _sortAscending = true),
                           ),

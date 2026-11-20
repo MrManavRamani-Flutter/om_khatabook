@@ -229,7 +229,7 @@ class ChallanListView extends StatelessWidget {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Confirm Move to Recycle Bin',
-      message: 'Enter your password to confirm moving Challan #${entry.challanNo} (${entry.partyName}) to the Recycle Bin.',
+      message: 'Enter password to move Challan #${entry.challanNo} to Recycle Bin.',
       actionLabel: 'Move to Bin',
       icon: Icons.delete_outline,
       iconColor: AppColors.warningText,
@@ -283,7 +283,7 @@ class ChallanListView extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Manage challan entries, GST billing, and cash/cheque clearance',
+                    'Track challans, GST billing & payments',
                     style: TextStyle(
                       fontSize: 11.5,
                       color: Theme.of(context)
@@ -342,7 +342,7 @@ class ChallanListView extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Manage challan entries, GST billing, cash clearance, and cheque tracking',
+                          'Track challans, GST billing & payments',
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context)
@@ -731,7 +731,7 @@ class ChallanListView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // ACTIVE FILTER BANNER (IF FILTER APPLIED)
+            // ACTIVE FILTER BANNER (RESPONSIVE)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -739,41 +739,79 @@ class ChallanListView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Showing: ${provider.activeFilterSummary} (${entries.length} records)',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // WINDOWS EXPLORER STYLE VIEW MODE SWITCHER
-                  _buildViewModeSwitcher(context, provider),
-                  const SizedBox(width: 12),
-                  InkWell(
-                    onTap: () => _openExportDialog(context),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.download_rounded, size: 15, color: AppColors.primary),
-                        SizedBox(width: 4),
-                        Text(
-                          'Export This View',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                        Row(
+                          children: [
+                            const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Showing: ${provider.activeFilterSummary} (${entries.length})',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => _openExportDialog(context),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.download_rounded, size: 14, color: AppColors.primary),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Export',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Center(child: _buildViewModeSwitcher(context, provider)),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Showing: ${provider.activeFilterSummary} (${entries.length} records)',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _buildViewModeSwitcher(context, provider),
+                        const SizedBox(width: 12),
+                        InkWell(
+                          onTap: () => _openExportDialog(context),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.download_rounded, size: 15, color: AppColors.primary),
+                              SizedBox(width: 4),
+                              Text(
+                                'Export',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 12),
 
@@ -848,6 +886,7 @@ class ChallanListView extends StatelessWidget {
     final isPartialCash = isCash && item.isPartiallyPaid;
     final isBouncedCheque = !isCash && item.chequeDetails?.status == ChequeStatus.bounced;
     final hasWarning = isUnpaidCash || isBouncedCheque;
+    final isMobileCard = MediaQuery.of(context).size.width < 700;
 
     final cardBgColor = hasWarning
         ? (Theme.of(context).brightness == Brightness.dark
@@ -898,7 +937,7 @@ class ChallanListView extends StatelessWidget {
         onTap: () => _openViewDialog(context, item),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobileCard ? 12 : 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -972,117 +1011,192 @@ class ChallanListView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // ROW 2: PARTY NAME & AMOUNTS
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 4,
-                    child: Column(
+              // ROW 2: PARTY NAME & AMOUNTS (RESPONSIVE)
+              if (isMobileCard) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PARTY',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      provider.formatCasedText(item.partyName),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (item.notes.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.notes,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'PARTY',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                        ),
+                        const Text('CHALLAN AMT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                         const SizedBox(height: 2),
-                        Text(
-                          provider.formatCasedText(item.partyName),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (item.notes.isNotEmpty) ...[
+                        Text(Formatters.currency(item.challanAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    if (item.gstBillNo.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('GST BILL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                           const SizedBox(height: 2),
-                          Text(
-                            item.notes,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          Text('${item.gstBillNo} (${Formatters.currency(item.gstAmount)})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                         ],
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'CHALLAN AMT',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          Formatters.currency(item.challanAmount),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'GST BILL & AMT',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.gstBillNo.isNotEmpty
-                              ? '${item.gstBillNo} (${Formatters.currency(item.gstAmount)})'
-                              : 'No GST Bill',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: item.gstBillNo.isNotEmpty ? null : Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
+                      ),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text(
-                          'FINAL AMOUNT',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                        ),
+                        const Text('FINAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                         const SizedBox(height: 2),
                         Text(
                           Formatters.currency(item.finalAmount),
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: hasWarning
                                 ? AppColors.warningText
                                 : (item.isPartiallyPaid ? const Color(0xFFB45309) : AppColors.primary),
                           ),
                         ),
-                        if (item.isPartiallyPaid) ...[
-                          const SizedBox(height: 2),
+                        if (item.isPartiallyPaid)
                           Text(
                             'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFB45309),
-                            ),
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                           ),
-                        ],
                       ],
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'PARTY',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            provider.formatCasedText(item.partyName),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (item.notes.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.notes,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'CHALLAN AMT',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            Formatters.currency(item.challanAmount),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'GST BILL & AMT',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.gstBillNo.isNotEmpty
+                                ? '${item.gstBillNo} (${Formatters.currency(item.gstAmount)})'
+                                : 'No GST Bill',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: item.gstBillNo.isNotEmpty ? null : Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'FINAL AMOUNT',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            Formatters.currency(item.finalAmount),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: hasWarning
+                                  ? AppColors.warningText
+                                  : (item.isPartiallyPaid ? const Color(0xFFB45309) : AppColors.primary),
+                            ),
+                          ),
+                          if (item.isPartiallyPaid) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFB45309),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               if (!isCash && item.chequeDetails != null) ...[
                 const SizedBox(height: 10),
@@ -1112,6 +1226,7 @@ class ChallanListView extends StatelessWidget {
   }
 
   Widget _buildViewModeSwitcher(BuildContext context, ChallanProvider provider) {
+    final isCompact = MediaQuery.of(context).size.width < 500;
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
@@ -1127,7 +1242,7 @@ class ChallanListView extends StatelessWidget {
             mode: LedgerViewMode.table,
             current: provider.viewMode,
             icon: Icons.table_chart_outlined,
-            label: 'Excel Table',
+            label: isCompact ? 'Table' : 'Excel Table',
             tooltip: 'Excel Grid View (Dense rows, view many records at once)',
             onTap: () => provider.setViewMode(LedgerViewMode.table),
           ),
@@ -1591,6 +1706,8 @@ class ChallanListView extends StatelessWidget {
                 ? (isDark ? const Color(0xFF332707) : const Color(0xFFFFFDF5))
                 : Theme.of(context).cardColor);
 
+        final isMobileCompact = MediaQuery.of(context).size.width < 700;
+
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 3),
           decoration: BoxDecoration(
@@ -1610,105 +1727,171 @@ class ChallanListView extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               onTap: () => _openViewDialog(context, item),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: hasWarning
-                            ? AppColors.warningText.withValues(alpha: 0.15)
-                            : AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '#${item.challanNo}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: hasWarning ? AppColors.warningText : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      Formatters.shortDate(item.date),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        provider.formatCasedText(item.partyName),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildStatusBadge(item, compact: true),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          Formatters.currency(item.finalAmount),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: hasWarning ? AppColors.warningText : AppColors.primary,
-                          ),
-                        ),
-                        if (dueAmt > 0)
-                          Text(
-                            'Due: ${Formatters.currency(dueAmt)}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFB45309),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: isMobileCompact
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: hasWarning
+                                            ? AppColors.warningText.withValues(alpha: 0.15)
+                                            : AppColors.primary.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '#${item.challanNo}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: hasWarning ? AppColors.warningText : AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      Formatters.shortDate(item.date),
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  provider.formatCasedText(item.partyName),
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(width: 10),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (context.watch<AuthProvider>().canPrintInvoice)
-                          _buildActionIcon(
-                            icon: Icons.receipt_long_outlined,
-                            tooltip: 'Print Tax Invoice (A4/A5)',
-                            color: AppColors.primary,
-                            onTap: () => _openInvoiceDialog(context, item),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                Formatters.currency(item.finalAmount),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasWarning ? AppColors.warningText : AppColors.primary,
+                                ),
+                              ),
+                              _buildStatusBadge(item, compact: true),
+                            ],
                           ),
-                        const SizedBox(width: 2),
-                        _buildActionIcon(
-                          icon: Icons.visibility_outlined,
-                          tooltip: 'View Full Details',
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          onTap: () => _openViewDialog(context, item),
-                        ),
-                        if (context.watch<AuthProvider>().canEditChallan) ...[
-                          const SizedBox(width: 2),
-                          _buildActionIcon(
-                            icon: Icons.edit_outlined,
-                            tooltip: 'Edit Entry',
-                            color: AppColors.primary,
-                            onTap: () => _openEditDialog(context, item),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                           ),
                         ],
-                        if (context.watch<AuthProvider>().canDelete) ...[
-                          const SizedBox(width: 2),
-                          _buildActionIcon(
-                            icon: Icons.delete_outline,
-                            tooltip: 'Move to Bin',
-                            color: AppColors.warningText,
-                            onTap: () => _confirmDelete(context, item),
+                      )
+                    : Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: hasWarning
+                                  ? AppColors.warningText.withValues(alpha: 0.15)
+                                  : AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '#${item.challanNo}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: hasWarning ? AppColors.warningText : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            Formatters.shortDate(item.date),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              provider.formatCasedText(item.partyName),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStatusBadge(item, compact: true),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                Formatters.currency(item.finalAmount),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasWarning ? AppColors.warningText : AppColors.primary,
+                                ),
+                              ),
+                              if (dueAmt > 0)
+                                Text(
+                                  'Due: ${Formatters.currency(dueAmt)}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(width: 10),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (context.watch<AuthProvider>().canPrintInvoice)
+                                _buildActionIcon(
+                                  icon: Icons.receipt_long_outlined,
+                                  tooltip: 'Print Invoice',
+                                  color: AppColors.primary,
+                                  onTap: () => _openInvoiceDialog(context, item),
+                                ),
+                              const SizedBox(width: 2),
+                              _buildActionIcon(
+                                icon: Icons.visibility_outlined,
+                                tooltip: 'View Details',
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                                onTap: () => _openViewDialog(context, item),
+                              ),
+                              if (context.watch<AuthProvider>().canEditChallan) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.edit_outlined,
+                                  tooltip: 'Edit Entry',
+                                  color: AppColors.primary,
+                                  onTap: () => _openEditDialog(context, item),
+                                ),
+                              ],
+                              if (context.watch<AuthProvider>().canDelete) ...[
+                                const SizedBox(width: 2),
+                                _buildActionIcon(
+                                  icon: Icons.delete_outline,
+                                  tooltip: 'Move to Bin',
+                                  color: AppColors.warningText,
+                                  onTap: () => _confirmDelete(context, item),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
               ),
             ),
           ),

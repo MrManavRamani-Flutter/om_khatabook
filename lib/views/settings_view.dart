@@ -255,6 +255,7 @@ class _SettingsViewState extends State<SettingsView> {
 
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               title: Row(
                 children: [
                   Container(
@@ -282,12 +283,13 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                 ],
               ),
-              content: SizedBox(
-                width: 440,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     if (localError != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -374,6 +376,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ],
                 ),
               ),
+            ),
               actions: [
                 TextButton(
                   onPressed: isSubmitting ? null : () => Navigator.of(ctx).pop(),
@@ -732,7 +735,7 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const SizedBox(height: 3),
           Text(
-            'Manage official company branding, logo, operator credentials, and visual display preferences directly inline.',
+            'Manage company branding, logo, profile, and preferences.',
             style: TextStyle(
               fontSize: 12.5,
               color: Theme.of(context)
@@ -820,7 +823,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Full master privileges active. Party add, edit, and deletion are protected by master password (Default: OMMAVTAR36).',
+                    'Protected by master password (Default: OMMAVTAR36).',
                     style: TextStyle(
                       fontSize: 11.5,
                       color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
@@ -900,7 +903,7 @@ class _SettingsViewState extends State<SettingsView> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Updates the navigation header, summary reports, and printed GST commercial tax invoices.',
+                        'Applied to invoices, reports, and header.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
@@ -965,7 +968,7 @@ class _SettingsViewState extends State<SettingsView> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Upload a PNG, JPG, or WEBP image file directly from your computer.',
+                          'Upload PNG, JPG, or WEBP logo.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
@@ -1208,7 +1211,7 @@ class _SettingsViewState extends State<SettingsView> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Shown at the bottom of the navigation sidebar and recorded in system audit logs.',
+                        'Displayed on sidebar and audit logs.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
@@ -1272,7 +1275,7 @@ class _SettingsViewState extends State<SettingsView> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Upload your own personal portrait photo or profile picture.',
+                          'Upload photo or avatar.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
@@ -1510,7 +1513,7 @@ class _SettingsViewState extends State<SettingsView> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Dark Mode Theme'),
               subtitle: const Text(
-                'Optimized high-contrast dark theme for long working hours on Desktop',
+                'High-contrast dark mode theme',
               ),
               value: provider.isDarkMode,
               onChanged: (_) => provider.toggleTheme(),
@@ -1550,7 +1553,7 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Choose how party names, challans, and entry details format automatically',
+              'Automatic text formatting for entries',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
@@ -1654,8 +1657,11 @@ class _SettingsViewState extends State<SettingsView> {
     AuthProvider auth,
     bool isDark,
   ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 14 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1669,7 +1675,7 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Inspect local database statistics, create JSON backups, and restore archived records',
+            'Database stats, JSON backups, and restore.',
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context)
@@ -1700,37 +1706,61 @@ class _SettingsViewState extends State<SettingsView> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatItem(
-                          context,
-                          'Active Challans',
-                          '${provider.challans.length}',
-                          Icons.receipt_long,
+                  if (isMobile) ...[
+                    _buildStatItem(
+                      context,
+                      'Active Challans',
+                      '${provider.challans.length}',
+                      Icons.receipt_long,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStatItem(
+                      context,
+                      'Registered Parties',
+                      '${provider.parties.length}',
+                      Icons.people,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStatItem(
+                      context,
+                      'Recycle Bin Items',
+                      '${provider.recycleBinCount}',
+                      Icons.delete_outline,
+                      color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Active Challans',
+                            '${provider.challans.length}',
+                            Icons.receipt_long,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildStatItem(
-                          context,
-                          'Registered Parties',
-                          '${provider.parties.length}',
-                          Icons.people,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Registered Parties',
+                            '${provider.parties.length}',
+                            Icons.people,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildStatItem(
-                          context,
-                          'Recycle Bin Items',
-                          '${provider.recycleBinCount}',
-                          Icons.delete_outline,
-                          color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: _buildStatItem(
+                            context,
+                            'Recycle Bin Items',
+                            '${provider.recycleBinCount}',
+                            Icons.delete_outline,
+                            color: provider.recycleBinCount > 0 ? AppColors.warningText : null,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1757,7 +1787,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'All your commercial ledger records are stored locally and encrypted. You can export a full JSON snapshot anytime for offsite archiving.',
+                    'Records are stored locally. Export JSON snapshot anytime.',
                     style: TextStyle(fontSize: 12.5, color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
@@ -1773,7 +1803,7 @@ class _SettingsViewState extends State<SettingsView> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         icon: const Icon(Icons.download, size: 18),
-                        label: const Text('Export JSON Backup File'),
+                        label: const Text('Export Backup (JSON)'),
                         onPressed: () => _exportBackup(context),
                       ),
                       OutlinedButton.icon(
@@ -1782,7 +1812,7 @@ class _SettingsViewState extends State<SettingsView> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         icon: const Icon(Icons.upload, size: 18),
-                        label: const Text('Restore from Backup JSON'),
+                        label: const Text('Restore Data'),
                         onPressed: () => _showImportDialog(context),
                       ),
                       OutlinedButton.icon(

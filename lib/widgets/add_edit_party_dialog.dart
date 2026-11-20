@@ -71,7 +71,7 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password verification cancelled. Your party details are preserved.'),
+            content: Text('Password verification cancelled. Party details preserved.'),
             backgroundColor: AppColors.primaryDark,
             duration: Duration(seconds: 2),
           ),
@@ -107,13 +107,19 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     final isEdit = widget.partyToEdit != null;
     final provider = context.watch<ChallanProvider>();
     final casingStyle = provider.textCasingStyle;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxWidth: 480,
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
           child: Form(
             key: _formKey,
             child: Column(

@@ -25,7 +25,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Empty Recycle Bin',
-      message: 'Enter your password to confirm permanently erasing ALL items in the Recycle Bin. This action cannot be undone.',
+      message: 'Enter password to permanently erase ALL bin items.',
       actionLabel: 'Empty Permanently',
       icon: Icons.delete_sweep,
       iconColor: AppColors.warningText,
@@ -48,7 +48,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Permanently Erase Challan',
-      message: 'Enter your password to confirm permanently erasing Challan #${challan.challanNo} (${challan.partyName}). This action cannot be undone.',
+      message: 'Enter password to erase Challan #${challan.challanNo}.',
       actionLabel: 'Erase Permanently',
       icon: Icons.delete_forever,
       iconColor: AppColors.warningText,
@@ -71,7 +71,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Permanently Erase Party',
-      message: 'Enter your password to confirm permanently erasing "${party.name}". This action cannot be undone.',
+      message: 'Enter password to erase "${party.name}".',
       actionLabel: 'Erase Permanently',
       icon: Icons.delete_forever,
       iconColor: AppColors.warningText,
@@ -110,7 +110,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               Text(
-                'Safely recover deleted items or permanently purge them',
+                'Recover or permanently purge items',
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context)
@@ -220,10 +220,12 @@ class _RecycleBinViewState extends State<RecycleBinView> {
       );
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 10),
           color: Theme.of(context).cardColor,
           child: Row(
             children: [
@@ -231,7 +233,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${challans.length} deleted challan(s). Restoring will return the entry to the main ledger.',
+                  '${challans.length} deleted challans',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -241,7 +243,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
         const Divider(height: 1),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 10 : 16),
             itemCount: challans.length,
             separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
@@ -261,19 +263,21 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                 ),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 10),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                      if (!isMobile) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.receipt_outlined,
+                              color: Colors.grey, size: 24),
                         ),
-                        child: const Icon(Icons.receipt_outlined,
-                            color: Colors.grey, size: 24),
-                      ),
-                      const SizedBox(width: 14),
+                        const SizedBox(width: 14),
+                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,13 +288,13 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                   'Challan #${c.challanNo}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                    fontSize: 14.5,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                      horizontal: 5, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
@@ -298,7 +302,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                   child: const Text(
                                     'Deleted',
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9.5,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.red,
                                     ),
@@ -306,17 +310,18 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
-                              'Party: ${c.partyName} • Date: ${_dateFormat.format(c.date)}',
+                              '${c.partyName} • ${_dateFormat.format(c.date)}',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Amount: ${_currencyFormat.format(c.finalAmount)} • Deleted: $deletedTime',
+                              '${_currencyFormat.format(c.finalAmount)} • $deletedTime',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Theme.of(context)
@@ -325,41 +330,67 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                     ?.color
                                     ?.withValues(alpha: 0.7),
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (auth.canRestoreFromBin)
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                              ),
-                              icon: const Icon(Icons.restore_from_trash, size: 16),
-                              label: const Text('Restore'),
-                              onPressed: () async {
-                                await provider.restoreChallan(c.id);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Challan #${c.challanNo} restored successfully.'),
+                            isMobile
+                                ? IconButton.filled(
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.all(8),
+                                      minimumSize: const Size(36, 36),
                                     ),
-                                  );
-                                }
-                              },
-                            ),
+                                    icon: const Icon(Icons.restore_from_trash, size: 18),
+                                    tooltip: 'Restore',
+                                    onPressed: () async {
+                                      await provider.restoreChallan(c.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Challan #${c.challanNo} restored.'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  )
+                                : FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 8),
+                                    ),
+                                    icon: const Icon(Icons.restore_from_trash, size: 16),
+                                    label: const Text('Restore'),
+                                    onPressed: () async {
+                                      await provider.restoreChallan(c.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Challan #${c.challanNo} restored.'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
                           if (auth.canPurgeRecycleBin) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: isMobile ? 4 : 8),
                             IconButton(
                               icon: const Icon(Icons.delete_forever,
                                   color: AppColors.warningText, size: 20),
                               tooltip: 'Delete Permanently',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                               onPressed: () =>
                                   _confirmPermanentDeleteChallan(c),
                             ),
@@ -411,10 +442,12 @@ class _RecycleBinViewState extends State<RecycleBinView> {
       );
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 10),
           color: Theme.of(context).cardColor,
           child: Row(
             children: [
@@ -422,7 +455,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${parties.length} deleted party record(s). Restoring will return the party to the active directory.',
+                  '${parties.length} deleted parties',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -432,7 +465,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
         const Divider(height: 1),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 10 : 16),
             itemCount: parties.length,
             separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
@@ -452,19 +485,21 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                 ),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 10),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                      if (!isMobile) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.person_off_outlined,
+                              color: Colors.grey, size: 24),
                         ),
-                        child: const Icon(Icons.person_off_outlined,
-                            color: Colors.grey, size: 24),
-                      ),
-                      const SizedBox(width: 14),
+                        const SizedBox(width: 14),
+                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,13 +510,13 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                   p.name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                    fontSize: 14.5,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                      horizontal: 5, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
@@ -489,7 +524,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                   child: const Text(
                                     'Deleted',
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9.5,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.red,
                                     ),
@@ -497,7 +532,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               [
                                 if (p.phone.isNotEmpty) 'Phone: ${p.phone}',
@@ -505,9 +540,10 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                 if (p.address.isNotEmpty) 'Address: ${p.address}',
                               ].join(' • '),
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -520,41 +556,67 @@ class _RecycleBinViewState extends State<RecycleBinView> {
                                     ?.color
                                     ?.withValues(alpha: 0.7),
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (auth.canRestoreFromBin)
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                              ),
-                              icon: const Icon(Icons.restore_from_trash, size: 16),
-                              label: const Text('Restore'),
-                              onPressed: () async {
-                                await provider.restoreParty(p.id);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('${p.name} restored successfully.'),
+                            isMobile
+                                ? IconButton.filled(
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.all(8),
+                                      minimumSize: const Size(36, 36),
                                     ),
-                                  );
-                                }
-                              },
-                            ),
+                                    icon: const Icon(Icons.restore_from_trash, size: 18),
+                                    tooltip: 'Restore',
+                                    onPressed: () async {
+                                      await provider.restoreParty(p.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('${p.name} restored.'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  )
+                                : FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 8),
+                                    ),
+                                    icon: const Icon(Icons.restore_from_trash, size: 16),
+                                    label: const Text('Restore'),
+                                    onPressed: () async {
+                                      await provider.restoreParty(p.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('${p.name} restored.'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
                           if (auth.canPurgeRecycleBin) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: isMobile ? 4 : 8),
                             IconButton(
                               icon: const Icon(Icons.delete_forever,
                                   color: AppColors.warningText, size: 20),
                               tooltip: 'Delete Permanently',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                               onPressed: () =>
                                   _confirmPermanentDeleteParty(p),
                             ),

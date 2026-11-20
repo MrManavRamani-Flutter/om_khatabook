@@ -60,6 +60,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
             title: const Row(
               children: [
                 Icon(Icons.business_center, color: AppColors.primary),
@@ -67,8 +68,8 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 Text('Customize App Logo & Branding'),
               ],
             ),
-            content: SizedBox(
-              width: 520,
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -287,6 +288,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
             title: const Row(
               children: [
                 Icon(Icons.person, color: AppColors.primary),
@@ -294,8 +296,8 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 Text('Customize Admin Profile & Avatar'),
               ],
             ),
-            content: SizedBox(
-              width: 500,
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

@@ -561,18 +561,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             if (isMobile)
               Column(
                 children: [
-                  _buildExpensesCard(context, calc, isDark),
+                  _buildExpensesCard(context, calc, isDark, isMobile),
                   const SizedBox(height: 16),
-                  _buildIncomeCard(context, calc, isDark),
+                  _buildIncomeCard(context, calc, isDark, isMobile),
                 ],
               )
             else
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _buildExpensesCard(context, calc, isDark)),
+                  Expanded(child: _buildExpensesCard(context, calc, isDark, isMobile)),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildIncomeCard(context, calc, isDark)),
+                  Expanded(child: _buildIncomeCard(context, calc, isDark, isMobile)),
                 ],
               ),
           ],
@@ -588,29 +588,33 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
                   Text(
                     'Net Profit - Loss Ledger',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.4),
+                    style: TextStyle(
+                      fontSize: isMobile ? 19 : 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.4,
+                    ),
                   ),
-                  SizedBox(width: 10),
-                  Chip(
+                  const SizedBox(width: 8),
+                  const Chip(
                     visualDensity: VisualDensity.compact,
                     label: Text(
-                      'FINANCIAL LEDGER',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      'FINANCIAL',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                     backgroundColor: Color(0x1500A86B),
                     side: BorderSide(color: Color(0x3300A86B)),
                   ),
                 ],
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
-                'Comprehensive 2-column breakdown of Business Incomes (Party Collections) vs Operating Expenses.',
+                'Track Income & Collections vs Operating Expenses',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 12,
                   color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
                 ),
               ),
@@ -688,59 +692,112 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             const Divider(height: 1),
             const SizedBox(height: 12),
 
-            // SEARCH BAR & QUICK ACTION BUTTONS
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: 'Search Particulars, Category, or Party...',
-                      prefixIcon: const Icon(Icons.search, size: 18),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 16),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            // SEARCH BAR & QUICK ACTION BUTTONS (RESPONSIVE)
+            if (isMobile) ...[
+              TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Search Particulars, Category, or Party...',
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 16),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE11D48),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('+ Expense', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      onPressed: () => _openAddEditEntryDialog(context, type: EntryType.expense),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                // ADD EXPENSE (RED BUTTON)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE11D48),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('+ Income', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
+                    ),
                   ),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add Expense', style: TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () => _openAddEditEntryDialog(context, type: EntryType.expense),
-                ),
-                const SizedBox(width: 8),
-                // ADD INCOME (GREEN BUTTON)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF059669),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ],
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search Particulars, Category, or Party...',
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
                   ),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add Income', style: TextStyle(fontWeight: FontWeight.bold)),
-                  onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE11D48),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Expense', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _openAddEditEntryDialog(context, type: EntryType.expense),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add Income', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [
@@ -748,7 +805,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Active Period: $filterLabel',
+                    'Period: $filterLabel',
                     style: const TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w500),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -820,7 +877,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               ),
                             ),
                             Text(
-                              '${calc.incomes.length} Income Sources / Parties',
+                              '${calc.incomes.length} Incomes',
                               style: const TextStyle(fontSize: 11, color: Colors.grey),
                             ),
                           ],
@@ -877,7 +934,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               ),
                             ),
                             Text(
-                              '${calc.expenses.length} Expense Entries Recorded',
+                              '${calc.expenses.length} Expenses',
                               style: const TextStyle(fontSize: 11, color: Colors.grey),
                             ),
                           ],
@@ -951,8 +1008,8 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                             ),
                             Text(
                               calc.isProfit
-                                  ? 'Income exceeds expenses (Surplus)'
-                                  : 'Expenses exceed income (Deficit)',
+                                  ? 'Surplus (Profit)'
+                                  : 'Deficit (Loss)',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: calc.isProfit ? const Color(0xFF047857) : const Color(0xFFBE123C),
@@ -973,7 +1030,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
   }
 
   // --- EXPENSES COLUMN CARD (LEFT - RED) ---
-  Widget _buildExpensesCard(BuildContext context, ProfitLossCalculation calc, bool isDark) {
+  Widget _buildExpensesCard(BuildContext context, ProfitLossCalculation calc, bool isDark, bool isMobile) {
     const redColor = Color(0xFFE11D48);
 
     return Card(
@@ -1005,7 +1062,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         'Expenses',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: redColor),
                       ),
-                      Text('Operating expenses & overhead costs', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text('Operating Costs', style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -1028,19 +1085,20 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 40, child: Text('Sr.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 3, child: Text('Particulars / Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(
+                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const Expanded(flex: 3, child: Text('Particulars / Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                if (!isMobile)
+                  const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const Expanded(
                   flex: 2,
                   child: Padding(
                     padding: EdgeInsets.only(right: 8),
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                SizedBox(width: 64, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 56, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1074,10 +1132,10 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 40,
+                        width: 32,
                         child: Text(
                           '${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                       Expanded(
@@ -1088,21 +1146,26 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                             Text(
                               e.particular,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              e.category,
+                              isMobile
+                                  ? '${e.category} • ${_dateFormat.format(e.date)}'
+                                  : e.category,
                               style: const TextStyle(fontSize: 10.5, color: Colors.grey),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          _dateFormat.format(e.date),
-                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                      if (!isMobile)
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            _dateFormat.format(e.date),
+                            style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                          ),
                         ),
-                      ),
                       Expanded(
                         flex: 2,
                         child: Padding(
@@ -1119,7 +1182,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 64,
+                        width: 56,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -1131,7 +1194,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               ),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                padding: const EdgeInsets.all(5),
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(6),
@@ -1139,12 +1202,12 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                 child: const Icon(Icons.edit_outlined, size: 14),
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 4),
                             InkWell(
                               onTap: () => _confirmDeleteEntry(context, e),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                padding: const EdgeInsets.all(5),
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: Colors.red.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
@@ -1209,7 +1272,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
   }
 
   // --- INCOME COLUMN CARD (RIGHT - GREEN) ---
-  Widget _buildIncomeCard(BuildContext context, ProfitLossCalculation calc, bool isDark) {
+  Widget _buildIncomeCard(BuildContext context, ProfitLossCalculation calc, bool isDark, bool isMobile) {
     const greenColor = Color(0xFF059669);
 
     return Card(
@@ -1241,7 +1304,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         'Income',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: greenColor),
                       ),
-                      Text('Business revenue & party collections', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text('Revenue & Collections', style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -1264,19 +1327,20 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 40, child: Text('Sr.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 3, child: Text('Particulars / Party Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('Source / Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(
+                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const Expanded(flex: 3, child: Text('Particulars / Party', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                if (!isMobile)
+                  const Expanded(flex: 2, child: Text('Source / Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const Expanded(
                   flex: 2,
                   child: Padding(
                     padding: EdgeInsets.only(right: 8),
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                SizedBox(width: 64, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 56, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1312,10 +1376,10 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 40,
+                        width: 32,
                         child: Text(
                           '${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       ),
                       Expanded(
@@ -1326,25 +1390,30 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                             Text(
                               e.particular,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              isPartyCollection ? 'Party Challan Payment' : e.category,
+                              isMobile
+                                  ? (isPartyCollection ? 'Party Payment' : '${e.category} • ${_dateFormat.format(e.date)}')
+                                  : (isPartyCollection ? 'Party Challan Payment' : e.category),
                               style: TextStyle(
                                 fontSize: 10.5,
                                 color: isPartyCollection ? AppColors.primary : Colors.grey,
                                 fontWeight: isPartyCollection ? FontWeight.w500 : FontWeight.normal,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          isPartyCollection ? 'Challan Ledger' : _dateFormat.format(e.date),
-                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                      if (!isMobile)
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            isPartyCollection ? 'Challan Ledger' : _dateFormat.format(e.date),
+                            style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                          ),
                         ),
-                      ),
                       Expanded(
                         flex: 2,
                         child: Padding(
@@ -1361,15 +1430,15 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 64,
+                        width: 56,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: isPartyCollection
                               ? [
                                   Tooltip(
-                                    message: 'Auto-calculated from party challan receipts',
+                                    message: 'Auto-calculated from party receipts',
                                     child: Container(
-                                      padding: const EdgeInsets.all(5),
+                                      padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: greenColor.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(6),
@@ -1387,7 +1456,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                     ),
                                     borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      padding: const EdgeInsets.all(5),
+                                      padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(6),
@@ -1395,12 +1464,12 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                       child: const Icon(Icons.edit_outlined, size: 14),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 4),
                                   InkWell(
                                     onTap: () => _confirmDeleteEntry(context, e),
                                     borderRadius: BorderRadius.circular(6),
                                     child: Container(
-                                      padding: const EdgeInsets.all(5),
+                                      padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: Colors.red.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(6),

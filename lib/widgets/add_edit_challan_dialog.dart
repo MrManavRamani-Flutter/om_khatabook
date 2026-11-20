@@ -403,12 +403,19 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     final casingStyle = provider.textCasingStyle;
     final isDark = provider.isDarkMode || Theme.of(context).brightness == Brightness.dark;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 780),
+        constraints: BoxConstraints(
+          maxWidth: 680,
+          maxHeight: MediaQuery.of(context).size.height * 0.92,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 14 : 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -706,7 +713,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: const Text(
-                                        'Auto-calc (Priority: Final Amt > Challan Amt)',
+                                        'Auto-calculated (5%)',
                                         style: TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w600,

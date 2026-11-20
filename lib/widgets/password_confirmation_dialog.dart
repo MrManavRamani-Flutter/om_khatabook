@@ -84,6 +84,7 @@ class _PasswordConfirmationDialogState extends State<_PasswordConfirmationDialog
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Row(
         children: [
           Container(
@@ -124,7 +125,7 @@ class _PasswordConfirmationDialogState extends State<_PasswordConfirmationDialog
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _verify(),
               decoration: InputDecoration(
-                labelText: 'Enter Master / Operator Password *',
+                labelText: 'Master Password *',
                 hintText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline, size: 20),
                 suffixIcon: IconButton(

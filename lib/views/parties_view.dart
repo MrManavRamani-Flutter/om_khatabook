@@ -40,7 +40,7 @@ class _PartiesViewState extends State<PartiesView> {
     final confirmed = await promptPasswordConfirmation(
       context,
       title: 'Confirm Delete Party',
-      message: 'Enter your password to confirm moving "${party.name}" to the Recycle Bin. Linked challans will remain preserved.',
+      message: 'Enter password to move "${party.name}" to Recycle Bin.',
       actionLabel: 'Move to Bin',
       icon: Icons.delete_outline,
       iconColor: AppColors.warningText,
@@ -106,7 +106,7 @@ class _PartiesViewState extends State<PartiesView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Pre-add and manage registered parties, contact info, and GST numbers',
+                    'Manage registered parties, contact & GST info',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -149,7 +149,7 @@ class _PartiesViewState extends State<PartiesView> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Pre-add and manage registered parties, contact info, and GST numbers',
+                          'Manage registered parties, contact & GST info',
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context)
@@ -899,7 +899,11 @@ class _PartiesViewState extends State<PartiesView> {
                         style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        totalDue > 0 ? 'Due: ${Formatters.currency(totalDue)}' : '${partyChallans.length} Challans • Settled',
+                        totalDue > 0
+                            ? 'Due: ${Formatters.currency(totalDue)}'
+                            : (MediaQuery.of(context).size.width < 700
+                                ? 'Settled'
+                                : '${partyChallans.length} Challans • Settled'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

@@ -108,10 +108,15 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
     final storage = context.read<StorageService>();
     final provider = context.watch<ChallanProvider>();
     final isA4 = _selectedPageFormat == PdfPageFormat.a4;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 720;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 10 : 24,
+        vertical: isMobile ? 10 : 20,
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: 960,
@@ -122,7 +127,10 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
           children: [
             // TOP MODAL TOOLBAR
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 20,
+                vertical: isMobile ? 10 : 14,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -132,130 +140,253 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                   ),
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+              child: isMobile
+                  ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Commercial GST Tax Invoice',
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(
-                                '#${widget.entry.challanNo}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
+                              child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Tax Invoice',
+                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          '#${widget.entry.challanNo}',
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    provider.formatCasedText(widget.entry.partyName),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context).textTheme.bodySmall?.color,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              onPressed: () => Navigator.of(context).pop(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Party: ${provider.formatCasedText(widget.entry.partyName)} • Date: ${Formatters.date(widget.entry.date)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              padding: const EdgeInsets.all(2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildFormatToggleOption(
+                                    label: 'A4',
+                                    isSelected: isA4,
+                                    onTap: () {
+                                      if (!isA4) setState(() => _selectedPageFormat = PdfPageFormat.a4);
+                                    },
+                                  ),
+                                  _buildFormatToggleOption(
+                                    label: 'A5',
+                                    isSelected: !isA4,
+                                    onTap: () {
+                                      if (isA4) setState(() => _selectedPageFormat = PdfPageFormat.a5);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              ),
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.download_outlined, size: 16),
+                              label: const Text('Save PDF', style: TextStyle(fontSize: 12)),
+                              onPressed: _isSaving ? null : () => _handleSavePdf(storage),
+                            ),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              icon: const Icon(Icons.print, size: 16),
+                              label: const Text('Print', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              onPressed: () => _handleDirectPrint(storage),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Commercial GST Tax Invoice',
+                                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '#${widget.entry.challanNo}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Party: ${provider.formatCasedText(widget.entry.partyName)} • Date: ${Formatters.date(widget.entry.date)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+
+                        // A4 vs A5 FORMAT SWITCHER
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.all(3),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildFormatToggleOption(
+                                label: 'A4 (Full Page)',
+                                isSelected: isA4,
+                                onTap: () {
+                                  if (!isA4) {
+                                    setState(() => _selectedPageFormat = PdfPageFormat.a4);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 2),
+                              _buildFormatToggleOption(
+                                label: 'A5 (Compact Slip)',
+                                isSelected: !isA4,
+                                onTap: () {
+                                  if (isA4) {
+                                    setState(() => _selectedPageFormat = PdfPageFormat.a5);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // SAVE PDF BUTTON
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            side: BorderSide(color: Theme.of(context).dividerColor),
+                          ),
+                          icon: _isSaving
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.download_outlined, size: 18),
+                          label: const Text('Save PDF', style: TextStyle(fontSize: 13)),
+                          onPressed: _isSaving ? null : () => _handleSavePdf(storage),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // DIRECT PRINT BUTTON
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                          icon: const Icon(Icons.print, size: 18),
+                          label: const Text('Print Invoice', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          onPressed: () => _handleDirectPrint(storage),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // CLOSE BUTTON
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          tooltip: 'Close Preview',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ],
                     ),
-                  ),
-
-                  // A4 vs A5 FORMAT SWITCHER
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(3),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildFormatToggleOption(
-                          label: 'A4 (Full Page)',
-                          isSelected: isA4,
-                          onTap: () {
-                            if (!isA4) {
-                              setState(() => _selectedPageFormat = PdfPageFormat.a4);
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 2),
-                        _buildFormatToggleOption(
-                          label: 'A5 (Compact Slip)',
-                          isSelected: !isA4,
-                          onTap: () {
-                            if (isA4) {
-                              setState(() => _selectedPageFormat = PdfPageFormat.a5);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-
-                  // SAVE PDF BUTTON
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      side: BorderSide(color: Theme.of(context).dividerColor),
-                    ),
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('Save PDF', style: TextStyle(fontSize: 13)),
-                    onPressed: _isSaving ? null : () => _handleSavePdf(storage),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // DIRECT PRINT BUTTON
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    ),
-                    icon: const Icon(Icons.print, size: 18),
-                    label: const Text('Print Invoice', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    onPressed: () => _handleDirectPrint(storage),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // CLOSE BUTTON
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    tooltip: 'Close Preview',
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
             ),
 
             // INTERACTIVE PDF PREVIEW BODY

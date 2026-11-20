@@ -128,14 +128,14 @@ class SummaryReportsView extends StatelessWidget {
     final metricTile2 = _buildMetricTile(
       'TOTAL GST BILLED',
       Formatters.currency(totalGst),
-      'Across ${challans.where((c) => c.gstBillNo.isNotEmpty).length} Invoices',
+      '${challans.where((c) => c.gstBillNo.isNotEmpty).length} Invoices',
       const Color(0xFF7C3AED),
       Icons.calculate,
     );
     final metricTile3 = _buildMetricTile(
       'PENDING / UNPAID DUES',
       Formatters.currency(totalUnpaid),
-      '${provider.unpaidWarningCount} Entries Require Action',
+      '${provider.unpaidWarningCount} Pending Action',
       AppColors.warningText,
       Icons.warning_amber_rounded,
     );
@@ -151,7 +151,7 @@ class SummaryReportsView extends StatelessWidget {
                 Icon(Icons.money, color: AppColors.primary),
                 SizedBox(width: 10),
                 Text(
-                  'Cash Transactions Breakdown',
+                  'Cash Transactions',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -187,7 +187,7 @@ class SummaryReportsView extends StatelessWidget {
                 Icon(Icons.account_balance, color: AppColors.primary),
                 SizedBox(width: 10),
                 Text(
-                  'Cheque Transactions Breakdown',
+                  'Cheque Transactions',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -202,7 +202,7 @@ class SummaryReportsView extends StatelessWidget {
             ),
             const Divider(height: 16),
             _buildStatRow(
-              '⏳ Cheques Pending Clearance',
+              '⏳ Pending Clearance',
               Formatters.currency(chequePendingAmt),
               valueColor: AppColors.pendingText,
               isBold: true,
@@ -215,7 +215,7 @@ class SummaryReportsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        padding: EdgeInsets.all(isMobile ? 14 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -225,16 +225,16 @@ class SummaryReportsView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Financial & Billing Summary',
+                    'Financial Reports',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
-                    'Comprehensive breakdown of billing, cash receipts, and cheque clearances',
+                    'Breakdown of billing, cash receipts & cheques',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -262,7 +262,7 @@ class SummaryReportsView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Financial & Billing Summary',
+                        'Financial Reports',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -271,7 +271,7 @@ class SummaryReportsView extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Comprehensive breakdown of billing, cash receipts, and cheque clearances',
+                        'Breakdown of billing, cash receipts & cheques',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context)
