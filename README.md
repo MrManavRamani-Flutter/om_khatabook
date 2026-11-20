@@ -16,6 +16,24 @@ A dedicated, production-grade commercial accounting, delivery challan ledger, an
 
 ---
 
+## 📥 Direct Installation Downloads (All Platforms)
+
+GitHub Actions builds official, direct-installable binaries on every release and commit:
+
+| Platform | Direct Install File | Format | How to Install |
+| :--- | :--- | :--- | :--- |
+| 💻 **Windows** | **`OmMavtarKhataBook_Windows_Setup.exe`** | Setup Installer | Double-click to install on Windows 10/11. Creates Desktop & Start Menu shortcuts. |
+| 💻 **Windows** | **`OmMavtarKhataBook_Windows_Portable.zip`** | Portable ZIP | Unzip anywhere and double-click `om_khatabook.exe` without setup. |
+| 📱 **Android** | **`OmMavtarKhataBook_Android.apk`** | Direct APK | Download on your Android smartphone/tablet, tap to install (enable *Install unknown apps*). |
+| 📱 **Android** | **`OmMavtarKhataBook_Android.aab`** | Play AppBundle | Official format for Google Play Store console release. |
+| 🍏 **macOS** | **`OmMavtarKhataBook_macOS.dmg`** | Disk Image | Double-click `.dmg` and drag `om_khatabook.app` into `/Applications`. |
+| 🍏 **macOS** | **`OmMavtarKhataBook_macOS.zip`** | App Bundle ZIP | Extract zip and move `om_khatabook.app` to `/Applications`. |
+| 📲 **iOS** | **`OmMavtarKhataBook_iOS.ipa`** | iOS IPA Package | Direct install via AltStore, Sideloadly, TrollStore, Scarlet, or Apple Configurator. |
+
+> **Default Master Credentials**: Operator: `OM MAVTAR` • Master Password: `OMMAVTAR36`
+
+---
+
 ## 📑 Table of Contents
 1. [Application Screenshots](#-application-screenshots)
 2. [Complete Features Guide (Abhi Tak Ke Sare Features)](#-complete-features-guide)
