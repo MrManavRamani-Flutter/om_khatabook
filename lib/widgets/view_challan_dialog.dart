@@ -8,46 +8,34 @@ import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'add_edit_challan_dialog.dart';
 import 'invoice_preview_dialog.dart';
+import 'password_confirmation_dialog.dart';
 
 class ViewChallanDialog extends StatelessWidget {
   final ChallanEntry entry;
 
   const ViewChallanDialog({super.key, required this.entry});
 
-  void _showDeleteConfirm(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Challan Entry?'),
-        content: Text(
-          'Are you sure you want to permanently delete Challan #${entry.challanNo} for ${entry.partyName}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop(); // Close confirm
-              context.read<ChallanProvider>().deleteChallan(entry.id);
-              Navigator.of(context).pop(); // Close view dialog
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  Future<void> _showDeleteConfirm(BuildContext context) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Confirm Delete Challan',
+      message: 'Enter your password to confirm permanently deleting Challan #${entry.challanNo} for ${entry.partyName}.',
+      actionLabel: 'Delete Challan',
+      icon: Icons.delete_forever,
+      iconColor: AppColors.warningText,
     );
+
+    if (!confirmed || !context.mounted) return;
+
+    context.read<ChallanProvider>().deleteChallan(entry.id);
+    Navigator.of(context).pop();
   }
 
   void _openEdit(BuildContext context) {
     Navigator.of(context).pop();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AddEditChallanDialog(entryToEdit: entry),
     );
   }

@@ -23,6 +23,7 @@ class _PartiesViewState extends State<PartiesView> {
   void _openAddParty(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => const AddEditPartyDialog(),
     );
   }
@@ -30,6 +31,7 @@ class _PartiesViewState extends State<PartiesView> {
   void _openEditParty(BuildContext context, Party party) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AddEditPartyDialog(partyToEdit: party),
     );
   }

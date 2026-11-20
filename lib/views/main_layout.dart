@@ -33,6 +33,7 @@ class _MainLayoutState extends State<MainLayout> {
   void _openAddChallan(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => const AddEditChallanDialog(),
     );
   }

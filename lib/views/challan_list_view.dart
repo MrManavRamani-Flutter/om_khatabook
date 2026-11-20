@@ -19,6 +19,7 @@ class ChallanListView extends StatelessWidget {
   void _openAddDialog(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => const AddEditChallanDialog(),
     );
   }
@@ -55,6 +56,7 @@ class ChallanListView extends StatelessWidget {
   void _openEditDialog(BuildContext context, ChallanEntry entry) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AddEditChallanDialog(entryToEdit: entry),
     );
   }

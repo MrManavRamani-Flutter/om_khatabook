@@ -35,6 +35,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   void _openAddChallan(BuildContext context, Party party) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AddEditChallanDialog(initialParty: party),
     );
   }
@@ -42,6 +43,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   void _openEditChallan(BuildContext context, ChallanEntry entry) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => AddEditChallanDialog(entryToEdit: entry),
     );
   }

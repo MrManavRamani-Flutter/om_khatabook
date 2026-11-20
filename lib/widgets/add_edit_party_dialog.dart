@@ -67,7 +67,18 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
       iconColor: AppColors.primary,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password verification cancelled. Your party details are preserved.'),
+            backgroundColor: AppColors.primaryDark,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
     if (widget.partyToEdit != null) {
       final updated = widget.partyToEdit!.copyWith(

@@ -73,6 +73,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
@@ -223,6 +224,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
           final isDark = Theme.of(ctx).brightness == Brightness.dark;
@@ -437,7 +439,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                       icon: isExpense ? Icons.arrow_upward : Icons.arrow_downward,
                       iconColor: accentColor,
                     );
-                    if (!confirmed) return;
+                    if (!confirmed) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password verification cancelled. Your entry details are preserved.'),
+                            backgroundColor: AppColors.primaryDark,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                      return;
+                    }
 
                     final updated = entryToEdit.copyWith(
                       particular: part,
@@ -457,7 +470,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                       icon: isExpense ? Icons.arrow_upward : Icons.arrow_downward,
                       iconColor: accentColor,
                     );
-                    if (!confirmed) return;
+                    if (!confirmed) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password verification cancelled. Your entry details are preserved.'),
+                            backgroundColor: AppColors.primaryDark,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                      return;
+                    }
 
                     final newEntry = IncomeExpenseEntry(
                       id: 'entry_${DateTime.now().millisecondsSinceEpoch}',

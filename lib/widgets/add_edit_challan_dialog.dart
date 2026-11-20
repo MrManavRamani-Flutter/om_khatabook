@@ -342,7 +342,18 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       iconColor: AppColors.primary,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password verification cancelled. Your form details are preserved.'),
+            backgroundColor: AppColors.primaryDark,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(
@@ -390,7 +401,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     final provider = context.watch<ChallanProvider>();
     final parties = provider.parties;
     final casingStyle = provider.textCasingStyle;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = provider.isDarkMode || Theme.of(context).brightness == Brightness.dark;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
