@@ -9,8 +9,8 @@ class IncomeExpenseEntry {
   final String id;
   final EntryType type; // income or expense
   final DateTime date;
-  final String particular; // વિગત (e.g., "લાઈટ બિલ", "પગાર", "ઓમ્ કિરણ", "ઓફિસ ભાડું")
-  final double amount; // રકમ
+  final String particular; // Particulars (e.g., "Electricity Bill", "Staff Salary", "Om Kiran", "Office Rent")
+  final double amount; // Amount in INR
   final String category; // Category (e.g. "Electricity", "Salary", "Rent", "Office", "Party Payment")
   final String paymentMode; // "Cash", "Cheque", "Online / UPI", "Bank Transfer"
   final String notes;

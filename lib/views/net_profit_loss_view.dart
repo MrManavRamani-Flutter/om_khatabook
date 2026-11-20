@@ -196,26 +196,26 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
     DateTime selectedDate = entryToEdit?.date ?? DateTime.now();
     String paymentMode = entryToEdit?.paymentMode ?? 'Cash';
 
-    // Preset quick chips matching user handwriting & common business ledger entries
+    // Preset quick chips for common business ledger entries
     final expenseSuggestions = [
-      'લાઈટ બિલ (Light Bill)',
-      'પગાર (Salary / Wages)',
-      'ઓફિસ ભાડું (Office Rent)',
-      'ચા-નાસ્તો (Refreshments)',
-      'ટ્રાન્સપોર્ટ (Transportation)',
-      'સ્ટેશનરી (Stationary & Print)',
-      'પેકિંગ ખર્ચ (Packing)',
-      'રિપેરીંગ (Maintenance)',
-      'અન્ય ખર્ચ (Other Expense)',
+      'Electricity Bill',
+      'Staff Salary / Wages',
+      'Office Rent',
+      'Refreshments & Tea',
+      'Transportation & Travel',
+      'Stationary & Printing',
+      'Packing Materials',
+      'Repairs & Maintenance',
+      'Other Operating Expenses',
     ];
 
     final incomeSuggestions = [
-      'ઓમ્ કિરણ (Om Kiran)',
-      'પ્રદિપ (Pradip)',
-      'રોકડ વેચાણ (Direct Cash Sales)',
-      'કમિશન આવક (Commission)',
-      'વ્યાજ આવક (Interest Received)',
-      'અન્ય આવક (Other Income)',
+      'Om Kiran (Sales)',
+      'Pradip (Sales)',
+      'Direct Cash Sales',
+      'Commission Received',
+      'Interest Received',
+      'Other Business Income',
     ];
 
     final suggestions = type == EntryType.expense ? expenseSuggestions : incomeSuggestions;
@@ -247,8 +247,8 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                 const SizedBox(width: 10),
                 Text(
                   isEdit
-                      ? (isExpense ? 'Edit Expense (ખર્ચ ફેરફાર)' : 'Edit Income (આવક ફેરફાર)')
-                      : (isExpense ? 'Add New Expense (ખર્ચ નોંધણી)' : 'Add New Income (આવક નોંધણી)'),
+                      ? (isExpense ? 'Edit Expense' : 'Edit Income')
+                      : (isExpense ? 'Add New Expense' : 'Add New Income'),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -262,7 +262,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   children: [
                     // QUICK SUGGESTION CHIPS
                     Text(
-                      'Quick Presets (ઝડપી પસંદગી):',
+                      'Quick Presets:',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.bold,
@@ -289,12 +289,12 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // PARTICULAR / વિગત
+                    // PARTICULAR / DETAILS
                     TextField(
                       controller: particularController,
                       decoration: InputDecoration(
-                        labelText: 'Particulars / Details (વિગત) *',
-                        hintText: isExpense ? 'e.g. લાઈટ બિલ, પગાર' : 'e.g. ઓમ્ કિરણ, રોકડ વેચાણ',
+                        labelText: 'Particulars / Details *',
+                        hintText: isExpense ? 'e.g. Electricity Bill, Staff Salary' : 'e.g. Om Kiran, Cash Sales',
                         prefixIcon: const Icon(Icons.description_outlined, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         filled: true,
@@ -303,12 +303,12 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                     const SizedBox(height: 14),
 
-                    // AMOUNT / રકમ
+                    // AMOUNT
                     TextField(
                       controller: amountController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
-                        labelText: 'Amount (રકમ ₹) *',
+                        labelText: 'Amount (₹) *',
                         hintText: '0.00',
                         prefixIcon: const Icon(Icons.currency_rupee, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -337,7 +337,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                             borderRadius: BorderRadius.circular(10),
                             child: InputDecorator(
                               decoration: InputDecoration(
-                                labelText: 'Date (તારીખ)',
+                                labelText: 'Date',
                                 prefixIcon: const Icon(Icons.calendar_today, size: 18),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -350,13 +350,13 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                           child: DropdownButtonFormField<String>(
                             initialValue: paymentMode,
                             decoration: InputDecoration(
-                              labelText: 'Mode (ચુકવણી)',
+                              labelText: 'Payment Mode',
                               prefixIcon: const Icon(Icons.payment, size: 18),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'Cash', child: Text('Cash (રોકડ)')),
-                              DropdownMenuItem(value: 'Cheque', child: Text('Cheque (ચેક)')),
+                              DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                              DropdownMenuItem(value: 'Cheque', child: Text('Cheque')),
                               DropdownMenuItem(value: 'Online / UPI', child: Text('UPI / Online')),
                               DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
                             ],
@@ -373,7 +373,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     TextField(
                       controller: categoryController,
                       decoration: InputDecoration(
-                        labelText: 'Category (વર્ગ)',
+                        labelText: 'Category',
                         hintText: 'e.g. Utility, Salary, Rent, Sales',
                         prefixIcon: const Icon(Icons.category_outlined, size: 18),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -386,7 +386,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                       controller: notesController,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: 'Notes / Remarks (નોંધ)',
+                        labelText: 'Notes / Remarks',
                         hintText: 'Optional remarks or bill reference',
                         prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -416,7 +416,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
 
                   if (part.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter Particulars / Details (વિગત)')),
+                      const SnackBar(content: Text('Please enter Particulars / Details')),
                     );
                     return;
                   }
@@ -565,8 +565,8 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   Chip(
                     visualDensity: VisualDensity.compact,
                     label: Text(
-                      'નફો - નુકસાન ખાતાવહી',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      'FINANCIAL LEDGER',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                     backgroundColor: Color(0x1500A86B),
                     side: BorderSide(color: Color(0x3300A86B)),
@@ -596,7 +596,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
   ) {
     String filterLabel;
     if (_activePreset == 'all' || _selectedMonthKeys.isEmpty) {
-      filterLabel = 'All Months (બધા મહિના - All Time)';
+      filterLabel = 'All Months (All Time)';
     } else if (_selectedMonthKeys.length == 1) {
       filterLabel = '1 Month: ${_formatMonthKey(_selectedMonthKeys.first)}';
     } else {
@@ -618,7 +618,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               children: [
                 // ALL MONTHS
                 ChoiceChip(
-                  label: const Text('All Months (બધા)'),
+                  label: const Text('All Months'),
                   selected: _activePreset == 'all' || _selectedMonthKeys.isEmpty,
                   onSelected: (_) => _setPreset('all', provider),
                 ),
@@ -663,7 +663,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     controller: _searchController,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      hintText: 'Search Particulars or Party (વિગત / પાર્ટી શોધો)...',
+                      hintText: 'Search Particulars, Category, or Party...',
                       prefixIcon: const Icon(Icons.search, size: 18),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -690,7 +690,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Add Expense (ખર્ચ)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text('+ Add Expense', style: TextStyle(fontWeight: FontWeight.bold)),
                   onPressed: () => _openAddEditEntryDialog(context, type: EntryType.expense),
                 ),
                 const SizedBox(width: 8),
@@ -703,7 +703,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Add Income (આવક)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text('+ Add Income', style: TextStyle(fontWeight: FontWeight.bold)),
                   onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
                 ),
               ],
@@ -769,7 +769,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'TOTAL INCOME (કુલ આવક)',
+                              'TOTAL INCOME',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
@@ -826,7 +826,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'TOTAL EXPENSES (કુલ ખર્ચ)',
+                              'TOTAL EXPENSES',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.bold,
@@ -897,7 +897,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                             Row(
                               children: [
                                 Text(
-                                  calc.isProfit ? 'NET PROFIT (ચોખ્ખો નફો)' : 'NET LOSS (ચોખ્ખું નુકસાન)',
+                                  calc.isProfit ? 'NET PROFIT' : 'NET LOSS',
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.bold,
@@ -969,7 +969,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Expenses (ખર્ચ)',
+                        'Expenses',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: redColor),
                       ),
                       Text('Red Color Column', style: TextStyle(fontSize: 10.5, color: Colors.grey)),
@@ -991,16 +991,16 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             ),
           ),
 
-          // TABLE HEADER (ક્રમ | વિગત | રકમ)
+          // TABLE HEADER (Sr | Particulars | Date | Amount)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
             child: const Row(
               children: [
-                SizedBox(width: 40, child: Text('ક્રમ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 3, child: Text('વિગત (Particulars)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('તારીખ (Date)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('રકમ (Amount)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                SizedBox(width: 40, child: Text('Sr.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 3, child: Text('Particulars / Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 2, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                 SizedBox(width: 60, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
@@ -1119,7 +1119,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'કુલ ખર્ચ (Total Expenses):',
+                  'Total Expenses:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: redColor),
                 ),
                 Text(
@@ -1169,7 +1169,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Income (આવક)',
+                        'Income',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: greenColor),
                       ),
                       Text('Green Color Column', style: TextStyle(fontSize: 10.5, color: Colors.grey)),
@@ -1191,16 +1191,16 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             ),
           ),
 
-          // TABLE HEADER (ક્રમ | વિગત | રકમ)
+          // TABLE HEADER (Sr | Particulars | Source | Amount)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
             child: const Row(
               children: [
-                SizedBox(width: 40, child: Text('ક્રમ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 3, child: Text('વિગત (Particulars / Party)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('સ્રોત (Source)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                Expanded(flex: 2, child: Text('રકમ (Amount)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                SizedBox(width: 40, child: Text('Sr.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 3, child: Text('Particulars / Party Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 2, child: Text('Source / Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                Expanded(flex: 2, child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                 SizedBox(width: 60, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
@@ -1332,7 +1332,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'કુલ આવક (Total Income):',
+                  'Total Income:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: greenColor),
                 ),
                 Text(

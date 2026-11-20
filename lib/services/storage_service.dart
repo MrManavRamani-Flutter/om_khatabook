@@ -477,16 +477,16 @@ class StorageService {
   Future<List<IncomeExpenseEntry>> loadIncomeExpenseEntries() async {
     final str = _prefs.getString(_keyIncomeExpenseEntries);
     if (str == null || str.isEmpty) {
-      // Seed default sample entries matching the notebook breakdown:
-      // Expenses: લાઈટ બિલ (50), પગાર (50)
-      // Income: ઓમ્ કિરણ (10), પ્રદિપ (20)
+      // Seed default sample entries:
+      // Expenses: Electricity Bill (50), Staff Salary (50)
+      // Income: Om Kiran (10), Pradip (20)
       final now = DateTime.now();
       return [
         IncomeExpenseEntry(
           id: 'exp_default_1',
           type: EntryType.expense,
           date: now,
-          particular: 'લાઈટ બિલ (Electricity)',
+          particular: 'Electricity Bill (Light Bill)',
           amount: 50.0,
           category: 'Utility & Bills',
           paymentMode: 'Cash',
@@ -497,7 +497,7 @@ class StorageService {
           id: 'exp_default_2',
           type: EntryType.expense,
           date: now,
-          particular: 'પગાર (Staff Salary)',
+          particular: 'Staff Salary (Monthly Wages)',
           amount: 50.0,
           category: 'Salary & Wages',
           paymentMode: 'Cash',
@@ -508,7 +508,7 @@ class StorageService {
           id: 'inc_default_1',
           type: EntryType.income,
           date: now,
-          particular: 'ઓમ્ કિરણ (Om Kiran)',
+          particular: 'Om Kiran (Sales Income)',
           amount: 10.0,
           category: 'Party Sales',
           paymentMode: 'Cash',
@@ -519,7 +519,7 @@ class StorageService {
           id: 'inc_default_2',
           type: EntryType.income,
           date: now,
-          particular: 'પ્રદિપ (Pradip)',
+          particular: 'Pradip (Sales Income)',
           amount: 20.0,
           category: 'Party Sales',
           paymentMode: 'Cash',

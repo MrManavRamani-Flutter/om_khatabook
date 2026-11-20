@@ -257,7 +257,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Strategy: ${summary.mode == BackupImportMode.merge ? "Combine & Merge (मर्ज)" : "Clean Overwrite (पुराना रिप्लेस)"}',
+                    'Strategy: ${summary.mode == BackupImportMode.merge ? "Combine & Merge" : "Clean Overwrite"}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
@@ -664,7 +664,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
               if (_analysis != null && _analysis!.isValid) ...[
                 const SizedBox(height: 16),
                 const Text(
-                  'Choose Import Strategy (बैकअप कैसे इम्पोर्ट करना है?):',
+                  'Choose Import Strategy:',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -674,9 +674,9 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                   context,
                   mode: BackupImportMode.merge,
                   title: 'Combine & Merge with Existing Data (Recommended)',
-                  hindiSubtitle: 'डेटा कम्बाइन / मर्ज करें',
+                  subtitle: 'Safe Non-Destructive Data Merge',
                   description:
-                      'Purana data safe rahega. Duplicate records skip honge aur agar kisi record ka data different hai to usko nayi primary ID dekar preserve kiya jayega.',
+                      'Existing data stays completely safe. Duplicate records are skipped automatically, and records with unique data are safely merged.',
                   icon: Icons.call_merge,
                   isRecommended: true,
                 ),
@@ -687,9 +687,9 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                   context,
                   mode: BackupImportMode.replace,
                   title: 'Replace Everything (Clean Overwrite)',
-                  hindiSubtitle: 'पुराना डेटा डिलीट करके नया डेटा सेट करें',
+                  subtitle: 'Complete Database Overwrite',
                   description:
-                      '⚠️ Warning: Purana sara data remove ho jayega aur backup file ka data clean load hoga.',
+                      'Warning: Replaces all existing records with the entries from the backup file.',
                   icon: Icons.delete_sweep,
                   isDanger: true,
                 ),
@@ -824,7 +824,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
     BuildContext context, {
     required BackupImportMode mode,
     required String title,
-    required String hindiSubtitle,
+    required String subtitle,
     required String description,
     required IconData icon,
     bool isRecommended = false,
@@ -927,7 +927,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    hindiSubtitle,
+                    subtitle,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
