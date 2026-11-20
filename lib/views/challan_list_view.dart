@@ -10,6 +10,7 @@ import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/export_report_dialog.dart';
 import '../widgets/invoice_preview_dialog.dart';
+import '../widgets/password_confirmation_dialog.dart';
 import '../widgets/view_challan_dialog.dart';
 
 class ChallanListView extends StatelessWidget {
@@ -222,43 +223,29 @@ class ChallanListView extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, ChallanEntry entry) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Move to Recycle Bin?'),
-        content: Text(
-          'Challan #${entry.challanNo} (${entry.partyName}) will be moved to the Recycle Bin. You can restore it anytime or delete it permanently from the bin.',
+  Future<void> _confirmDelete(BuildContext context, ChallanEntry entry) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Confirm Move to Recycle Bin',
+      message: 'Enter your password to confirm moving Challan #${entry.challanNo} (${entry.partyName}) to the Recycle Bin.',
+      actionLabel: 'Move to Bin',
+      icon: Icons.delete_outline,
+      iconColor: AppColors.warningText,
+    );
+
+    if (!confirmed || !context.mounted) return;
+
+    context.read<ChallanProvider>().moveToBinChallan(entry.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Challan #${entry.challanNo} moved to Recycle Bin'),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.amberAccent,
+          onPressed: () {
+            context.read<ChallanProvider>().restoreChallan(entry.id);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.read<ChallanProvider>().moveToBinChallan(entry.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Challan #${entry.challanNo} moved to Recycle Bin'),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: Colors.amberAccent,
-                    onPressed: () {
-                      context.read<ChallanProvider>().restoreChallan(entry.id);
-                    },
-                  ),
-                ),
-              );
-            },
-            child: const Text('Move to Bin'),
-          ),
-        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import 'add_edit_party_dialog.dart';
+import 'password_confirmation_dialog.dart';
 
 enum CashPaymentMode {
   fullyPaid('Fully Paid'),
@@ -328,6 +329,20 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
 
     const uName = 'OM MAVTAR';
     const uRole = 'MASTER';
+
+    final isEdit = widget.entryToEdit != null;
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: isEdit ? 'Confirm Update Challan' : 'Confirm Add Challan',
+      message: isEdit
+          ? 'Enter password to confirm updating Challan #$formattedChallanNo for $formattedPartyName.'
+          : 'Enter password to confirm adding Challan #$formattedChallanNo for $formattedPartyName.',
+      actionLabel: isEdit ? 'Update Entry' : 'Add Challan',
+      icon: isEdit ? Icons.edit_note : Icons.add_circle_outline,
+      iconColor: AppColors.primary,
+    );
+
+    if (!confirmed) return;
 
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(

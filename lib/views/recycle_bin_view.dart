@@ -21,89 +21,50 @@ class _RecycleBinViewState extends State<RecycleBinView> {
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, hh:mm a');
 
-  void _confirmEmptyBin() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.warningText),
-            SizedBox(width: 8),
-            Text('Empty Recycle Bin?'),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to permanently delete all items in the Recycle Bin?\n\n'
-          'This action is permanent and IRREVERSIBLE. Once deleted, this data cannot be recovered from any backup or archive.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await context.read<ChallanProvider>().emptyRecycleBin();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Recycle Bin emptied permanently.'),
-                    backgroundColor: AppColors.primaryDark,
-                  ),
-                );
-              }
-            },
-            child: const Text('Empty Permanently'),
-          ),
-        ],
-      ),
+  Future<void> _confirmEmptyBin() async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Empty Recycle Bin',
+      message: 'Enter your password to confirm permanently erasing ALL items in the Recycle Bin. This action cannot be undone.',
+      actionLabel: 'Empty Permanently',
+      icon: Icons.delete_sweep,
+      iconColor: AppColors.warningText,
     );
+
+    if (!confirmed || !mounted) return;
+
+    await context.read<ChallanProvider>().emptyRecycleBin();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Recycle Bin emptied permanently.'),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+    }
   }
 
-  void _confirmPermanentDeleteChallan(ChallanEntry challan) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Challan Permanently?'),
-        content: Text(
-          'Are you sure you want to permanently erase Challan #${challan.challanNo} (${challan.partyName})?\n\n'
-          'This record will be destroyed and cannot be recovered.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await context
-                  .read<ChallanProvider>()
-                  .deletePermanentlyChallan(challan.id);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'Challan #${challan.challanNo} permanently deleted.'),
-                    backgroundColor: Colors.red.shade800,
-                  ),
-                );
-              }
-            },
-            child: const Text('Delete Permanently'),
-          ),
-        ],
-      ),
+  Future<void> _confirmPermanentDeleteChallan(ChallanEntry challan) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Permanently Erase Challan',
+      message: 'Enter your password to confirm permanently erasing Challan #${challan.challanNo} (${challan.partyName}). This action cannot be undone.',
+      actionLabel: 'Erase Permanently',
+      icon: Icons.delete_forever,
+      iconColor: AppColors.warningText,
     );
+
+    if (!confirmed || !mounted) return;
+
+    await context.read<ChallanProvider>().deletePermanentlyChallan(challan.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Challan #${challan.challanNo} permanently deleted.'),
+          backgroundColor: Colors.red.shade800,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmPermanentDeleteParty(Party party) async {

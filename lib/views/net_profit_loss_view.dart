@@ -5,6 +5,7 @@ import '../models/income_expense_entry.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/password_confirmation_dialog.dart';
 
 class NetProfitLossView extends StatefulWidget {
   const NetProfitLossView({super.key});
@@ -428,6 +429,16 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   }
 
                   if (isEdit) {
+                    final confirmed = await promptPasswordConfirmation(
+                      context,
+                      title: isExpense ? 'Confirm Edit Expense' : 'Confirm Edit Income',
+                      message: 'Enter password to confirm updating "$part" (${Formatters.currency(amt)}).',
+                      actionLabel: 'Save Changes',
+                      icon: isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                      iconColor: accentColor,
+                    );
+                    if (!confirmed) return;
+
                     final updated = entryToEdit.copyWith(
                       particular: part,
                       amount: amt,
@@ -438,6 +449,16 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     );
                     await provider.updateIncomeExpenseEntry(updated);
                   } else {
+                    final confirmed = await promptPasswordConfirmation(
+                      context,
+                      title: isExpense ? 'Confirm Add Expense' : 'Confirm Add Income',
+                      message: 'Enter password to confirm adding "$part" (${Formatters.currency(amt)}).',
+                      actionLabel: isExpense ? 'Save Expense' : 'Save Income',
+                      icon: isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                      iconColor: accentColor,
+                    );
+                    if (!confirmed) return;
+
                     final newEntry = IncomeExpenseEntry(
                       id: 'entry_${DateTime.now().millisecondsSinceEpoch}',
                       type: type,
@@ -465,31 +486,19 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
     );
   }
 
-  void _confirmDeleteEntry(BuildContext context, IncomeExpenseEntry entry) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete ${entry.isExpense ? "Expense" : "Income"} Entry?'),
-        content: Text('Are you sure you want to delete "${entry.particular}" (${Formatters.currency(entry.amount)})?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warningText,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await context.read<ChallanProvider>().deleteIncomeExpenseEntry(entry.id);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteEntry(BuildContext context, IncomeExpenseEntry entry) async {
+    final confirmed = await promptPasswordConfirmation(
+      context,
+      title: 'Confirm Delete ${entry.isExpense ? "Expense" : "Income"}',
+      message: 'Enter password to confirm deleting "${entry.particular}" (${Formatters.currency(entry.amount)}).',
+      actionLabel: 'Delete',
+      icon: Icons.delete_outline,
+      iconColor: AppColors.warningText,
     );
+
+    if (!confirmed || !context.mounted) return;
+
+    await context.read<ChallanProvider>().deleteIncomeExpenseEntry(entry.id);
   }
 
   @override

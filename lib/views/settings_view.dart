@@ -8,6 +8,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/branding_dialogs.dart';
 import '../widgets/import_backup_dialog.dart';
+import '../widgets/password_confirmation_dialog.dart';
 
 class SettingsView extends StatefulWidget {
   final int initialCategoryIndex;
@@ -1129,7 +1130,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Save Company Branding', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {
+                onPressed: () async {
                   final name = _companyNameController.text.trim();
                   final tagline = _companyTaglineController.text.trim();
                   if (name.isEmpty) {
@@ -1141,14 +1142,27 @@ class _SettingsViewState extends State<SettingsView> {
                     );
                     return;
                   }
-                  provider.setCompanyBranding(name: name, tagline: tagline);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Company branding saved successfully!'),
-                      backgroundColor: AppColors.primary,
-                      duration: Duration(seconds: 2),
-                    ),
+
+                  final confirmed = await promptPasswordConfirmation(
+                    context,
+                    title: 'Confirm Update Branding',
+                    message: 'Enter password to confirm updating company branding to "$name".',
+                    actionLabel: 'Save Branding',
+                    icon: Icons.branding_watermark,
+                    iconColor: AppColors.primary,
                   );
+                  if (!confirmed || !context.mounted) return;
+
+                  provider.setCompanyBranding(name: name, tagline: tagline);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Company branding saved successfully!'),
+                        backgroundColor: AppColors.primary,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -1423,7 +1437,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Save Profile Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {
+                onPressed: () async {
                   final name = _adminNameController.text.trim();
                   final role = _adminRoleController.text.trim();
                   if (name.isEmpty) {
@@ -1435,17 +1449,30 @@ class _SettingsViewState extends State<SettingsView> {
                     );
                     return;
                   }
+
+                  final confirmed = await promptPasswordConfirmation(
+                    context,
+                    title: 'Confirm Update Profile',
+                    message: 'Enter password to confirm updating operator profile to "$name".',
+                    actionLabel: 'Save Profile',
+                    icon: Icons.person_outline,
+                    iconColor: AppColors.primary,
+                  );
+                  if (!confirmed || !context.mounted) return;
+
                   provider.setAdminProfile(
                     name: name,
                     role: role.isNotEmpty ? role : 'Administrator',
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Profile updated successfully!'),
-                      backgroundColor: AppColors.primary,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Profile updated successfully!'),
+                        backgroundColor: AppColors.primary,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
