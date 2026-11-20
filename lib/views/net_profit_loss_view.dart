@@ -534,15 +534,13 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                 ],
               )
             else
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: _buildExpensesCard(context, calc, isDark)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildIncomeCard(context, calc, isDark)),
-                  ],
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildExpensesCard(context, calc, isDark)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildIncomeCard(context, calc, isDark)),
+                ],
               ),
           ],
         ),
@@ -1015,121 +1013,120 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           ),
           const Divider(height: 1),
 
-          // ROWS LIST (EXPANDED FOR BALANCED HEIGHT)
-          Expanded(
-            child: calc.expenses.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.receipt_outlined, size: 36, color: Colors.grey.shade400),
-                          const SizedBox(height: 8),
-                          const Text('No expenses recorded for this period.', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
-                        ],
+          // ROWS LIST
+          if (calc.expenses.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.receipt_outlined, size: 36, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    const Text('No expenses recorded for this period.', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: calc.expenses.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final e = calc.expenses[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
                       ),
-                    ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: calc.expenses.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final e = calc.expenses[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        child: Row(
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 40,
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
-                              ),
+                            Text(
+                              e.particular,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e.particular,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                  ),
-                                  Text(
-                                    e.category,
-                                    style: const TextStyle(fontSize: 10.5, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              e.category,
+                              style: const TextStyle(fontSize: 10.5, color: Colors.grey),
                             ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                _dateFormat.format(e.date),
-                                style: const TextStyle(fontSize: 11.5, color: Colors.grey),
-                              ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          _dateFormat.format(e.date),
+                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            Formatters.currency(e.amount),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                              color: redColor,
                             ),
-                            Expanded(
-                              flex: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Text(
-                                  Formatters.currency(e.amount),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13.5,
-                                    color: redColor,
-                                  ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 64,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            InkWell(
+                              onTap: () => _openAddEditEntryDialog(
+                                context,
+                                type: EntryType.expense,
+                                entryToEdit: e,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
+                                child: const Icon(Icons.edit_outlined, size: 14),
                               ),
                             ),
-                            SizedBox(
-                              width: 64,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  InkWell(
-                                    onTap: () => _openAddEditEntryDialog(
-                                      context,
-                                      type: EntryType.expense,
-                                      entryToEdit: e,
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(5),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(Icons.edit_outlined, size: 14),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  InkWell(
-                                    onTap: () => _confirmDeleteEntry(context, e),
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(5),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _confirmDeleteEntry(context, e),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-          ),
+                );
+              },
+            ),
 
           // FOOTER / TOTAL ROW (CLEAN ACCOUNTING BADGE, NO TEXT UNDERLINE)
           Container(
@@ -1252,141 +1249,140 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           ),
           const Divider(height: 1),
 
-          // ROWS LIST (EXPANDED FOR BALANCED HEIGHT)
-          Expanded(
-            child: calc.incomes.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.account_balance_wallet_outlined, size: 36, color: Colors.grey.shade400),
-                          const SizedBox(height: 8),
-                          const Text('No income recorded for this period.', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: calc.incomes.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final e = calc.incomes[index];
-                      final isPartyCollection = e.id.startsWith('party_inc_');
+          // ROWS LIST
+          if (calc.incomes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined, size: 36, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
+                    const Text('No income recorded for this period.', style: TextStyle(color: Colors.grey, fontSize: 12.5)),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: calc.incomes.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final e = calc.incomes[index];
+                final isPartyCollection = e.id.startsWith('party_inc_');
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        child: Row(
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 40,
-                              child: Text(
-                                '${index + 1}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
-                              ),
+                            Text(
+                              e.particular,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e.particular,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                  ),
-                                  Text(
-                                    isPartyCollection ? 'Party Challan Payment' : e.category,
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      color: isPartyCollection ? AppColors.primary : Colors.grey,
-                                      fontWeight: isPartyCollection ? FontWeight.w500 : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                isPartyCollection ? 'Challan Ledger' : _dateFormat.format(e.date),
-                                style: const TextStyle(fontSize: 11.5, color: Colors.grey),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Text(
-                                  Formatters.currency(e.amount),
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13.5,
-                                    color: greenColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 64,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: isPartyCollection
-                                    ? [
-                                        Tooltip(
-                                          message: 'Auto-calculated from party challan receipts',
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              color: greenColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: const Icon(Icons.check_circle_outline, size: 14, color: greenColor),
-                                          ),
-                                        ),
-                                      ]
-                                    : [
-                                        InkWell(
-                                          onTap: () => _openAddEditEntryDialog(
-                                            context,
-                                            type: EntryType.income,
-                                            entryToEdit: e,
-                                          ),
-                                          borderRadius: BorderRadius.circular(6),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: const Icon(Icons.edit_outlined, size: 14),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        InkWell(
-                                          onTap: () => _confirmDeleteEntry(context, e),
-                                          borderRadius: BorderRadius.circular(6),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
-                                          ),
-                                        ),
-                                      ],
+                            Text(
+                              isPartyCollection ? 'Party Challan Payment' : e.category,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isPartyCollection ? AppColors.primary : Colors.grey,
+                                fontWeight: isPartyCollection ? FontWeight.w500 : FontWeight.normal,
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          isPartyCollection ? 'Challan Ledger' : _dateFormat.format(e.date),
+                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            Formatters.currency(e.amount),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                              color: greenColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 64,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: isPartyCollection
+                              ? [
+                                  Tooltip(
+                                    message: 'Auto-calculated from party challan receipts',
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: greenColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(Icons.check_circle_outline, size: 14, color: greenColor),
+                                    ),
+                                  ),
+                                ]
+                              : [
+                                  InkWell(
+                                    onTap: () => _openAddEditEntryDialog(
+                                      context,
+                                      type: EntryType.income,
+                                      entryToEdit: e,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(Icons.edit_outlined, size: 14),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  InkWell(
+                                    onTap: () => _confirmDeleteEntry(context, e),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
+                                    ),
+                                  ),
+                                ],
+                        ),
+                      ),
+                    ],
                   ),
-          ),
+                );
+              },
+            ),
 
           // FOOTER / TOTAL ROW (CLEAN ACCOUNTING BADGE, NO TEXT UNDERLINE)
           Container(
