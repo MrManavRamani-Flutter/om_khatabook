@@ -199,6 +199,210 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  void _showChangePasswordDialog(BuildContext context, AuthProvider auth) {
+    final oldController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    String? localError;
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submit() async {
+              setDialogState(() {
+                localError = null;
+                isSubmitting = true;
+              });
+
+              final result = await auth.updatePassword(
+                oldPassword: oldController.text,
+                newPassword: newController.text,
+                confirmPassword: confirmController.text,
+              );
+
+              if (!ctx.mounted) return;
+
+              if (result.success) {
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(result.message)),
+                      ],
+                    ),
+                    backgroundColor: AppColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } else {
+                setDialogState(() {
+                  localError = result.message;
+                  isSubmitting = false;
+                });
+              }
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.lock_reset, color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Change Password',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Master Operator: OM MAVTAR (OMMAVTAR36)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 440,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (localError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningBgLight,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.warningText.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: AppColors.warningText, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                localError!,
+                                style: const TextStyle(
+                                  color: AppColors.warningText,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    // Current / Old Password
+                    const Text('Current (Old) Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: oldController,
+                      obscureText: obscureOld,
+                      decoration: InputDecoration(
+                        hintText: 'Enter current password (Default: OMMAVTAR36)',
+                        prefixIcon: const Icon(Icons.key, size: 18),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureOld ? Icons.visibility_off : Icons.visibility, size: 18),
+                          onPressed: () => setDialogState(() => obscureOld = !obscureOld),
+                        ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    // New Password
+                    const Text('New Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: newController,
+                      obscureText: obscureNew,
+                      decoration: InputDecoration(
+                        hintText: 'Enter at least 4 characters',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility, size: 18),
+                          onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                        ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    // Confirm New Password
+                    const Text('Confirm New Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: confirmController,
+                      obscureText: obscureConfirm,
+                      decoration: InputDecoration(
+                        hintText: 'Re-enter new password to confirm',
+                        prefixIcon: const Icon(Icons.check_circle_outline, size: 18),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility, size: 18),
+                          onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                        ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  ),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save, size: 16),
+                  label: Text(isSubmitting ? 'Updating...' : 'Update Password'),
+                  onPressed: isSubmitting ? null : submit,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   // --- MAIN BUILD METHOD ---
 
   @override
@@ -625,16 +829,33 @@ class _SettingsViewState extends State<SettingsView> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.warningText,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              icon: const Icon(Icons.logout, size: 18),
-              label: const Text('Sign Out / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: () => _confirmLogout(context, auth),
+            Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.lock_reset, size: 18),
+                  label: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () => _showChangePasswordDialog(context, auth),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.warningText,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Sign Out / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () => _confirmLogout(context, auth),
+                ),
+              ],
             ),
           ],
         ),

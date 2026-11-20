@@ -100,6 +100,38 @@ class StorageService {
         }
       }
 
+      // 2b. Auto-discover exported backup file if active database has 0 challans
+      // Only run in live app environment, skip during unit test execution
+      final isTestEnv = Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTestEnv) {
+        final challansCheck = _prefs.getString(_keyChallans);
+        if (challansCheck == null || challansCheck.trim() == '[]' || challansCheck.isEmpty) {
+          final recentBackups = await getRecentBackupFiles();
+          for (final backupFile in recentBackups) {
+            try {
+              if (await backupFile.exists()) {
+                final content = await backupFile.readAsString();
+                final dynamic decoded = jsonDecode(content);
+                if (decoded is Map<String, dynamic>) {
+                  final cList = decoded['challans'];
+                  final pList = decoded['parties'];
+                  if (cList is List && cList.isNotEmpty) {
+                    await _prefs.setString(_keyChallans, jsonEncode(cList));
+                    if (pList is List && pList.isNotEmpty) {
+                      await _prefs.setString(_keyParties, jsonEncode(pList));
+                    }
+                    debugPrint('Auto-restored ${cList.length} challans and ${(pList as List?)?.length ?? 0} parties from backup: ${backupFile.path}');
+                    break;
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('Error inspecting backup file ${backupFile.path}: $e');
+            }
+          }
+        }
+      }
+
       // 3. Upgrade existing challans schema (ensure paidAmount & createdBy = OM MAVTAR)
       final existingChallansJson = _prefs.getString(_keyChallans);
       if (existingChallansJson != null && existingChallansJson.isNotEmpty) {
