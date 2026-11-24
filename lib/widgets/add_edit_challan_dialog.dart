@@ -48,6 +48,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   Party? _selectedParty;
   PaymentOption _paymentOption = PaymentOption.cash;
   CashPaymentMode _cashPaymentMode = CashPaymentMode.unpaid;
+  DateTime? _paymentDueDate;
 
   String? get _activePrefix {
     final current = _gstBillNoController.text.trim().toUpperCase();
@@ -92,6 +93,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     if (widget.entryToEdit != null) {
       final e = widget.entryToEdit!;
       _selectedDate = e.date;
+      _paymentDueDate = e.paymentDueDate;
       _challanNoController.text = e.challanNo;
       _partySearchController.text = e.partyName;
       _challanAmountController.text = e.challanAmount.toStringAsFixed(0);
@@ -355,6 +357,12 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       return;
     }
 
+    final dueDateToSave = (_paymentOption == PaymentOption.cash && _cashPaymentMode == CashPaymentMode.fullyPaid)
+        ? null
+        : (_paymentOption == PaymentOption.cheque && cheque?.status == ChequeStatus.cleared)
+            ? null
+            : _paymentDueDate;
+
     if (widget.entryToEdit != null) {
       final updated = widget.entryToEdit!.copyWith(
         date: _selectedDate,
@@ -369,6 +377,8 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         paymentOption: _paymentOption,
         isCashPaid: cashPaidBool,
         chequeDetails: cheque,
+        paymentDueDate: dueDateToSave,
+        clearPaymentDueDate: dueDateToSave == null,
         notes: formattedNotes,
       );
       await provider.updateChallan(updated, performedBy: uName, userRole: uRole);
@@ -386,6 +396,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         paymentOption: _paymentOption,
         isCashPaid: cashPaidBool,
         chequeDetails: cheque,
+        paymentDueDate: dueDateToSave,
         notes: formattedNotes,
         performedBy: uName,
         userRole: uRole,
@@ -1212,6 +1223,10 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                     ),
                                   ),
                                 ],
+                                if (_cashPaymentMode != CashPaymentMode.fullyPaid) ...[
+                                  const SizedBox(height: 14),
+                                  _buildPaymentDueDateSection(isDark),
+                                ],
                               ],
                             ),
                           ),
@@ -1346,6 +1361,10 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                     if (val != null) setState(() => _chequeStatus = val);
                                   },
                                 ),
+                                if (_chequeStatus != ChequeStatus.cleared) ...[
+                                  const SizedBox(height: 14),
+                                  _buildPaymentDueDateSection(isDark),
+                                ],
                               ],
                             ),
                           ),
@@ -1399,6 +1418,167 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentDueDateSection(bool isDark) {
+    int? days;
+    bool isOverdue = false;
+    if (_paymentDueDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final due = DateTime(_paymentDueDate!.year, _paymentDueDate!.month, _paymentDueDate!.day);
+      days = due.difference(today).inDays;
+      isOverdue = today.isAfter(due);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isOverdue
+              ? const Color(0xFFEF4444)
+              : (isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFCBD5E1)),
+          width: isOverdue ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.event_available,
+                    size: 16,
+                    color: isOverdue ? const Color(0xFFEF4444) : AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Payment Due Date (પેમેન્ટ મળવાની તારીખ) *',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              if (_paymentDueDate != null && days != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isOverdue
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                        : (days == 0 || days == 1
+                            ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                            : AppColors.primary.withValues(alpha: 0.15)),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isOverdue
+                          ? const Color(0xFFEF4444)
+                          : (days == 0 || days == 1 ? const Color(0xFFF59E0B) : AppColors.primary),
+                    ),
+                  ),
+                  child: Text(
+                    isOverdue
+                        ? '🚨 ${days.abs()} Days Overdue'
+                        : (days == 0 ? '⚠️ Due Today' : (days == 1 ? '⚠️ Due Tomorrow' : '⏳ $days Days Left')),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: isOverdue
+                          ? const Color(0xFFEF4444)
+                          : (days == 0 || days == 1 ? const Color(0xFFD97706) : AppColors.primary),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _paymentDueDate ?? _selectedDate.add(const Duration(days: 30)),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setState(() => _paymentDueDate = picked);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Due Date',
+                      prefixIcon: Icon(Icons.calendar_today, size: 16),
+                      isDense: true,
+                    ),
+                    child: Text(
+                      _paymentDueDate != null
+                          ? Formatters.date(_paymentDueDate!)
+                          : 'Select payment due date...',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: _paymentDueDate != null ? FontWeight.bold : FontWeight.normal,
+                        color: _paymentDueDate != null ? null : Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_paymentDueDate != null) ...[
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: 'Clear Due Date',
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => setState(() => _paymentDueDate = null),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+7 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 7))),
+              ),
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+15 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 15))),
+              ),
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+30 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 30))),
+              ),
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+45 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 45))),
+              ),
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+60 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 60))),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

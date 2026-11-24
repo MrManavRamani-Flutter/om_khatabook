@@ -230,6 +230,13 @@ class ViewChallanDialog extends StatelessWidget {
                     _buildRow('GST Amount', Formatters.currency(entry.gstAmount)),
                     const Divider(height: 16),
                     _buildRow('Payment Option', entry.paymentOption.label),
+                    if (entry.paymentDueDate != null) ...[
+                      const Divider(height: 16),
+                      _buildRow(
+                        'Payment Due Date',
+                        '${Formatters.date(entry.paymentDueDate!)} • ${entry.paymentDueCountdownText}',
+                      ),
+                    ],
                     if (!isCash && entry.chequeDetails != null) ...[
                       const Divider(height: 16),
                       _buildRow('Cheque No.', entry.chequeDetails!.chequeNo),

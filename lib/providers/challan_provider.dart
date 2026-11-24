@@ -429,6 +429,8 @@ class ChallanProvider extends ChangeNotifier {
       if (_statusFilter != null && _statusFilter != 'all') {
         if (_statusFilter == 'unpaid') {
           if (!item.isPending && !item.hasWarning) return false;
+        } else if (_statusFilter == 'overdue') {
+          if (item.isFullyPaid || !item.isPaymentOverdue) return false;
         } else if (_statusFilter == 'paid') {
           if (!item.isFullyPaid) return false;
         } else if (_statusFilter == 'bounced') {
@@ -520,7 +522,11 @@ class ChallanProvider extends ChangeNotifier {
       parts.add('Mode: ${_paymentOptionFilter!.label}');
     }
     if (_statusFilter != null && _statusFilter != 'all') {
-      parts.add('Status: ${_statusFilter!.toUpperCase()}');
+      if (_statusFilter == 'overdue') {
+        parts.add('Status: OVERDUE 🚨');
+      } else {
+        parts.add('Status: ${_statusFilter!.toUpperCase()}');
+      }
     }
 
     if (_sortField == ChallanSortField.challanNo) {
@@ -588,6 +594,25 @@ class ChallanProvider extends ChangeNotifier {
 
   int get unpaidWarningCount =>
       filteredChallans.where((c) => c.hasWarning).length;
+
+  /// Active overdue unpaid challans (due date passed and entry is not fully paid)
+  List<ChallanEntry> get overdueChallans =>
+      challans.where((c) => !c.isFullyPaid && c.isPaymentOverdue).toList();
+
+  int get overdueCount => overdueChallans.length;
+
+  double get overdueAmount {
+    double sum = 0.0;
+    for (var c in overdueChallans) {
+      if (c.paymentOption == PaymentOption.cash) {
+        sum += c.remainingAmount;
+      } else if (c.paymentOption == PaymentOption.cheque &&
+          c.chequeDetails?.status != ChequeStatus.cleared) {
+        sum += c.finalAmount;
+      }
+    }
+    return sum;
+  }
 
   // --- PROFIT & LOSS / INCOME & EXPENSES ---
   List<IncomeExpenseEntry> get incomeExpenseEntries =>
@@ -941,6 +966,7 @@ class ChallanProvider extends ChangeNotifier {
     PaymentOption paymentOption = PaymentOption.cash,
     bool isCashPaid = true,
     ChequeDetails? chequeDetails,
+    DateTime? paymentDueDate,
     String notes = '',
     String performedBy = 'OM MAVTAR',
     String userRole = 'MASTER',
@@ -959,6 +985,7 @@ class ChallanProvider extends ChangeNotifier {
       paymentOption: paymentOption,
       isCashPaid: isCashPaid,
       chequeDetails: chequeDetails,
+      paymentDueDate: paymentDueDate,
       notes: notes.trim(),
       createdAt: DateTime.now(),
       createdBy: performedBy,

@@ -171,6 +171,7 @@ class ChallanEntry {
   final PaymentOption paymentOption;
   final bool isCashPaid; // False if unpaid or partially paid
   final ChequeDetails? chequeDetails;
+  final DateTime? paymentDueDate; // Promised payment date / due date for unpaid or partial challans
   final String notes;
   final DateTime createdAt; // Hidden from form, set to DateTime.now()
   final String createdBy; // Username who added this record
@@ -194,6 +195,7 @@ class ChallanEntry {
     required this.paymentOption,
     this.isCashPaid = true,
     this.chequeDetails,
+    this.paymentDueDate,
     this.notes = '',
     required this.createdAt,
     this.createdBy = 'admin',
@@ -260,6 +262,37 @@ class ChallanEntry {
     }
   }
 
+  /// Whether this unpaid/partial challan has crossed its payment due date
+  bool get isPaymentOverdue {
+    if (isFullyPaid) return false;
+    if (paymentDueDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(paymentDueDate!.year, paymentDueDate!.month, paymentDueDate!.day);
+    return today.isAfter(due);
+  }
+
+  /// Number of days remaining until payment due (positive = days left, 0 = due today, negative = days overdue)
+  int? get daysUntilPaymentDue {
+    if (paymentDueDate == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(paymentDueDate!.year, paymentDueDate!.month, paymentDueDate!.day);
+    return due.difference(today).inDays;
+  }
+
+  /// Countdown and status label for UI countdowns and badges
+  String get paymentDueCountdownText {
+    final days = daysUntilPaymentDue;
+    if (days == null) return '';
+    if (isFullyPaid) return 'Paid';
+    if (days > 1) return '$days Days Left';
+    if (days == 1) return 'Due Tomorrow';
+    if (days == 0) return 'Due Today ⚠️';
+    final overdueDays = days.abs();
+    return '$overdueDays Days Overdue 🚨';
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -275,6 +308,7 @@ class ChallanEntry {
       'paymentOption': paymentOption.name,
       'isCashPaid': isCashPaid,
       'chequeDetails': chequeDetails?.toJson(),
+      'paymentDueDate': paymentDueDate?.toIso8601String(),
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
@@ -342,6 +376,7 @@ class ChallanEntry {
       ),
       isCashPaid: isCashPaidVal,
       chequeDetails: cheque,
+      paymentDueDate: json['paymentDueDate'] != null ? _parseDate(json['paymentDueDate']) : null,
       notes: json['notes']?.toString().trim() ?? '',
       createdAt: _parseDate(json['createdAt']),
       createdBy: json['createdBy']?.toString().trim() ?? 'system',
@@ -367,6 +402,8 @@ class ChallanEntry {
     PaymentOption? paymentOption,
     bool? isCashPaid,
     ChequeDetails? chequeDetails,
+    DateTime? paymentDueDate,
+    bool clearPaymentDueDate = false,
     String? notes,
     String? createdBy,
     String? lastModifiedBy,
@@ -390,6 +427,7 @@ class ChallanEntry {
       paymentOption: paymentOption ?? this.paymentOption,
       isCashPaid: isCashPaid ?? this.isCashPaid,
       chequeDetails: chequeDetails ?? this.chequeDetails,
+      paymentDueDate: clearPaymentDueDate ? null : (paymentDueDate ?? this.paymentDueDate),
       notes: notes ?? this.notes,
       createdAt: createdAt,
       createdBy: createdBy ?? this.createdBy,

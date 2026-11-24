@@ -301,6 +301,8 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
       if (_statusFilter != null && _statusFilter != 'all') {
         if (_statusFilter == 'unpaid') {
           if (!item.isPending && !item.hasWarning) return false;
+        } else if (_statusFilter == 'overdue') {
+          if (item.isFullyPaid || !item.isPaymentOverdue) return false;
         } else if (_statusFilter == 'paid') {
           if (!item.isFullyPaid) return false;
         } else if (_statusFilter == 'bounced') {
@@ -608,6 +610,73 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
             ),
             const SizedBox(height: 16),
 
+            // PARTY OVERDUE PAYMENT WARNING BANNER
+            Builder(builder: (context) {
+              final partyOverdue = allPartyChallans.where((c) => !c.isFullyPaid && c.isPaymentOverdue).toList();
+              if (partyOverdue.isEmpty) return const SizedBox.shrink();
+
+              final overdueTotal = partyOverdue.fold(0.0, (s, c) => s + c.remainingAmount);
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PAYMENT OVERDUE ALERT FOR THIS PARTY 🚨',
+                            style: TextStyle(
+                              fontSize: isMobile ? 12.5 : 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${partyOverdue.length} challans past payment due date (${Formatters.currency(overdueTotal)}). Waiting for cash or cheque details.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: () {
+                        setState(() => _statusFilter = _statusFilter == 'overdue' ? 'all' : 'overdue');
+                      },
+                      child: Text(_statusFilter == 'overdue' ? 'Show All' : 'Filter Overdue'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
             // PARTY-SPECIFIC FILTER TOOLBAR (ZERO HORIZONTAL SCROLL)
             Card(
               child: Padding(
@@ -759,6 +828,10 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         _buildFilterChip('unpaid', 'Unpaid Warning', _statusFilter == 'unpaid', () {
                           setState(() => _statusFilter = 'unpaid');
                         }, color: AppColors.warningText),
+                        if (allPartyChallans.any((c) => !c.isFullyPaid && c.isPaymentOverdue))
+                          _buildFilterChip('overdue', 'Overdue 🚨', _statusFilter == 'overdue', () {
+                            setState(() => _statusFilter = _statusFilter == 'overdue' ? 'all' : 'overdue');
+                          }, color: const Color(0xFFDC2626)),
                         _buildFilterChip('bounced', 'Bounced', _statusFilter == 'bounced', () {
                           setState(() => _statusFilter = 'bounced');
                         }, color: AppColors.warningText),
@@ -1645,13 +1718,44 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           flex: 2,
                           child: Align(
                             alignment: Alignment.centerRight,
-                            child: Text(
-                              dueAmt > 0 ? Formatters.currency(dueAmt) : '-',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: dueAmt > 0 ? AppColors.warningText : Colors.grey,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  dueAmt > 0 ? Formatters.currency(dueAmt) : '-',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: dueAmt > 0 ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : AppColors.warningText) : Colors.grey,
+                                  ),
+                                ),
+                                if (!item.isFullyPaid && item.paymentDueDate != null)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: item.isPaymentOverdue
+                                          ? const Color(0xFFDC2626).withValues(alpha: 0.15)
+                                          : (item.daysUntilPaymentDue == 0 || item.daysUntilPaymentDue == 1
+                                              ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                                              : AppColors.primary.withValues(alpha: 0.1)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      item.paymentDueCountdownText,
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: item.isPaymentOverdue
+                                            ? const Color(0xFFDC2626)
+                                            : (item.daysUntilPaymentDue == 0 || item.daysUntilPaymentDue == 1
+                                                ? const Color(0xFFD97706)
+                                                : AppColors.primary),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -2022,19 +2126,23 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           ),
         );
       } else {
+        final isOverdue = item.isPaymentOverdue;
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: AppColors.warningText,
+            color: isOverdue ? const Color(0xFFDC2626) : AppColors.warningText,
             borderRadius: BorderRadius.circular(5),
+            border: isOverdue ? Border.all(color: const Color(0xFFFCA5A5), width: 1) : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 11, color: Colors.white),
+              Icon(isOverdue ? Icons.error_outline : Icons.warning_amber_rounded, size: 11, color: Colors.white),
               const SizedBox(width: 3),
               Text(
-                compact ? 'UNPAID' : 'UNPAID CASH',
+                isOverdue
+                    ? (compact ? 'OVERDUE' : 'OVERDUE (${item.daysUntilPaymentDue!.abs()}d)')
+                    : (compact ? 'UNPAID' : 'UNPAID CASH'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

@@ -442,6 +442,12 @@ class ChallanListView extends StatelessWidget {
             ),
             const SizedBox(height: 18),
 
+            // OVERDUE PAYMENT WARNING ALERT BANNER (PERSISTS AT TOP UNTIL DETAILS ARE ENTERED)
+            if (provider.overdueChallans.isNotEmpty) ...[
+              _buildOverdueWarningBanner(context, provider, isMobile),
+              const SizedBox(height: 16),
+            ],
+
             // FILTERS & SEARCH TOOLBAR
             Card(
               child: Padding(
@@ -662,6 +668,14 @@ class ChallanListView extends StatelessWidget {
                         _buildStatusChip(context, provider, 'all', 'All'),
                         _buildStatusChip(context, provider, 'paid', 'Paid', color: AppColors.successText),
                         _buildStatusChip(context, provider, 'unpaid', 'Unpaid Warning', color: AppColors.warningText),
+                        if (provider.overdueCount > 0)
+                          _buildStatusChip(
+                            context,
+                            provider,
+                            'overdue',
+                            'Overdue (${provider.overdueCount}) 🚨',
+                            color: const Color(0xFFDC2626),
+                          ),
                         _buildStatusChip(context, provider, 'bounced', 'Bounced', color: AppColors.warningText),
 
                         const Padding(
@@ -1621,13 +1635,44 @@ class ChallanListView extends StatelessWidget {
                           flex: 2,
                           child: Align(
                             alignment: Alignment.centerRight,
-                            child: Text(
-                              dueAmt > 0 ? Formatters.currency(dueAmt) : '-',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: dueAmt > 0 ? AppColors.warningText : Colors.grey,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  dueAmt > 0 ? Formatters.currency(dueAmt) : '-',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: dueAmt > 0 ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : AppColors.warningText) : Colors.grey,
+                                  ),
+                                ),
+                                if (!item.isFullyPaid && item.paymentDueDate != null)
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: item.isPaymentOverdue
+                                          ? const Color(0xFFDC2626).withValues(alpha: 0.15)
+                                          : (item.daysUntilPaymentDue == 0 || item.daysUntilPaymentDue == 1
+                                              ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                                              : AppColors.primary.withValues(alpha: 0.1)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      item.paymentDueCountdownText,
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: item.isPaymentOverdue
+                                            ? const Color(0xFFDC2626)
+                                            : (item.daysUntilPaymentDue == 0 || item.daysUntilPaymentDue == 1
+                                                ? const Color(0xFFD97706)
+                                                : AppColors.primary),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -2067,19 +2112,23 @@ class ChallanListView extends StatelessWidget {
           ),
         );
       } else {
+        final isOverdue = item.isPaymentOverdue;
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: AppColors.warningText,
+            color: isOverdue ? const Color(0xFFDC2626) : AppColors.warningText,
             borderRadius: BorderRadius.circular(5),
+            border: isOverdue ? Border.all(color: const Color(0xFFFCA5A5), width: 1) : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 11, color: Colors.white),
+              Icon(isOverdue ? Icons.error_outline : Icons.warning_amber_rounded, size: 11, color: Colors.white),
               const SizedBox(width: 3),
               Text(
-                compact ? 'UNPAID' : 'UNPAID CASH',
+                isOverdue
+                    ? (compact ? 'OVERDUE' : 'OVERDUE (${item.daysUntilPaymentDue!.abs()}d)')
+                    : (compact ? 'UNPAID' : 'UNPAID CASH'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -2150,6 +2199,149 @@ class ChallanListView extends StatelessWidget {
         ),
       );
     }
+  }
+
+  Widget _buildOverdueWarningBanner(BuildContext context, ChallanProvider provider, bool isMobile) {
+    final overdueList = provider.overdueChallans;
+    final overdueCount = overdueList.length;
+    final overdueTotal = provider.overdueAmount;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'PAYMENT OVERDUE ALERT 🚨',
+                          style: TextStyle(
+                            fontSize: isMobile ? 13 : 15,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFDC2626),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDC2626),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$overdueCount Overdue',
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Total Overdue: ${Formatters.currency(overdueTotal)} • Payment promise date exceeded. Click entry to enter cash or cheque clearance details.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isMobile) ...[
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFDC2626),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: Icon(
+                    provider.statusFilter == 'overdue' ? Icons.filter_list_off : Icons.filter_list,
+                    size: 16,
+                  ),
+                  label: Text(provider.statusFilter == 'overdue' ? 'Show All' : 'Filter Overdue'),
+                  onPressed: () {
+                    provider.setStatusFilter(provider.statusFilter == 'overdue' ? null : 'overdue');
+                  },
+                ),
+              ],
+            ],
+          ),
+          if (isMobile) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: Icon(
+                  provider.statusFilter == 'overdue' ? Icons.filter_list_off : Icons.filter_list,
+                  size: 16,
+                ),
+                label: Text(provider.statusFilter == 'overdue' ? 'Show All' : 'Filter Overdue ($overdueCount)'),
+                onPressed: () {
+                  provider.setStatusFilter(provider.statusFilter == 'overdue' ? null : 'overdue');
+                },
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFFCA5A5)),
+          const SizedBox(height: 8),
+          // OVERDUE CHIPS (Clicking an entry directly opens Edit Entry to enter cash/cheque details!)
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: overdueList.take(6).map((item) {
+              return ActionChip(
+                visualDensity: VisualDensity.compact,
+                backgroundColor: isDark ? Colors.black26 : Colors.white,
+                side: BorderSide(color: const Color(0xFFDC2626).withValues(alpha: 0.5)),
+                avatar: const Icon(Icons.edit_note, size: 14, color: Color(0xFFDC2626)),
+                label: Text(
+                  '#${item.challanNo} ${item.partyName} (${Formatters.currency(item.remainingAmount)}) • ${item.daysUntilPaymentDue!.abs()}d overdue',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+                ),
+                tooltip: 'Click to record Cash or Cheque payment for #${item.challanNo}',
+                onPressed: () => _openEditDialog(context, item),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildKpiCard(
