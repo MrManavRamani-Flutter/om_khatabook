@@ -204,6 +204,14 @@ class ViewChallanDialog extends StatelessWidget {
                     _buildRow('Party Name', entry.partyName, isBold: true),
                     const Divider(height: 16),
                     _buildRow('Challan Amount', Formatters.currency(entry.challanAmount)),
+                    if (entry.discountAmount > 0) ...[
+                      const Divider(height: 16),
+                      _buildRow(
+                        'Discount',
+                        Formatters.currency(entry.discountAmount),
+                        highlightColor: const Color(0xFFD97706),
+                      ),
+                    ],
                     const Divider(height: 16),
                     _buildRow('Final Amount', Formatters.currency(entry.finalAmount), isBold: true, highlightColor: AppColors.primary),
                     if (isCash) ...[

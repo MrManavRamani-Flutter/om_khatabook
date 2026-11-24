@@ -40,8 +40,6 @@ class OmKhataBookApp extends StatelessWidget {
     final isDark = context.select<ChallanProvider, bool>((p) => p.isDarkMode);
 
     return MaterialApp(
-      title: 'OM Mavtar Group Khata Book',
-      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,

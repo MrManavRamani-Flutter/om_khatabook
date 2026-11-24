@@ -1480,6 +1480,7 @@ class ChallanListView extends StatelessWidget {
                 const Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('DISCOUNT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
@@ -1595,6 +1596,25 @@ class ChallanListView extends StatelessWidget {
                                 color: item.gstBillNo.isNotEmpty ? null : Colors.grey,
                               ),
                               overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // DISCOUNT
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              item.discountAmount > 0
+                                  ? Formatters.currency(item.discountAmount)
+                                  : '-',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: item.discountAmount > 0
+                                    ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706))
+                                    : Colors.grey,
+                              ),
                             ),
                           ),
                         ),

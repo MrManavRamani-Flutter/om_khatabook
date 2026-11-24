@@ -557,6 +557,9 @@ class ChallanProvider extends ChangeNotifier {
   double get totalChallanAmount =>
       filteredChallans.fold(0.0, (sum, item) => sum + item.challanAmount);
 
+  double get totalDiscountAmount =>
+      filteredChallans.fold(0.0, (sum, item) => sum + item.discountAmount);
+
   double get totalFinalAmount =>
       filteredChallans.fold(0.0, (sum, item) => sum + item.finalAmount);
 
@@ -959,6 +962,7 @@ class ChallanProvider extends ChangeNotifier {
     required String partyId,
     required String partyName,
     required double challanAmount,
+    double discountAmount = 0.0,
     required double finalAmount,
     double? paidAmount,
     String gstBillNo = '',
@@ -978,6 +982,7 @@ class ChallanProvider extends ChangeNotifier {
       partyId: partyId,
       partyName: partyName.trim(),
       challanAmount: challanAmount,
+      discountAmount: discountAmount,
       finalAmount: finalAmount,
       paidAmount: paidAmount,
       gstBillNo: gstBillNo.trim(),

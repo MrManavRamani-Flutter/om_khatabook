@@ -34,6 +34,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   final _challanNoController = TextEditingController();
   final _partySearchController = TextEditingController();
   final _challanAmountController = TextEditingController();
+  final _discountController = TextEditingController();
   final _finalAmountController = TextEditingController();
   final _paidAmountController = TextEditingController();
   final _gstBillNoController = TextEditingController();
@@ -97,6 +98,11 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _challanNoController.text = e.challanNo;
       _partySearchController.text = e.partyName;
       _challanAmountController.text = e.challanAmount.toStringAsFixed(0);
+      if (e.discountAmount > 0) {
+        _discountController.text = e.discountAmount % 1 == 0
+            ? e.discountAmount.toStringAsFixed(0)
+            : e.discountAmount.toStringAsFixed(2);
+      }
       _finalAmountController.text = e.finalAmount.toStringAsFixed(0);
       _gstBillNoController.text = e.gstBillNo;
       for (final p in ['JK', 'OMC', 'MK', 'KK']) {
@@ -148,6 +154,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     _challanNoController.dispose();
     _partySearchController.dispose();
     _challanAmountController.dispose();
+    _discountController.dispose();
     _finalAmountController.dispose();
     _paidAmountController.dispose();
     _gstBillNoController.dispose();
@@ -210,6 +217,35 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     );
     if (picked != null) {
       setState(() => _chequeDate = picked);
+    }
+  }
+
+  void _onChallanAmountChanged(String val) {
+    final challanAmt = double.tryParse(val.trim()) ?? 0.0;
+    final discountAmt = double.tryParse(_discountController.text.trim()) ?? 0.0;
+    if (challanAmt > 0) {
+      final finalAmt = (challanAmt - discountAmt).clamp(0.0, double.infinity);
+      _finalAmountController.text = finalAmt > 0
+          ? (finalAmt % 1 == 0 ? finalAmt.toStringAsFixed(0) : finalAmt.toStringAsFixed(2))
+          : '0';
+      _onFinalAmountChanged(_finalAmountController.text);
+    } else if (val.isEmpty && discountAmt <= 0) {
+      _finalAmountController.clear();
+      _onFinalAmountChanged('');
+    } else {
+      _recalculateGst();
+    }
+  }
+
+  void _onDiscountChanged(String val) {
+    final discountAmt = double.tryParse(val.trim()) ?? 0.0;
+    final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
+    if (challanAmt > 0) {
+      final finalAmt = (challanAmt - discountAmt).clamp(0.0, double.infinity);
+      _finalAmountController.text = finalAmt > 0
+          ? (finalAmt % 1 == 0 ? finalAmt.toStringAsFixed(0) : finalAmt.toStringAsFixed(2))
+          : '0';
+      _onFinalAmountChanged(_finalAmountController.text);
     }
   }
 
@@ -276,6 +312,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     _selectedParty = matchingParty;
 
     final challanAmt = double.tryParse(_challanAmountController.text.trim()) ?? 0.0;
+    final discountAmt = double.tryParse(_discountController.text.trim()) ?? 0.0;
     final finalAmt = double.tryParse(_finalAmountController.text.trim()) ?? 0.0;
     final gstAmt = _hasGst ? (double.tryParse(_gstAmountController.text.trim()) ?? 0.0) : 0.0;
     final formattedGstBillNo = _hasGst ? _gstBillNoController.text.trim().toUpperCase() : '';
@@ -370,6 +407,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         partyId: partyId.isNotEmpty ? partyId : widget.entryToEdit!.partyId,
         partyName: formattedPartyName,
         challanAmount: challanAmt,
+        discountAmount: discountAmt,
         finalAmount: finalAmt,
         paidAmount: paidAmt,
         gstBillNo: formattedGstBillNo,
@@ -389,6 +427,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         partyId: partyId,
         partyName: formattedPartyName,
         challanAmount: challanAmt,
+        discountAmount: discountAmt,
         finalAmount: finalAmt,
         paidAmount: paidAmt,
         gstBillNo: formattedGstBillNo,
@@ -600,63 +639,158 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                         ),
                         const SizedBox(height: 14),
 
-                        // ROW 3: CHALLAN AMOUNT & FINAL AMOUNT (OPTIONAL)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _challanAmountController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(
-                                  labelText: 'Challan Amount (₹)',
-                                  prefixIcon: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                    child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ),
-                                  prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                  hintText: '0.00 (Optional)',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return null; // Optional
-                                  final n = double.tryParse(v.trim());
-                                  if (n == null || n < 0) return 'Invalid amount';
-                                  return null;
-                                },
-                                onChanged: (val) {
-                                  if (_finalAmountController.text.isEmpty && val.isNotEmpty) {
-                                    _finalAmountController.text = val;
-                                    _onFinalAmountChanged(val);
-                                  } else {
-                                    _recalculateGst();
-                                  }
-                                },
+                        // ROW 3: CHALLAN AMOUNT, DISCOUNT & FINAL AMOUNT
+                        if (isMobile) ...[
+                          TextFormField(
+                            controller: _challanAmountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Challan Amount (₹)',
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
+                              prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                              hintText: '0.00 (Optional)',
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _finalAmountController,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(
-                                  labelText: 'Final Amount (₹)',
-                                  prefixIcon: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                    child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ),
-                                  prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                                  hintText: '0.00 (Optional)',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return null; // Optional
-                                  final n = double.tryParse(v.trim());
-                                  if (n == null || n < 0) return 'Invalid amount';
-                                  return null;
-                                },
-                                onChanged: _onFinalAmountChanged,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null; // Optional
+                              final n = double.tryParse(v.trim());
+                              if (n == null || n < 0) return 'Invalid amount';
+                              return null;
+                            },
+                            onChanged: _onChallanAmountChanged,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _discountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: 'Discount (₹)',
+                              labelStyle: TextStyle(
+                                color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                               ),
+                              prefixIcon: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                              hintText: '0 (Optional)',
+                              helperText: 'Challan - Discount = Final',
+                              helperStyle: const TextStyle(fontSize: 10),
                             ),
-                          ],
-                        ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null; // Optional
+                              final n = double.tryParse(v.trim());
+                              if (n == null || n < 0) return 'Invalid discount';
+                              return null;
+                            },
+                            onChanged: _onDiscountChanged,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _finalAmountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Final Amount (₹)',
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                              hintText: '0.00 (Optional)',
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null; // Optional
+                              final n = double.tryParse(v.trim());
+                              if (n == null || n < 0) return 'Invalid amount';
+                              return null;
+                            },
+                            onChanged: _onFinalAmountChanged,
+                          ),
+                        ] else ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: TextFormField(
+                                  controller: _challanAmountController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Challan Amount (₹)',
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                      child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ),
+                                    prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                                    hintText: '0.00 (Optional)',
+                                  ),
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return null; // Optional
+                                    final n = double.tryParse(v.trim());
+                                    if (n == null || n < 0) return 'Invalid amount';
+                                    return null;
+                                  },
+                                  onChanged: _onChallanAmountChanged,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  controller: _discountController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: InputDecoration(
+                                    labelText: 'Discount (₹)',
+                                    labelStyle: TextStyle(
+                                      color: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+                                    ),
+                                    prefixIcon: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                      child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ),
+                                    prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                    hintText: '0 (Optional)',
+                                    helperText: 'Challan - Discount = Final',
+                                    helperStyle: const TextStyle(fontSize: 10),
+                                  ),
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return null; // Optional
+                                    final n = double.tryParse(v.trim());
+                                    if (n == null || n < 0) return 'Invalid discount';
+                                    return null;
+                                  },
+                                  onChanged: _onDiscountChanged,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 4,
+                                child: TextFormField(
+                                  controller: _finalAmountController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Final Amount (₹)',
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                      child: Text('₹', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ),
+                                    prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                                    hintText: '0.00 (Optional)',
+                                  ),
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return null; // Optional
+                                    final n = double.tryParse(v.trim());
+                                    if (n == null || n < 0) return 'Invalid amount';
+                                    return null;
+                                  },
+                                  onChanged: _onFinalAmountChanged,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 14),
 
                         // ROW 4: GST BILL SECTION WITH CHECKBOX, AUTO-CALCULATION & 4 PREFIXES

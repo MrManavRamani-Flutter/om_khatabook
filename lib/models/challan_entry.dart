@@ -164,6 +164,7 @@ class ChallanEntry {
   final String partyId;
   final String partyName;
   final double challanAmount;
+  final double discountAmount; // Discount given on challan (Challan Amt - Discount = Final Amt)
   final double finalAmount;
   final double paidAmount; // Received amount (supports partial payments)
   final String gstBillNo;
@@ -188,6 +189,7 @@ class ChallanEntry {
     required this.partyId,
     required this.partyName,
     required this.challanAmount,
+    this.discountAmount = 0.0,
     required this.finalAmount,
     double? paidAmount,
     this.gstBillNo = '',
@@ -301,6 +303,7 @@ class ChallanEntry {
       'partyId': partyId,
       'partyName': partyName,
       'challanAmount': challanAmount,
+      'discountAmount': discountAmount,
       'finalAmount': finalAmount,
       'paidAmount': paidAmount,
       'gstBillNo': gstBillNo,
@@ -366,6 +369,7 @@ class ChallanEntry {
       partyId: json['partyId']?.toString().trim() ?? '',
       partyName: json['partyName']?.toString().trim() ?? '',
       challanAmount: _parseAmount(json['challanAmount']),
+      discountAmount: _parseAmount(json['discountAmount'] ?? json['discount']),
       finalAmount: finalAmt,
       paidAmount: paidAmt,
       gstBillNo: json['gstBillNo']?.toString().trim() ?? '',
@@ -395,6 +399,7 @@ class ChallanEntry {
     String? partyId,
     String? partyName,
     double? challanAmount,
+    double? discountAmount,
     double? finalAmount,
     double? paidAmount,
     String? gstBillNo,
@@ -420,6 +425,7 @@ class ChallanEntry {
       partyId: partyId ?? this.partyId,
       partyName: partyName ?? this.partyName,
       challanAmount: challanAmount ?? this.challanAmount,
+      discountAmount: discountAmount ?? this.discountAmount,
       finalAmount: finalAmount ?? this.finalAmount,
       paidAmount: paidAmount ?? this.paidAmount,
       gstBillNo: gstBillNo ?? this.gstBillNo,

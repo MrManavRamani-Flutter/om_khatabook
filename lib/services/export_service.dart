@@ -1108,6 +1108,7 @@ class ExportService {
       TextCellValue('Challan No.'),
       TextCellValue('Party Name'),
       TextCellValue('Challan Amount (INR)'),
+      TextCellValue('Discount (INR)'),
       TextCellValue('Final Amount (INR)'),
       TextCellValue('Paid Amount (INR)'),
       TextCellValue('Balance Due (INR)'),
@@ -1125,6 +1126,7 @@ class ExportService {
 
     // Data Rows
     double sumChallan = 0.0;
+    double sumDiscount = 0.0;
     double sumFinal = 0.0;
     double sumPaid = 0.0;
     double sumDue = 0.0;
@@ -1132,6 +1134,7 @@ class ExportService {
 
     for (var c in sorted) {
       sumChallan += c.challanAmount;
+      sumDiscount += c.discountAmount;
       sumFinal += c.finalAmount;
       sumPaid += c.paidAmount;
       final due = c.paymentOption == PaymentOption.cash
@@ -1161,6 +1164,7 @@ class ExportService {
         TextCellValue(c.challanNo),
         TextCellValue(c.partyName),
         DoubleCellValue(c.challanAmount),
+        DoubleCellValue(c.discountAmount),
         DoubleCellValue(c.finalAmount),
         DoubleCellValue(c.paidAmount),
         DoubleCellValue(due),
@@ -1183,6 +1187,7 @@ class ExportService {
       TextCellValue(''),
       TextCellValue('${sorted.length} Entries'),
       DoubleCellValue(sumChallan),
+      DoubleCellValue(sumDiscount),
       DoubleCellValue(sumFinal),
       DoubleCellValue(sumPaid),
       DoubleCellValue(sumDue),
@@ -1350,6 +1355,7 @@ class ExportService {
       'Challan #',
       'Party Name',
       'Challan Amt',
+      'Discount',
       'Final Amt',
       'GST Bill & Amt',
       'Payment Mode',
@@ -1378,6 +1384,7 @@ class ExportService {
         c.challanNo,
         c.partyName,
         Formatters.currencyPdf(c.challanAmount),
+        c.discountAmount > 0 ? Formatters.currencyPdf(c.discountAmount) : '-',
         Formatters.currencyPdf(c.finalAmount),
         c.gstBillNo.isNotEmpty
             ? '${c.gstBillNo}\n${Formatters.currencyPdf(c.gstAmount)}'
@@ -1407,9 +1414,10 @@ class ExportService {
         2: pw.Alignment.centerLeft,
         3: pw.Alignment.centerRight,
         4: pw.Alignment.centerRight,
-        5: pw.Alignment.centerLeft,
-        6: pw.Alignment.center,
-        7: pw.Alignment.centerLeft,
+        5: pw.Alignment.centerRight,
+        6: pw.Alignment.centerLeft,
+        7: pw.Alignment.center,
+        8: pw.Alignment.centerLeft,
       },
     );
   }
