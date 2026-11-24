@@ -119,22 +119,34 @@ class ChequeDetails {
     DateTime parseDate(dynamic val) {
       if (val == null) return DateTime.now();
       if (val is DateTime) return val;
-      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+      final str = val.toString().trim();
+      final dt = DateTime.tryParse(str);
+      if (dt != null) return dt;
+      final dmyRegex = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})');
+      final match = dmyRegex.firstMatch(str);
+      if (match != null) {
+        final d = int.tryParse(match.group(1)!) ?? 1;
+        final m = int.tryParse(match.group(2)!) ?? 1;
+        final y = int.tryParse(match.group(3)!) ?? DateTime.now().year;
+        return DateTime(y, m, d);
+      }
+      return DateTime.now();
     }
 
     double parseAmount(dynamic val) {
       if (val == null) return 0.0;
       if (val is num) return val.toDouble();
-      return double.tryParse(val.toString()) ?? 0.0;
+      final clean = val.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+      return double.tryParse(clean) ?? 0.0;
     }
 
     return ChequeDetails(
-      chequeDate: parseDate(json['chequeDate']),
-      chequeNo: json['chequeNo']?.toString().trim() ?? '',
-      bankName: json['bankName']?.toString().trim() ?? '',
-      chequeAmount: parseAmount(json['chequeAmount']),
+      chequeDate: parseDate(json['chequeDate'] ?? json['cheque_date']),
+      chequeNo: (json['chequeNo'] ?? json['chequeNumber'] ?? json['cheque_no'] ?? json['cheque_number'])?.toString().trim() ?? '',
+      bankName: (json['bankName'] ?? json['bank_name'] ?? json['bank'])?.toString().trim() ?? '',
+      chequeAmount: parseAmount(json['chequeAmount'] ?? json['cheque_amount'] ?? json['amount']),
       status: ChequeStatus.values.firstWhere(
-        (e) => e.name.toLowerCase() == json['status']?.toString().toLowerCase(),
+        (e) => e.name.toLowerCase() == (json['status'] ?? json['chequeStatus'])?.toString().toLowerCase(),
         orElse: () => ChequeStatus.pending,
       ),
     );
@@ -326,26 +338,67 @@ class ChallanEntry {
   static double _parseAmount(dynamic val) {
     if (val == null) return 0.0;
     if (val is num) return val.toDouble();
-    return double.tryParse(val.toString()) ?? 0.0;
+    final clean = val.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+    return double.tryParse(clean) ?? 0.0;
   }
 
   static DateTime _parseDate(dynamic val, {DateTime? fallback}) {
     if (val == null) return fallback ?? DateTime.now();
     if (val is DateTime) return val;
+    if (val is num) {
+      return DateTime.fromMillisecondsSinceEpoch(val.toInt());
+    }
     final str = val.toString().trim();
     if (str.isEmpty) return fallback ?? DateTime.now();
-    return DateTime.tryParse(str) ?? (fallback ?? DateTime.now());
+    final parsed = DateTime.tryParse(str);
+    if (parsed != null) return parsed;
+    // Support DD/MM/YYYY or DD-MM-YYYY
+    final dmyRegex = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})');
+    final match = dmyRegex.firstMatch(str);
+    if (match != null) {
+      final d = int.tryParse(match.group(1)!) ?? 1;
+      final m = int.tryParse(match.group(2)!) ?? 1;
+      final y = int.tryParse(match.group(3)!) ?? DateTime.now().year;
+      return DateTime(y, m, d);
+    }
+    return fallback ?? DateTime.now();
   }
 
   factory ChallanEntry.fromJson(Map<String, dynamic> json) {
-    final finalAmt = _parseAmount(json['finalAmount'] ?? json['totalAmount'] ?? json['amount']);
-    final isCashPaidVal = json['isCashPaid'] is bool
-        ? json['isCashPaid'] as bool
-        : (json['isCashPaid']?.toString().toLowerCase() == 'true' || json['isCashPaid'] == null);
+    final rawChallanNo = (json['challanNo'] ?? json['challanNumber'] ?? json['challan_no'] ?? json['referenceNo'] ?? json['refNo'] ?? json['billNo'] ?? '').toString().trim();
+    final rawPartyName = (json['partyName'] ?? json['party'] ?? json['party_name'] ?? json['customerName'] ?? json['clientName'] ?? '').toString().trim();
+    final rawPartyId = (json['partyId'] ?? json['party_id'] ?? json['customerId'] ?? '').toString().trim();
+    final rawGstBillNo = (json['gstBillNo'] ?? json['gst_bill_no'] ?? json['billNo'] ?? json['invoiceNo'] ?? json['taxInvoiceNo'] ?? '').toString().trim();
 
-    final paidAmt = json['paidAmount'] != null
-        ? _parseAmount(json['paidAmount'])
-        : (isCashPaidVal ? finalAmt : 0.0);
+    final parsedChallanAmt = _parseAmount(json['challanAmount'] ?? json['challan_amount'] ?? json['billAmount'] ?? json['subTotal']);
+    final parsedDiscountAmt = _parseAmount(json['discountAmount'] ?? json['discount_amount'] ?? json['discount'] ?? json['discountAmt']);
+    final parsedGstAmt = _parseAmount(json['gstAmount'] ?? json['gst_amount'] ?? json['taxAmount'] ?? json['gst']);
+
+    var finalAmt = _parseAmount(json['finalAmount'] ?? json['final_amount'] ?? json['totalAmount'] ?? json['total_amount'] ?? json['amount'] ?? json['netAmount']);
+    if (finalAmt == 0.0 && parsedChallanAmt > 0) {
+      finalAmt = (parsedChallanAmt - parsedDiscountAmt + parsedGstAmt).clamp(0.0, double.infinity);
+    }
+
+    final paymentStatusRaw = (json['paymentStatus'] ?? json['payment_status'] ?? json['status'])?.toString().toLowerCase().trim();
+    final isCashPaidField = json['isCashPaid'] ?? json['is_cash_paid'];
+
+    bool isCashPaidVal;
+    if (isCashPaidField is bool) {
+      isCashPaidVal = isCashPaidField;
+    } else if (isCashPaidField != null) {
+      final str = isCashPaidField.toString().toLowerCase().trim();
+      isCashPaidVal = str == 'true' || str == '1' || str == 'yes' || str == 'paid';
+    } else if (paymentStatusRaw != null) {
+      isCashPaidVal = paymentStatusRaw == 'paid' || paymentStatusRaw == 'cleared' || paymentStatusRaw == 'completed';
+    } else {
+      isCashPaidVal = true;
+    }
+
+    final paidAmt = (json['paidAmount'] != null || json['paid_amount'] != null)
+        ? _parseAmount(json['paidAmount'] ?? json['paid_amount'])
+        : ((json['receivedAmount'] != null || json['received_amount'] != null)
+            ? _parseAmount(json['receivedAmount'] ?? json['received_amount'])
+            : (isCashPaidVal ? finalAmt : 0.0));
 
     final rawId = json['id']?.toString().trim();
     final id = (rawId != null && rawId.isNotEmpty)
@@ -353,42 +406,59 @@ class ChallanEntry {
         : 'challan_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 8)}';
 
     ChequeDetails? cheque;
-    if (json['chequeDetails'] != null && json['chequeDetails'] is Map) {
+    final rawCheque = json['chequeDetails'] ?? json['cheque_details'] ?? json['cheque'];
+    if (rawCheque != null && rawCheque is Map) {
       try {
         cheque = ChequeDetails.fromJson(
-            Map<String, dynamic>.from(json['chequeDetails'] as Map));
+            Map<String, dynamic>.from(rawCheque));
       } catch (_) {
         cheque = null;
       }
+    } else if (json['chequeNumber'] != null || json['cheque_number'] != null || json['chequeNo'] != null || json['cheque_no'] != null) {
+      cheque = ChequeDetails(
+        chequeNo: (json['chequeNumber'] ?? json['cheque_number'] ?? json['chequeNo'] ?? json['cheque_no'])?.toString().trim() ?? '',
+        bankName: (json['bankName'] ?? json['bank_name'] ?? json['bank'])?.toString().trim() ?? '',
+        chequeDate: _parseDate(json['chequeDate'] ?? json['cheque_date']),
+        chequeAmount: _parseAmount(json['chequeAmount'] ?? json['cheque_amount'] ?? finalAmt),
+        status: ChequeStatus.values.firstWhere(
+          (s) => s.name.toLowerCase() == (json['chequeStatus'] ?? json['cheque_status'] ?? json['status'])?.toString().toLowerCase(),
+          orElse: () => ChequeStatus.pending,
+        ),
+      );
     }
+
+    final paymentOptStr = (json['paymentOption'] ?? json['payment_option'] ?? json['mode'] ?? json['paymentMode'])?.toString().toLowerCase().trim();
+    final paymentOption = paymentOptStr == 'cheque' ? PaymentOption.cheque : PaymentOption.cash;
+
+    final dueDateRaw = json['paymentDueDate'] ?? json['payment_due_date'] ?? json['dueDate'] ?? json['due_date'];
+    final paymentDueDate = dueDateRaw != null ? _parseDate(dueDateRaw) : null;
+
+    final notes = (json['notes'] ?? json['note'] ?? json['remarks'] ?? json['remark'] ?? json['description'])?.toString().trim() ?? '';
 
     return ChallanEntry(
       id: id,
-      date: _parseDate(json['date']),
-      challanNo: json['challanNo']?.toString().trim() ?? '',
-      partyId: json['partyId']?.toString().trim() ?? '',
-      partyName: json['partyName']?.toString().trim() ?? '',
-      challanAmount: _parseAmount(json['challanAmount']),
-      discountAmount: _parseAmount(json['discountAmount'] ?? json['discount']),
+      date: _parseDate(json['date'] ?? json['createdAt'] ?? json['created_at']),
+      challanNo: rawChallanNo,
+      partyId: rawPartyId,
+      partyName: rawPartyName,
+      challanAmount: parsedChallanAmt,
+      discountAmount: parsedDiscountAmt,
       finalAmount: finalAmt,
       paidAmount: paidAmt,
-      gstBillNo: json['gstBillNo']?.toString().trim() ?? '',
-      gstAmount: _parseAmount(json['gstAmount']),
-      paymentOption: PaymentOption.values.firstWhere(
-        (e) => e.name.toLowerCase() == json['paymentOption']?.toString().toLowerCase(),
-        orElse: () => PaymentOption.cash,
-      ),
+      gstBillNo: rawGstBillNo,
+      gstAmount: parsedGstAmt,
+      paymentOption: paymentOption,
       isCashPaid: isCashPaidVal,
       chequeDetails: cheque,
-      paymentDueDate: json['paymentDueDate'] != null ? _parseDate(json['paymentDueDate']) : null,
-      notes: json['notes']?.toString().trim() ?? '',
-      createdAt: _parseDate(json['createdAt']),
-      createdBy: json['createdBy']?.toString().trim() ?? 'system',
-      lastModifiedBy: json['lastModifiedBy']?.toString().trim(),
-      lastModifiedAt: json['lastModifiedAt'] != null ? _parseDate(json['lastModifiedAt']) : null,
-      isDeleted: json['isDeleted'] == true || json['isDeleted']?.toString() == 'true',
-      deletedAt: json['deletedAt'] != null ? _parseDate(json['deletedAt']) : null,
-      deletedBy: json['deletedBy']?.toString().trim(),
+      paymentDueDate: paymentDueDate,
+      notes: notes,
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      createdBy: (json['createdBy'] ?? json['created_by'])?.toString().trim() ?? 'OM MAVTAR',
+      lastModifiedBy: (json['lastModifiedBy'] ?? json['last_modified_by'])?.toString().trim(),
+      lastModifiedAt: (json['lastModifiedAt'] ?? json['last_modified_at']) != null ? _parseDate(json['lastModifiedAt'] ?? json['last_modified_at']) : null,
+      isDeleted: json['isDeleted'] == true || json['is_deleted'] == true || json['isDeleted']?.toString() == 'true',
+      deletedAt: (json['deletedAt'] ?? json['deleted_at']) != null ? _parseDate(json['deletedAt'] ?? json['deleted_at']) : null,
+      deletedBy: (json['deletedBy'] ?? json['deleted_by'])?.toString().trim(),
     );
   }
 

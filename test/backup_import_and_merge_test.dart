@@ -290,5 +290,79 @@ void main() {
       expect(provider.filteredChallans.first.challanNo, equals('CH-BETA'));
     });
   });
+
+  group('Database Schema Evolution & Flexible Import Tests', () {
+    test('Correctly imports database with commas, currency symbols, and computed finalAmount', () async {
+      final dataset = jsonEncode({
+        'challans': [
+          {
+            'referenceNo': '168',
+            'customerName': 'KAMDAR SILK MILLS',
+            'challanAmount': '₹ 57,200',
+            'discount': '1,200',
+            'gst': '0',
+            // finalAmount omitted -> should auto-compute: 57200 - 1200 = 56000
+            'paymentStatus': 'unpaid',
+            'date': '24/11/2026',
+            'due_date': '30/11/2026',
+            'note': 'Urgent delivery note',
+          },
+        ],
+      });
+
+      final summary = await provider.importBackupWithStrategy(
+        jsonString: dataset,
+        mode: BackupImportMode.replace,
+      );
+
+      expect(summary.success, isTrue);
+      expect(provider.challans.length, equals(1));
+      final c = provider.challans.first;
+      expect(c.challanNo, equals('168'));
+      expect(c.partyName, equals('KAMDAR SILK MILLS'));
+      expect(c.challanAmount, equals(57200.0));
+      expect(c.discountAmount, equals(1200.0));
+      expect(c.finalAmount, equals(56000.0));
+      expect(c.isCashPaid, isFalse); // unpaid properly preserved
+      expect(c.paidAmount, equals(0.0));
+      expect(c.hasWarning, isTrue);
+      expect(c.notes, equals('Urgent delivery note'));
+      expect(c.paymentDueDate, isNotNull);
+      expect(c.paymentDueDate!.day, equals(30));
+      expect(c.paymentDueDate!.month, equals(11));
+      expect(c.paymentDueDate!.year, equals(2026));
+      // Party was auto-created
+      expect(provider.parties.any((p) => p.name == 'KAMDAR SILK MILLS'), isTrue);
+    });
+
+    test('Correctly handles income & expense entries with varied schema during import', () async {
+      final dataset = jsonEncode({
+        'dayEntries': [
+          {
+            'id': 'exp_1',
+            'type': 'expense',
+            'description': 'SALARY BEADS',
+            'amount': '2,70,000',
+            'date': '01-10-2026',
+            'group': 'Salary',
+            'remarks': 'BEADS=571140/400=370598/250=299119',
+          },
+        ],
+      });
+
+      final summary = await provider.importBackupWithStrategy(
+        jsonString: dataset,
+        mode: BackupImportMode.replace,
+      );
+
+      expect(summary.success, isTrue);
+      expect(provider.incomeExpenseEntries.length, equals(1));
+      final entry = provider.incomeExpenseEntries.first;
+      expect(entry.particular, equals('SALARY BEADS'));
+      expect(entry.amount, equals(270000.0));
+      expect(entry.notes, contains('BEADS=571140'));
+      expect(entry.category, equals('Salary'));
+    });
+  });
 }
 

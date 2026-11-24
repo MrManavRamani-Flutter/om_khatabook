@@ -1161,6 +1161,7 @@ class ChallanProvider extends ChangeNotifier {
 
     if ((a.finalAmount - b.finalAmount).abs() > 0.01) return false;
     if ((a.challanAmount - b.challanAmount).abs() > 0.01) return false;
+    if ((a.discountAmount - b.discountAmount).abs() > 0.01) return false;
 
     if (a.gstBillNo.trim().toUpperCase() != b.gstBillNo.trim().toUpperCase()) {
       return false;
@@ -1222,7 +1223,14 @@ class ChallanProvider extends ChangeNotifier {
           rawChallans = txList.map((tx) {
             if (tx is Map) {
               final m = Map<String, dynamic>.from(tx);
-              final amt = (m['amount'] as num?)?.toDouble() ?? 0.0;
+              final rawAmt = m['amount'];
+              double amt = 0.0;
+              if (rawAmt is num) {
+                amt = rawAmt.toDouble();
+              } else if (rawAmt != null) {
+                final clean = rawAmt.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+                amt = double.tryParse(clean) ?? 0.0;
+              }
               return {
                 'id': m['id'] ?? 'migrated_${DateTime.now().millisecondsSinceEpoch}',
                 'challanNo': m['referenceNo'] ?? m['id'] ?? 'CH-LEGACY',
@@ -1230,6 +1238,7 @@ class ChallanProvider extends ChangeNotifier {
                 'partyName': m['partyName'] ?? 'Legacy Party',
                 'date': m['date'] ?? DateTime.now().toIso8601String(),
                 'challanAmount': amt,
+                'discountAmount': 0.0,
                 'hasGstBill': false,
                 'gstRate': 0.0,
                 'gstAmount': 0.0,
@@ -1237,7 +1246,7 @@ class ChallanProvider extends ChangeNotifier {
                 'paidAmount': amt,
                 'paymentOption': 'cash',
                 'paymentStatus': 'paid',
-                'notes': m['description'] ?? '',
+                'notes': m['description'] ?? m['notes'] ?? m['remarks'] ?? '',
                 'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
                 'createdBy': 'OM MAVTAR',
               };
@@ -1286,14 +1295,23 @@ class ChallanProvider extends ChangeNotifier {
             if (de is Map) {
               final m = Map<String, dynamic>.from(de);
               final typeStr = (m['type'] as String?)?.toLowerCase() ?? 'expense';
+              final rawAmt = m['amount'];
+              double amt = 0.0;
+              if (rawAmt is num) {
+                amt = rawAmt.toDouble();
+              } else if (rawAmt != null) {
+                final clean = rawAmt.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+                amt = double.tryParse(clean) ?? 0.0;
+              }
               return {
                 'id': m['id'] ?? 'de_${DateTime.now().millisecondsSinceEpoch}',
                 'type': typeStr == 'income' ? 'income' : 'expense',
                 'date': m['date'] ?? DateTime.now().toIso8601String(),
                 'particular': m['description'] ?? m['particular'] ?? '',
-                'amount': (m['amount'] as num?)?.toDouble() ?? 0.0,
-                'category': m['category'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
-                'paymentMode': m['paymentMode'] ?? 'Cash',
+                'amount': amt,
+                'category': m['category'] ?? m['group'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
+                'paymentMode': m['paymentMode'] ?? m['mode'] ?? 'Cash',
+                'notes': m['remarks'] ?? m['remark'] ?? m['notes'] ?? m['note'] ?? '',
                 'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
                 'createdBy': 'OM MAVTAR',
               };

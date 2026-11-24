@@ -141,6 +141,22 @@ class StorageService {
           final upgraded = list.map((item) {
             if (item is Map) {
               final m = Map<String, dynamic>.from(item);
+              // Ensure discountAmount
+              if (!m.containsKey('discountAmount') || m['discountAmount'] == null) {
+                final disc = (m['discount'] as num?)?.toDouble() ?? 0.0;
+                m['discountAmount'] = disc;
+                modified = true;
+              }
+              // Ensure notes
+              if (!m.containsKey('notes') || m['notes'] == null) {
+                m['notes'] = m['note'] ?? m['remarks'] ?? m['description'] ?? '';
+                modified = true;
+              }
+              // Ensure paymentDueDate from dueDate if present
+              if (!m.containsKey('paymentDueDate') && m.containsKey('dueDate')) {
+                m['paymentDueDate'] = m['dueDate'];
+                modified = true;
+              }
               if (!m.containsKey('paidAmount') || m['paidAmount'] == null) {
                 final status = (m['paymentStatus'] as String?)?.toLowerCase();
                 final finalAmt = (m['finalAmount'] as num?)?.toDouble() ??
@@ -685,7 +701,14 @@ class StorageService {
         final converted = txList.map((tx) {
           if (tx is Map) {
             final m = Map<String, dynamic>.from(tx);
-            final amt = (m['amount'] as num?)?.toDouble() ?? 0.0;
+            final rawAmt = m['amount'];
+            double amt = 0.0;
+            if (rawAmt is num) {
+              amt = rawAmt.toDouble();
+            } else if (rawAmt != null) {
+              final clean = rawAmt.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+              amt = double.tryParse(clean) ?? 0.0;
+            }
             return {
               'id': m['id'] ?? 'migrated_${DateTime.now().millisecondsSinceEpoch}',
               'challanNo': m['referenceNo'] ?? m['id'] ?? 'CH-LEGACY',
@@ -693,6 +716,7 @@ class StorageService {
               'partyName': m['partyName'] ?? 'Legacy Party',
               'date': m['date'] ?? DateTime.now().toIso8601String(),
               'challanAmount': amt,
+              'discountAmount': 0.0,
               'hasGstBill': false,
               'gstRate': 0.0,
               'gstAmount': 0.0,
@@ -700,7 +724,7 @@ class StorageService {
               'paidAmount': amt,
               'paymentOption': 'cash',
               'paymentStatus': 'paid',
-              'notes': m['description'] ?? 'Migrated from legacy backup',
+              'notes': m['description'] ?? m['notes'] ?? m['remarks'] ?? 'Migrated from legacy backup',
               'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
               'createdBy': 'OM MAVTAR',
             };
@@ -730,14 +754,23 @@ class StorageService {
           if (de is Map) {
             final m = Map<String, dynamic>.from(de);
             final typeStr = (m['type'] as String?)?.toLowerCase() ?? 'expense';
+            final rawAmt = m['amount'];
+            double amt = 0.0;
+            if (rawAmt is num) {
+              amt = rawAmt.toDouble();
+            } else if (rawAmt != null) {
+              final clean = rawAmt.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+              amt = double.tryParse(clean) ?? 0.0;
+            }
             return {
               'id': m['id'] ?? 'de_${DateTime.now().millisecondsSinceEpoch}',
               'type': typeStr == 'income' ? 'income' : 'expense',
               'date': m['date'] ?? DateTime.now().toIso8601String(),
               'particular': m['description'] ?? m['particular'] ?? '',
-              'amount': (m['amount'] as num?)?.toDouble() ?? 0.0,
-              'category': m['category'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
-              'paymentMode': m['paymentMode'] ?? 'Cash',
+              'amount': amt,
+              'category': m['category'] ?? m['group'] ?? (typeStr == 'income' ? 'Income' : 'Expense'),
+              'paymentMode': m['paymentMode'] ?? m['mode'] ?? 'Cash',
+              'notes': m['remarks'] ?? m['remark'] ?? m['notes'] ?? m['note'] ?? '',
               'createdAt': m['createdAt'] ?? DateTime.now().toIso8601String(),
               'createdBy': 'OM MAVTAR',
             };

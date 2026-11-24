@@ -47,13 +47,26 @@ class Party {
   static DateTime _parseDate(dynamic val, {DateTime? fallback}) {
     if (val == null) return fallback ?? DateTime.now();
     if (val is DateTime) return val;
+    if (val is num) {
+      return DateTime.fromMillisecondsSinceEpoch(val.toInt());
+    }
     final str = val.toString().trim();
     if (str.isEmpty) return fallback ?? DateTime.now();
-    return DateTime.tryParse(str) ?? (fallback ?? DateTime.now());
+    final parsed = DateTime.tryParse(str);
+    if (parsed != null) return parsed;
+    final dmyRegex = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})');
+    final match = dmyRegex.firstMatch(str);
+    if (match != null) {
+      final d = int.tryParse(match.group(1)!) ?? 1;
+      final m = int.tryParse(match.group(2)!) ?? 1;
+      final y = int.tryParse(match.group(3)!) ?? DateTime.now().year;
+      return DateTime(y, m, d);
+    }
+    return fallback ?? DateTime.now();
   }
 
   factory Party.fromJson(Map<String, dynamic> json) {
-    final rawName = json['name']?.toString().trim() ?? json['partyName']?.toString().trim() ?? '';
+    final rawName = (json['name'] ?? json['partyName'] ?? json['party_name'] ?? json['customerName'] ?? json['clientName'] ?? json['title'])?.toString().trim() ?? '';
     final rawId = json['id']?.toString().trim();
     final id = (rawId != null && rawId.isNotEmpty)
         ? rawId
@@ -62,16 +75,16 @@ class Party {
     return Party(
       id: id,
       name: rawName,
-      phone: json['phone']?.toString().trim() ?? json['contact']?.toString().trim() ?? '',
-      address: json['address']?.toString().trim() ?? json['city']?.toString().trim() ?? '',
-      gstNumber: json['gstNumber']?.toString().trim() ?? json['gstin']?.toString().trim() ?? '',
-      createdAt: _parseDate(json['createdAt']),
-      createdBy: json['createdBy']?.toString().trim() ?? 'system',
-      lastModifiedBy: json['lastModifiedBy']?.toString().trim(),
-      lastModifiedAt: json['lastModifiedAt'] != null ? _parseDate(json['lastModifiedAt']) : null,
-      isDeleted: json['isDeleted'] == true || json['isDeleted']?.toString() == 'true',
-      deletedAt: json['deletedAt'] != null ? _parseDate(json['deletedAt']) : null,
-      deletedBy: json['deletedBy']?.toString().trim(),
+      phone: (json['phone'] ?? json['mobile'] ?? json['contact'] ?? json['phoneNumber'])?.toString().trim() ?? '',
+      address: (json['address'] ?? json['city'] ?? json['location'])?.toString().trim() ?? '',
+      gstNumber: (json['gstNumber'] ?? json['gst_number'] ?? json['gstin'] ?? json['gst'])?.toString().trim() ?? '',
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      createdBy: (json['createdBy'] ?? json['created_by'])?.toString().trim() ?? 'system',
+      lastModifiedBy: (json['lastModifiedBy'] ?? json['last_modified_by'])?.toString().trim(),
+      lastModifiedAt: (json['lastModifiedAt'] ?? json['last_modified_at']) != null ? _parseDate(json['lastModifiedAt'] ?? json['last_modified_at']) : null,
+      isDeleted: json['isDeleted'] == true || json['is_deleted'] == true || json['isDeleted']?.toString() == 'true',
+      deletedAt: (json['deletedAt'] ?? json['deleted_at']) != null ? _parseDate(json['deletedAt'] ?? json['deleted_at']) : null,
+      deletedBy: (json['deletedBy'] ?? json['deleted_by'])?.toString().trim(),
     );
   }
 

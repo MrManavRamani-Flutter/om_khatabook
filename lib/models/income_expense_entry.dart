@@ -79,47 +79,60 @@ class IncomeExpenseEntry {
     };
   }
 
+  static DateTime _parseDate(dynamic val, {DateTime? fallback}) {
+    if (val == null) return fallback ?? DateTime.now();
+    if (val is DateTime) return val;
+    if (val is num) {
+      return DateTime.fromMillisecondsSinceEpoch(val.toInt());
+    }
+    final str = val.toString().trim();
+    if (str.isEmpty) return fallback ?? DateTime.now();
+    final parsed = DateTime.tryParse(str);
+    if (parsed != null) return parsed;
+    final dmyRegex = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})');
+    final match = dmyRegex.firstMatch(str);
+    if (match != null) {
+      final d = int.tryParse(match.group(1)!) ?? 1;
+      final m = int.tryParse(match.group(2)!) ?? 1;
+      final y = int.tryParse(match.group(3)!) ?? DateTime.now().year;
+      return DateTime(y, m, d);
+    }
+    return fallback ?? DateTime.now();
+  }
+
+  static double _parseAmount(dynamic val) {
+    if (val == null) return 0.0;
+    if (val is num) return val.toDouble();
+    final clean = val.toString().replaceAll('₹', '').replaceAll(',', '').replaceAll('Rs.', '').replaceAll(' ', '').trim();
+    return double.tryParse(clean) ?? 0.0;
+  }
+
   factory IncomeExpenseEntry.fromJson(Map<String, dynamic> json) {
-    final typeStr = json['type']?.toString().toLowerCase();
+    final typeStr = (json['type'] ?? json['entryType'])?.toString().toLowerCase().trim();
     final type = typeStr == 'income' ? EntryType.income : EntryType.expense;
 
-    DateTime parsedDate;
-    try {
-      parsedDate = DateTime.parse(json['date'].toString());
-    } catch (_) {
-      parsedDate = DateTime.now();
-    }
-
-    DateTime parsedCreated;
-    try {
-      parsedCreated = json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'].toString())
-          : parsedDate;
-    } catch (_) {
-      parsedCreated = DateTime.now();
-    }
-
-    double amt = 0.0;
-    if (json['amount'] is num) {
-      amt = (json['amount'] as num).toDouble();
-    } else if (json['amount'] != null) {
-      amt = double.tryParse(json['amount'].toString()) ?? 0.0;
-    }
+    final parsedDate = _parseDate(json['date'] ?? json['createdAt'] ?? json['created_at']);
+    final parsedCreated = _parseDate(json['createdAt'] ?? json['created_at'], fallback: parsedDate);
+    final amt = _parseAmount(json['amount'] ?? json['amt'] ?? json['total']);
 
     final id = json['id']?.toString().trim();
+    final particular = (json['particular'] ?? json['particulars'] ?? json['description'] ?? json['title'] ?? json['item'])?.toString().trim() ?? 'Particulars';
+    final notes = (json['notes'] ?? json['note'] ?? json['remark'] ?? json['remarks'] ?? '')?.toString().trim() ?? '';
+    final category = (json['category'] ?? json['group'] ?? json['cat'])?.toString().trim() ?? (type == EntryType.income ? 'Income' : 'Expense');
+    final paymentMode = (json['paymentMode'] ?? json['payment_mode'] ?? json['mode'])?.toString().trim() ?? 'Cash';
 
     return IncomeExpenseEntry(
       id: (id != null && id.isNotEmpty) ? id : 'entry_${DateTime.now().millisecondsSinceEpoch}_${const Uuid().v4().substring(0, 6)}',
       type: type,
       date: parsedDate,
-      particular: json['particular']?.toString().trim() ?? 'Particulars',
+      particular: particular,
       amount: amt,
-      category: json['category']?.toString().trim() ?? 'General',
-      paymentMode: json['paymentMode']?.toString().trim() ?? 'Cash',
-      notes: json['notes']?.toString().trim() ?? '',
+      category: category,
+      paymentMode: paymentMode,
+      notes: notes,
       createdAt: parsedCreated,
-      createdBy: json['createdBy']?.toString().trim() ?? 'OM MAVTAR',
-      isDeleted: json['isDeleted'] == true,
+      createdBy: (json['createdBy'] ?? json['created_by'])?.toString().trim() ?? 'OM MAVTAR',
+      isDeleted: json['isDeleted'] == true || json['is_deleted'] == true,
     );
   }
 }
