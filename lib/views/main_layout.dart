@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
+import '../widgets/add_edit_party_dialog.dart';
 import '../widgets/branding_dialogs.dart';
 import 'challan_list_view.dart';
 import 'net_profit_loss_view.dart';
@@ -94,23 +95,82 @@ class _MainLayoutState extends State<MainLayout> {
     final recycleBinCount = provider.recycleBinCount;
     final isCollapsed = provider.isSidebarCollapsed;
 
-    // Mobile layout with drawer
+    // Mobile layout with drawer & bottom navigation bar
     if (isMobile) {
+      final navIndex = _selectedIndex == 5 ? 4 : (_selectedIndex < 4 ? _selectedIndex : 0);
       return Scaffold(
         appBar: AppBar(
-          title: Text(
-            provider.companyName,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          elevation: 0,
           leading: Builder(
             builder: (ctx) => IconButton(
               icon: const Icon(Icons.menu),
               onPressed: () => Scaffold.of(ctx).openDrawer(),
             ),
           ),
+          titleSpacing: 0,
+          title: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset(
+                  'assets/logo/app_logo.png',
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_balance_wallet, size: 22, color: AppColors.primary),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  provider.companyName,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
           actions: [
+            if (warningCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _selectedIndex = 0);
+                    provider.setStatusFilter(provider.statusFilter == 'overdue' ? null : 'overdue');
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFE11D48)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$warningCount Due',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFE11D48)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined),
+              icon: Icon(
+                Theme.of(context).brightness == Brightness.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                size: 20,
+              ),
+              tooltip: 'Theme',
+              onPressed: () => provider.toggleTheme(),
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, size: 20),
               tooltip: 'Settings',
               onPressed: () => _navigateToSettings(categoryIndex: 0),
             ),
@@ -128,12 +188,74 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
         body: contentBody,
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          onPressed: () => _openAddChallan(context),
-          child: const Icon(Icons.add),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: navIndex,
+          onDestinationSelected: (idx) {
+            setState(() {
+              if (idx == 4) {
+                _selectedIndex = 5;
+              } else {
+                _selectedIndex = idx;
+              }
+            });
+          },
+          height: 64,
+          destinations: [
+            NavigationDestination(
+              icon: warningCount > 0
+                  ? Badge(
+                      label: Text('$warningCount'),
+                      backgroundColor: const Color(0xFFE11D48),
+                      child: const Icon(Icons.receipt_long_outlined),
+                    )
+                  : const Icon(Icons.receipt_long_outlined),
+              selectedIcon: const Icon(Icons.receipt_long),
+              label: 'Challans',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.people_alt_outlined),
+              selectedIcon: Icon(Icons.people_alt),
+              label: 'Parties',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              selectedIcon: Icon(Icons.analytics),
+              label: 'P & L',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.assessment_outlined),
+              selectedIcon: Icon(Icons.assessment),
+              label: 'Reports',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.tune_outlined),
+              selectedIcon: Icon(Icons.tune),
+              label: 'Settings',
+            ),
+          ],
         ),
+        floatingActionButton: _selectedIndex == 0
+            ? FloatingActionButton.extended(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                onPressed: () => _openAddChallan(context),
+                icon: const Icon(Icons.add),
+                label: const Text('New Challan', style: TextStyle(fontWeight: FontWeight.bold)),
+              )
+            : (_selectedIndex == 1
+                ? FloatingActionButton.extended(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const AddEditPartyDialog(),
+                      );
+                    },
+                    icon: const Icon(Icons.person_add_outlined),
+                    label: const Text('New Party', style: TextStyle(fontWeight: FontWeight.bold)),
+                  )
+                : null),
       );
     }
 

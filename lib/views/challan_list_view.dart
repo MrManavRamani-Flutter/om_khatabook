@@ -1388,7 +1388,7 @@ class ChallanListView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth = constraints.maxWidth < 1000 ? 1000.0 : constraints.maxWidth;
+        final tableWidth = constraints.maxWidth < 1220 ? 1220.0 : constraints.maxWidth;
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
