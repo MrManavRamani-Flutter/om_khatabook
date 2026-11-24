@@ -712,16 +712,53 @@ class ChallanListView extends StatelessWidget {
                         // DATE SORT TOGGLE
                         ActionChip(
                           avatar: Icon(
-                            provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                            size: 16,
-                            color: AppColors.primary,
+                            provider.sortField == ChallanSortField.date
+                                ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                : Icons.calendar_today,
+                            size: 15,
+                            color: provider.sortField == ChallanSortField.date ? AppColors.primary : Colors.grey,
                           ),
                           label: Text(
-                            provider.sortAscending ? 'Date: Oldest First ↑' : 'Date: Newest First ↓',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            provider.sortField == ChallanSortField.date
+                                ? (provider.sortAscending ? 'Date: Oldest ↑' : 'Date: Newest ↓')
+                                : 'Date Wise',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: provider.sortField == ChallanSortField.date ? FontWeight.bold : FontWeight.normal,
+                              color: provider.sortField == ChallanSortField.date ? AppColors.primary : null,
+                            ),
                           ),
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                          onPressed: () => provider.toggleSortOrder(),
+                          backgroundColor: provider.sortField == ChallanSortField.date
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () => provider.setSortField(ChallanSortField.date),
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        // CHALLAN NO SORT TOGGLE
+                        ActionChip(
+                          avatar: Icon(
+                            provider.sortField == ChallanSortField.challanNo
+                                ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                : Icons.tag,
+                            size: 15,
+                            color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : Colors.grey,
+                          ),
+                          label: Text(
+                            provider.sortField == ChallanSortField.challanNo
+                                ? (provider.sortAscending ? 'Challan #: 1→9 ↑' : 'Challan #: 9→1 ↓')
+                                : 'Challan # Wise',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: provider.sortField == ChallanSortField.challanNo ? FontWeight.bold : FontWeight.normal,
+                              color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : null,
+                            ),
+                          ),
+                          backgroundColor: provider.sortField == ChallanSortField.challanNo
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () => provider.setSortField(ChallanSortField.challanNo),
                         ),
                       ],
                     ),
@@ -1367,19 +1404,73 @@ class ChallanListView extends StatelessWidget {
                 ),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                SizedBox(width: 80, child: Text('DATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                SizedBox(width: 95, child: Text('CHALLAN #', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                SizedBox(
+                  width: 80,
+                  child: InkWell(
+                    onTap: () => provider.setSortField(ChallanSortField.date),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'DATE',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: provider.sortField == ChallanSortField.date ? AppColors.primary : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          provider.sortField == ChallanSortField.date
+                              ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                              : Icons.unfold_more,
+                          size: 13,
+                          color: provider.sortField == ChallanSortField.date ? AppColors.primary : const Color(0xFF64748B).withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 95,
+                  child: InkWell(
+                    onTap: () => provider.setSortField(ChallanSortField.challanNo),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'CHALLAN #',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          provider.sortField == ChallanSortField.challanNo
+                              ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                              : Icons.unfold_more,
+                          size: 13,
+                          color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : const Color(0xFF64748B).withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
               ],
             ),
           ),

@@ -15,6 +15,14 @@ enum BackupImportMode {
   replace, // Clean overwrite / erase existing data
 }
 
+enum ChallanSortField {
+  date('Date'),
+  challanNo('Challan #');
+
+  final String label;
+  const ChallanSortField(this.label);
+}
+
 class ProfitLossCalculation {
   final List<IncomeExpenseEntry> expenses;
   final List<IncomeExpenseEntry> incomes;
@@ -101,8 +109,9 @@ class ChallanProvider extends ChangeNotifier {
   int? _selectedMonth; // 1 - 12
   int? _selectedYear; // e.g. 2026
 
-  // Sorting state (Date Ascending vs Descending)
-  bool _sortAscending = false; // false = Newest First (Desc), true = Oldest First (Asc)
+  // Sorting state (Field & Ascending vs Descending)
+  ChallanSortField _sortField = ChallanSortField.date;
+  bool _sortAscending = false; // For Date: false = Newest First, true = Oldest First. For Challan #: true = 1 to N, false = N to 1
 
   // View Mode (Table / Cards / Compact)
   LedgerViewMode _viewMode = LedgerViewMode.table;
@@ -146,6 +155,7 @@ class ChallanProvider extends ChangeNotifier {
   DateTime? get customEndDate => _customEndDate;
   int? get selectedMonth => _selectedMonth;
   int? get selectedYear => _selectedYear;
+  ChallanSortField get sortField => _sortField;
   bool get sortAscending => _sortAscending;
   LedgerViewMode get viewMode => _viewMode;
   LedgerViewMode get partyViewMode => _partyViewMode;
@@ -341,6 +351,23 @@ class ChallanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setSortField(ChallanSortField field) {
+    if (_sortField == field) {
+      _sortAscending = !_sortAscending;
+    } else {
+      _sortField = field;
+      // When switching to Challan #, default to Ascending (1 to N). When switching to Date, default to Descending (Newest first).
+      _sortAscending = field == ChallanSortField.challanNo;
+    }
+    notifyListeners();
+  }
+
+  void setSortOrder({required ChallanSortField field, required bool ascending}) {
+    _sortField = field;
+    _sortAscending = ascending;
+    notifyListeners();
+  }
+
   void setSortAscending(bool ascending) {
     _sortAscending = ascending;
     notifyListeners();
@@ -356,6 +383,7 @@ class ChallanProvider extends ChangeNotifier {
     _customEndDate = null;
     _selectedMonth = null;
     _selectedYear = null;
+    _sortField = ChallanSortField.date;
     _sortAscending = false;
     notifyListeners();
   }
@@ -440,9 +468,17 @@ class ChallanProvider extends ChangeNotifier {
       return true;
     }).toList();
 
-    // 6. Date Sorting (Ascending vs Descending)
-    result.sort((a, b) =>
-        _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
+    // 6. Sorting (Date or Challan #)
+    if (_sortField == ChallanSortField.challanNo) {
+      result.sort((a, b) => Formatters.compareChallanNumbers(
+            a.challanNo,
+            b.challanNo,
+            ascending: _sortAscending,
+          ));
+    } else {
+      result.sort((a, b) =>
+          _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
+    }
 
     return result;
   }
@@ -487,7 +523,11 @@ class ChallanProvider extends ChangeNotifier {
       parts.add('Status: ${_statusFilter!.toUpperCase()}');
     }
 
-    parts.add('Sort: ${_sortAscending ? "Oldest First (Asc)" : "Newest First (Desc)"}');
+    if (_sortField == ChallanSortField.challanNo) {
+      parts.add('Sort: Challan # (${_sortAscending ? "1 → 9 (Asc)" : "9 → 1 (Desc)"})');
+    } else {
+      parts.add('Sort: Date (${_sortAscending ? "Oldest First (Asc)" : "Newest First (Desc)"})');
+    }
 
     return parts.join(' • ');
   }

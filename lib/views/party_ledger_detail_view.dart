@@ -30,6 +30,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   String _dateFilter = 'all'; // 'all', 'today', 'week', 'month', 'monthly_picker'
   int? _selectedMonth;
   int? _selectedYear;
+  ChallanSortField _sortField = ChallanSortField.date;
   bool _sortAscending = false;
 
   void _openAddChallan(BuildContext context, Party party) {
@@ -332,9 +333,17 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
       return true;
     }).toList();
 
-    // 5. Date Sort
-    filtered.sort((a, b) =>
-        _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
+    // 5. Sort (Date or Challan #)
+    if (_sortField == ChallanSortField.challanNo) {
+      filtered.sort((a, b) => Formatters.compareChallanNumbers(
+            a.challanNo,
+            b.challanNo,
+            ascending: _sortAscending,
+          ));
+    } else {
+      filtered.sort((a, b) =>
+          _sortAscending ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
+    }
 
     final isMobile = MediaQuery.of(context).size.width < 768;
 
@@ -656,6 +665,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                 _dateFilter = 'all';
                                 _selectedMonth = null;
                                 _selectedYear = null;
+                                _sortField = ChallanSortField.date;
                                 _sortAscending = false;
                               });
                             },
@@ -716,6 +726,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                 _dateFilter = 'all';
                                 _selectedMonth = null;
                                 _selectedYear = null;
+                                _sortField = ChallanSortField.date;
                                 _sortAscending = false;
                               });
                             },
@@ -803,19 +814,73 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           child: Text('•', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                         ),
 
+                        // DATE SORT TOGGLE
                         ActionChip(
                           avatar: Icon(
-                            _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                            size: 16,
-                            color: AppColors.primary,
+                            _sortField == ChallanSortField.date
+                                ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                : Icons.calendar_today,
+                            size: 15,
+                            color: _sortField == ChallanSortField.date ? AppColors.primary : Colors.grey,
                           ),
                           label: Text(
-                            _sortAscending ? 'Date: Oldest First ↑' : 'Date: Newest First ↓',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            _sortField == ChallanSortField.date
+                                ? (_sortAscending ? 'Date: Oldest ↑' : 'Date: Newest ↓')
+                                : 'Date Wise',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: _sortField == ChallanSortField.date ? FontWeight.bold : FontWeight.normal,
+                              color: _sortField == ChallanSortField.date ? AppColors.primary : null,
+                            ),
                           ),
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          backgroundColor: _sortField == ChallanSortField.date
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
                           onPressed: () {
-                            setState(() => _sortAscending = !_sortAscending);
+                            setState(() {
+                              if (_sortField == ChallanSortField.date) {
+                                _sortAscending = !_sortAscending;
+                              } else {
+                                _sortField = ChallanSortField.date;
+                                _sortAscending = false;
+                              }
+                            });
+                          },
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        // CHALLAN NO SORT TOGGLE
+                        ActionChip(
+                          avatar: Icon(
+                            _sortField == ChallanSortField.challanNo
+                                ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                : Icons.tag,
+                            size: 15,
+                            color: _sortField == ChallanSortField.challanNo ? AppColors.primary : Colors.grey,
+                          ),
+                          label: Text(
+                            _sortField == ChallanSortField.challanNo
+                                ? (_sortAscending ? 'Challan #: 1→9 ↑' : 'Challan #: 9→1 ↓')
+                                : 'Challan # Wise',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: _sortField == ChallanSortField.challanNo ? FontWeight.bold : FontWeight.normal,
+                              color: _sortField == ChallanSortField.challanNo ? AppColors.primary : null,
+                            ),
+                          ),
+                          backgroundColor: _sortField == ChallanSortField.challanNo
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () {
+                            setState(() {
+                              if (_sortField == ChallanSortField.challanNo) {
+                                _sortAscending = !_sortAscending;
+                              } else {
+                                _sortField = ChallanSortField.challanNo;
+                                _sortAscending = true;
+                              }
+                            });
                           },
                         ),
                       ],
@@ -1341,19 +1406,91 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                 ),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                SizedBox(width: 80, child: Text('DATE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                SizedBox(width: 95, child: Text('CHALLAN #', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                Expanded(flex: 3, child: Text('NOTES / REMARKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                SizedBox(
+                  width: 80,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        if (_sortField == ChallanSortField.date) {
+                          _sortAscending = !_sortAscending;
+                        } else {
+                          _sortField = ChallanSortField.date;
+                          _sortAscending = false;
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'DATE',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _sortField == ChallanSortField.date ? AppColors.primary : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          _sortField == ChallanSortField.date
+                              ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                              : Icons.unfold_more,
+                          size: 13,
+                          color: _sortField == ChallanSortField.date ? AppColors.primary : const Color(0xFF64748B).withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 95,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        if (_sortField == ChallanSortField.challanNo) {
+                          _sortAscending = !_sortAscending;
+                        } else {
+                          _sortField = ChallanSortField.challanNo;
+                          _sortAscending = true;
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'CHALLAN #',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _sortField == ChallanSortField.challanNo ? AppColors.primary : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          _sortField == ChallanSortField.challanNo
+                              ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                              : Icons.unfold_more,
+                          size: 13,
+                          color: _sortField == ChallanSortField.challanNo ? AppColors.primary : const Color(0xFF64748B).withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Expanded(flex: 3, child: Text('NOTES / REMARKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
               ],
             ),
           ),

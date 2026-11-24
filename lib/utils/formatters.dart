@@ -105,4 +105,36 @@ class Formatters {
     final rem = n % 10000000;
     return '${_convertIndianNumber(n ~/ 10000000)} Crore${rem != 0 ? ' ${_convertIndianNumber(rem)}' : ''}';
   }
+
+  /// Natural alphanumeric comparison for challan numbers and codes
+  /// Ensures 1 < 2 < 10 < 100 and CH-2 < CH-10 rather than pure alphabetical order.
+  static int compareNatural(String a, String b) {
+    final regex = RegExp(r'(\d+|\D+)');
+    final matchesA = regex.allMatches(a.trim()).map((m) => m.group(0)!).toList();
+    final matchesB = regex.allMatches(b.trim()).map((m) => m.group(0)!).toList();
+
+    final minLen = matchesA.length < matchesB.length ? matchesA.length : matchesB.length;
+    for (int i = 0; i < minLen; i++) {
+      final partA = matchesA[i];
+      final partB = matchesB[i];
+
+      final numA = BigInt.tryParse(partA);
+      final numB = BigInt.tryParse(partB);
+
+      if (numA != null && numB != null) {
+        final comp = numA.compareTo(numB);
+        if (comp != 0) return comp;
+      } else {
+        final comp = partA.toLowerCase().compareTo(partB.toLowerCase());
+        if (comp != 0) return comp;
+      }
+    }
+    return matchesA.length.compareTo(matchesB.length);
+  }
+
+  /// Compares two challan numbers respecting ascending/descending order.
+  static int compareChallanNumbers(String a, String b, {bool ascending = true}) {
+    final res = compareNatural(a, b);
+    return ascending ? res : -res;
+  }
 }
