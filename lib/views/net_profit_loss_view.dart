@@ -7,6 +7,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/password_confirmation_dialog.dart';
+import '../services/whatsapp_share_service.dart';
 
 class NetProfitLossView extends StatefulWidget {
   const NetProfitLossView({super.key});
@@ -331,6 +332,19 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('Close'),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF16A34A),
+                  side: const BorderSide(color: Color(0xFF16A34A)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.share, size: 15),
+                label: const Text('Share (WhatsApp)'),
+                onPressed: () {
+                  final liveEntry = entry.copyWith(notes: noteController.text.trim());
+                  WhatsAppShareService.shareEntry(context, liveEntry);
+                },
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -733,7 +747,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             const SizedBox(height: 16),
 
             // MONTH FILTER & ACTIONS TOOLBAR
-            _buildFilterToolbar(context, provider, isDark, isMobile),
+            _buildFilterToolbar(context, provider, calc, isDark, isMobile),
             const SizedBox(height: 16),
 
             // TOP 3 KPI SUMMARY CARDS
@@ -811,6 +825,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
   Widget _buildFilterToolbar(
     BuildContext context,
     ChallanProvider provider,
+    ProfitLossCalculation calc,
     bool isDark,
     bool isMobile,
   ) {
@@ -927,6 +942,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                       onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.share, size: 15),
+                    label: const Text('Share', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    onPressed: () => WhatsAppShareService.shareProfitLossStatement(context, calc, filterLabel),
+                  ),
                 ],
               ),
             ] else ...[
@@ -977,6 +1004,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Add Income', style: TextStyle(fontWeight: FontWeight.bold)),
                     onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('Share (WhatsApp)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () => WhatsAppShareService.shareProfitLossStatement(context, calc, filterLabel),
                   ),
                 ],
               ),
@@ -1281,7 +1320,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                const SizedBox(width: 84, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 114, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1391,10 +1430,35 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 84,
+                        width: 114,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
+                            // WHATSAPP SHARE BUTTON
+                            InkWell(
+                              onTap: () => WhatsAppShareService.shareEntry(context, e),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Tooltip(
+                                message: 'Share on WhatsApp (વોટ્સએપ પર મોકલો)',
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFF25D366).withValues(alpha: 0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.share,
+                                    size: 14,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
                             // NOTE 📝 BUTTON
                             InkWell(
                               onTap: () => _openNoteDialog(context, e),
@@ -1579,7 +1643,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                const SizedBox(width: 84, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 114, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1695,11 +1759,36 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 84,
+                        width: 114,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: isPartyCollection
                               ? [
+                                  // WHATSAPP SHARE BUTTON
+                                  InkWell(
+                                    onTap: () => WhatsAppShareService.shareEntry(context, e),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Tooltip(
+                                      message: 'Share on WhatsApp (વોટ્સએપ પર મોકલો)',
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: const Color(0xFF25D366).withValues(alpha: 0.4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.share,
+                                          size: 14,
+                                          color: Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
                                   Tooltip(
                                     message: 'Auto-calculated from party receipts',
                                     child: Container(
@@ -1713,6 +1802,31 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                   ),
                                 ]
                               : [
+                                  // WHATSAPP SHARE BUTTON
+                                  InkWell(
+                                    onTap: () => WhatsAppShareService.shareEntry(context, e),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Tooltip(
+                                      message: 'Share on WhatsApp (વોટ્સએપ પર મોકલો)',
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: const Color(0xFF25D366).withValues(alpha: 0.4),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.share,
+                                          size: 14,
+                                          color: Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
                                   // NOTE 📝 BUTTON
                                   InkWell(
                                     onTap: () => _openNoteDialog(context, e),
