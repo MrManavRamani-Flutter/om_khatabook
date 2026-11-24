@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/income_expense_entry.dart';
@@ -174,6 +175,186 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   });
                 },
                 child: const Text('Apply Filter'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _openNoteDialog(BuildContext context, IncomeExpenseEntry entry) {
+    final provider = context.read<ChallanProvider>();
+    final isExpense = entry.isExpense;
+    final accentColor = isExpense ? const Color(0xFFE11D48) : const Color(0xFF059669);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final noteController = TextEditingController(text: entry.notes);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          final currentNote = noteController.text.trim();
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.note_alt, size: 20, color: Colors.amber),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Entry Note & Remarks 📝',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${entry.particular} • ${Formatters.currency(entry.amount)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: accentColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 13, color: Colors.grey.shade600),
+                          const SizedBox(width: 5),
+                          Text(_dateFormat.format(entry.date), style: const TextStyle(fontSize: 11.5)),
+                          const SizedBox(width: 12),
+                          Icon(Icons.category_outlined, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              entry.category,
+                              style: const TextStyle(fontSize: 11.5),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              entry.paymentMode,
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: accentColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        const Text(
+                          'Note Content:',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        if (currentNote.isNotEmpty)
+                          InkWell(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: noteController.text));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Note copied to clipboard!'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.copy, size: 13, color: AppColors.primary),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Copy',
+                                    style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: noteController,
+                      maxLines: 5,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Enter note, calculation breakdown, or remarks here...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('Save Note'),
+                onPressed: () async {
+                  final newNote = noteController.text.trim();
+                  final updated = entry.copyWith(notes: newNote);
+                  await provider.updateIncomeExpenseEntry(updated);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Note saved successfully!'),
+                        backgroundColor: AppColors.primary,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           );
@@ -384,15 +565,17 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                     const SizedBox(height: 14),
 
-                    // NOTES
+                    // NOTES / DETAILS
                     TextField(
                       controller: notesController,
-                      maxLines: 2,
+                      maxLines: 3,
                       decoration: InputDecoration(
-                        labelText: 'Notes / Remarks',
-                        hintText: 'Optional remarks or bill reference',
+                        labelText: 'Notes / Remarks 📝 (Breakdown, Details, Ref)',
+                        hintText: 'e.g. BEADS=571140/400=370598, bill breakdown, vendor ref...',
                         prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        filled: true,
+                        fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
                       ),
                     ),
                   ],
@@ -1098,7 +1281,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                const SizedBox(width: 56, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 84, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1155,6 +1338,32 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               style: const TextStyle(fontSize: 10.5, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (e.notes.trim().isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              InkWell(
+                                onTap: () => _openNoteDialog(context, e),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.sticky_note_2_outlined, size: 11, color: Colors.amber),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        e.notes.trim(),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1182,10 +1391,39 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 56,
+                        width: 84,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
+                            // NOTE 📝 BUTTON
+                            InkWell(
+                              onTap: () => _openNoteDialog(context, e),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Tooltip(
+                                message: e.notes.trim().isNotEmpty ? 'View Note:\n${e.notes}' : 'Add Note 📝',
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: e.notes.trim().isNotEmpty
+                                        ? Colors.amber.withValues(alpha: 0.18)
+                                        : Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: e.notes.trim().isNotEmpty
+                                        ? Border.all(color: Colors.amber.withValues(alpha: 0.6), width: 1)
+                                        : null,
+                                  ),
+                                  child: Icon(
+                                    e.notes.trim().isNotEmpty ? Icons.note_alt : Icons.note_alt_outlined,
+                                    size: 14,
+                                    color: e.notes.trim().isNotEmpty
+                                        ? Colors.amber.shade700
+                                        : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            // EDIT BUTTON
                             InkWell(
                               onTap: () => _openAddEditEntryDialog(
                                 context,
@@ -1203,6 +1441,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               ),
                             ),
                             const SizedBox(width: 4),
+                            // DELETE BUTTON
                             InkWell(
                               onTap: () => _confirmDeleteEntry(context, e),
                               borderRadius: BorderRadius.circular(6),
@@ -1340,7 +1579,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
-                const SizedBox(width: 56, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(width: 84, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               ],
             ),
           ),
@@ -1403,6 +1642,32 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (!isPartyCollection && e.notes.trim().isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              InkWell(
+                                onTap: () => _openNoteDialog(context, e),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.sticky_note_2_outlined, size: 11, color: Colors.amber),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        e.notes.trim(),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1430,7 +1695,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         ),
                       ),
                       SizedBox(
-                        width: 56,
+                        width: 84,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: isPartyCollection
@@ -1448,6 +1713,35 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                   ),
                                 ]
                               : [
+                                  // NOTE 📝 BUTTON
+                                  InkWell(
+                                    onTap: () => _openNoteDialog(context, e),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Tooltip(
+                                      message: e.notes.trim().isNotEmpty ? 'View Note:\n${e.notes}' : 'Add Note 📝',
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: e.notes.trim().isNotEmpty
+                                              ? Colors.amber.withValues(alpha: 0.18)
+                                              : Theme.of(context).dividerColor.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: e.notes.trim().isNotEmpty
+                                              ? Border.all(color: Colors.amber.withValues(alpha: 0.6), width: 1)
+                                              : null,
+                                        ),
+                                        child: Icon(
+                                          e.notes.trim().isNotEmpty ? Icons.note_alt : Icons.note_alt_outlined,
+                                          size: 14,
+                                          color: e.notes.trim().isNotEmpty
+                                              ? Colors.amber.shade700
+                                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  // EDIT BUTTON
                                   InkWell(
                                     onTap: () => _openAddEditEntryDialog(
                                       context,
@@ -1465,6 +1759,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
+                                  // DELETE BUTTON
                                   InkWell(
                                     onTap: () => _confirmDeleteEntry(context, e),
                                     borderRadius: BorderRadius.circular(6),
