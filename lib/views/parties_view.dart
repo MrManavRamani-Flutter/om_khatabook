@@ -885,7 +885,7 @@ class _PartiesViewState extends State<PartiesView> {
                             if (party.address.isNotEmpty)
                               Text('📍 ${provider.formatCasedText(party.address)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                             if (party.gstNumber.isNotEmpty)
-                              Text('GST: ${party.gstNumber}', style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                              Text('GST: ${party.gstNumber}', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ],
@@ -1032,7 +1032,7 @@ class _PartiesViewState extends State<PartiesView> {
                                               ),
                                               child: Text(
                                                 'GST: ${party.gstNumber}',
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 10.5,
                                                   fontWeight: FontWeight.bold,
                                                   color: AppColors.primary,
@@ -1095,7 +1095,7 @@ class _PartiesViewState extends State<PartiesView> {
                                     ),
                                   ],
                                 ),
-                              const Icon(
+                              Icon(
                                 Icons.chevron_right,
                                 size: 20,
                                 color: AppColors.primary,
@@ -1229,7 +1229,7 @@ class _PartiesViewState extends State<PartiesView> {
                                         ),
                                         child: Text(
                                           'GSTIN: ${party.gstNumber}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.primary,
@@ -1277,7 +1277,7 @@ class _PartiesViewState extends State<PartiesView> {
                             ),
                           ],
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right,
                             size: 20,
                             color: AppColors.primary,

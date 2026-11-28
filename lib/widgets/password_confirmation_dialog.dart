@@ -12,7 +12,7 @@ Future<bool> promptPasswordConfirmation(
   required String message,
   String actionLabel = 'Confirm',
   IconData icon = Icons.security,
-  Color iconColor = AppColors.primary,
+  Color? iconColor,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -22,7 +22,7 @@ Future<bool> promptPasswordConfirmation(
       message: message,
       actionLabel: actionLabel,
       icon: icon,
-      iconColor: iconColor,
+      iconColor: iconColor ?? AppColors.primary,
     ),
   );
   return result ?? false;

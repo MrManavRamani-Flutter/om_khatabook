@@ -111,7 +111,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.calendar_month, color: AppColors.primary),
             SizedBox(width: 8),
@@ -424,13 +424,13 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           if (auth.canExportReports)
             isMobile
                 ? IconButton(
-                    icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary),
+                    icon: Icon(Icons.picture_as_pdf, color: AppColors.primary),
                     tooltip: 'Export Party Ledger',
                     onPressed: () => _openExportDialog(context),
                   )
                 : OutlinedButton.icon(
                     onPressed: () => _openExportDialog(context),
-                    icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                    icon: Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
                     label: const Text('Export Party Ledger'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -440,7 +440,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
             const SizedBox(width: 6),
             isMobile
                 ? IconButton(
-                    icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                    icon: Icon(Icons.add_circle, color: AppColors.primary),
                     tooltip: 'Add Challan',
                     onPressed: () => _openAddChallan(context, party),
                   )
@@ -516,7 +516,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                   ),
                                   child: Text(
                                     'GSTIN: ${party.gstNumber}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.primary,
@@ -907,7 +907,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         }),
 
                         ActionChip(
-                          avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                          avatar: Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                           label: Text(
                             _dateFilter == 'monthly_picker' && _selectedMonth != null
                                 ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(_selectedYear!, _selectedMonth!))}'
@@ -960,7 +960,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                       _customEndDate = null;
                                     });
                                   },
-                                  child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                  child: Icon(Icons.close, size: 14, color: AppColors.primary),
                                 ),
                               ],
                             ],
@@ -1063,7 +1063,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                  Icon(Icons.filter_list, size: 16, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1270,7 +1270,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   const SizedBox(width: 8),
                   if (context.watch<AuthProvider>().canPrintInvoice)
                     IconButton(
-                      icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                      icon: Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
                       tooltip: 'Print Tax Invoice (A4/A5)',
                       onPressed: () => _openInvoiceDialog(context, item),
                     ),
@@ -2015,7 +2015,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     alignment: Alignment.centerRight,
                     child: Text(
                       Formatters.currency(sumFinal),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ),
                 ),

@@ -327,11 +327,11 @@ class ChallanListView extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _openExportDialog(context),
-                          icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 16),
+                          icon: Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 16),
                           label: const Text('Export PDF/Excel', style: TextStyle(fontSize: 12)),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: const BorderSide(color: AppColors.primary),
+                            side: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       ),
@@ -390,11 +390,11 @@ class ChallanListView extends StatelessWidget {
                       if (auth.canExportReports)
                         OutlinedButton.icon(
                           onPressed: () => _openExportDialog(context),
-                          icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+                          icon: Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
                           label: const Text('Generate PDF / Excel'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            side: const BorderSide(color: AppColors.primary),
+                            side: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       if (auth.canExportReports && auth.canCreateChallan)
@@ -703,7 +703,7 @@ class ChallanListView extends StatelessWidget {
 
                         // DEDICATED MONTH PICKER BUTTON
                         ActionChip(
-                          avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                          avatar: Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                           label: Text(
                             provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
                                 ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
@@ -750,7 +750,7 @@ class ChallanListView extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 InkWell(
                                   onTap: () => provider.setDateFilter('all'),
-                                  child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                  child: Icon(Icons.close, size: 14, color: AppColors.primary),
                                 ),
                               ],
                             ],
@@ -840,7 +840,7 @@ class ChallanListView extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                            Icon(Icons.filter_list, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -851,7 +851,7 @@ class ChallanListView extends StatelessWidget {
                             ),
                             InkWell(
                               onTap: () => _openExportDialog(context),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.download_rounded, size: 14, color: AppColors.primary),
@@ -875,7 +875,7 @@ class ChallanListView extends StatelessWidget {
                     )
                   : Row(
                       children: [
-                        const Icon(Icons.filter_list, size: 16, color: AppColors.primary),
+                        Icon(Icons.filter_list, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -889,7 +889,7 @@ class ChallanListView extends StatelessWidget {
                         const SizedBox(width: 12),
                         InkWell(
                           onTap: () => _openExportDialog(context),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.download_rounded, size: 15, color: AppColors.primary),
@@ -1099,7 +1099,7 @@ class ChallanListView extends StatelessWidget {
                       },
                       itemBuilder: (ctx) => [
                         if (ctx.read<AuthProvider>().canPrintInvoice)
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'print',
                             child: Row(
                               children: [
@@ -1227,7 +1227,7 @@ class ChallanListView extends StatelessWidget {
                     const SizedBox(width: 8),
                     if (context.watch<AuthProvider>().canPrintInvoice)
                       IconButton(
-                        icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                        icon: Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
                         tooltip: 'Print Tax Invoice (A4/A5)',
                         onPressed: () => _openInvoiceDialog(context, item),
                       ),
@@ -2048,7 +2048,7 @@ class ChallanListView extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: Text(
                       Formatters.currency(sumFinal),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ),
                 ),
@@ -2770,7 +2770,7 @@ class ChallanListView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
                               Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
                               SizedBox(width: 8),
@@ -2896,7 +2896,7 @@ class ChallanListView extends StatelessWidget {
                                 _buildDateChip(ctx, provider, 'week', 'Last 7 Days'),
                                 _buildDateChip(ctx, provider, 'month', 'Last 30 Days'),
                                 ActionChip(
-                                  avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                                  avatar: Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                                   label: Text(
                                     provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
                                         ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
@@ -2937,7 +2937,7 @@ class ChallanListView extends StatelessWidget {
                                         const SizedBox(width: 4),
                                         InkWell(
                                           onTap: () => provider.setDateFilter('all'),
-                                          child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                          child: Icon(Icons.close, size: 14, color: AppColors.primary),
                                         ),
                                       ],
                                     ],

@@ -289,11 +289,11 @@ class ViewChallanDialog extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.history, size: 14, color: AppColors.primary),
+                              Icon(Icons.history, size: 14, color: AppColors.primary),
                               const SizedBox(width: 6),
                               Text(
                                 'Modification History (${challanLogs.length}):',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
                               ),
                             ],
                           ),
@@ -350,7 +350,7 @@ class ViewChallanDialog extends StatelessWidget {
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
+                          side: BorderSide(color: AppColors.primary),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                         icon: const Icon(Icons.receipt_long, size: 16),
@@ -396,7 +396,7 @@ class ViewChallanDialog extends StatelessWidget {
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
-                              side: const BorderSide(color: AppColors.primary),
+                              side: BorderSide(color: AppColors.primary),
                             ),
                             icon: const Icon(Icons.receipt_long, size: 18),
                             label: const Text('Tax Invoice (A4/A5)'),

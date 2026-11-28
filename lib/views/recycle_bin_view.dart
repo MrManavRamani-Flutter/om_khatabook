@@ -36,7 +36,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
     await context.read<ChallanProvider>().emptyRecycleBin();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Recycle Bin emptied permanently.'),
           backgroundColor: AppColors.primaryDark,
         ),
@@ -229,7 +229,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
           color: Theme.of(context).cardColor,
           child: Row(
             children: [
-              const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+              Icon(Icons.info_outline, size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -451,7 +451,7 @@ class _RecycleBinViewState extends State<RecycleBinView> {
           color: Theme.of(context).cardColor,
           child: Row(
             children: [
-              const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+              Icon(Icons.info_outline, size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

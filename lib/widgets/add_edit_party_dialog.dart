@@ -70,7 +70,7 @@ class _AddEditPartyDialogState extends State<AddEditPartyDialog> {
     if (!confirmed) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Password verification cancelled. Party details preserved.'),
             backgroundColor: AppColors.primaryDark,
             duration: Duration(seconds: 2),

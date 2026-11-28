@@ -397,7 +397,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     if (!confirmed) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Password verification cancelled. Your form details are preserved.'),
             backgroundColor: AppColors.primaryDark,
             duration: Duration(seconds: 2),
@@ -1048,7 +1048,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                         color: AppColors.primary.withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         'Auto-calculated (5%)',
                                         style: TextStyle(
                                           fontSize: 10.5,
@@ -1250,7 +1250,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                             padding: const EdgeInsets.only(left: 4),
                                             child: Text(
                                               _calcHintText(),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w600,
                                                 color: AppColors.primary,
@@ -1920,7 +1920,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   Widget _buildCustomDaysRow() {
     return Row(
       children: [
-        const Icon(Icons.tune, size: 15, color: AppColors.primary),
+        Icon(Icons.tune, size: 15, color: AppColors.primary),
         const SizedBox(width: 6),
         const Text(
           'Custom Days:',

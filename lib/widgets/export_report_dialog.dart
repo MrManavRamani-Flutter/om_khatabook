@@ -506,7 +506,7 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                       if (_dateScope == DateScope.specificMonth) ...[
                         Row(
                           children: [
-                            const Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
+                            Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
                             const SizedBox(width: 8),
                             const Text('Select Month:', style: TextStyle(fontWeight: FontWeight.w600)),
                             const SizedBox(width: 12),
@@ -622,7 +622,7 @@ class _ExportReportDialogState extends State<ExportReportDialog> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.analytics_outlined, color: AppColors.primary),
+                            Icon(Icons.analytics_outlined, color: AppColors.primary),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

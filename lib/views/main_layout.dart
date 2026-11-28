@@ -146,7 +146,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                   width: 26,
                   height: 26,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_balance_wallet, size: 22, color: AppColors.primary),
+                  errorBuilder: (context, error, stackTrace) => Icon(Icons.account_balance_wallet, size: 22, color: AppColors.primary),
                 ),
               ),
               const SizedBox(width: 8),
@@ -549,7 +549,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.business_outlined, size: 18, color: AppColors.primary),
+                        Icon(Icons.business_outlined, size: 18, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(

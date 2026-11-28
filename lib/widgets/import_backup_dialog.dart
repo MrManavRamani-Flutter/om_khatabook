@@ -305,7 +305,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.settings_backup_restore, color: AppColors.primary, size: 24),
+            child: Icon(Icons.settings_backup_restore, color: AppColors.primary, size: 24),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -357,7 +357,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                           color: AppColors.primary.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.upload_file_rounded,
                           size: 34,
                           color: AppColors.primary,
@@ -418,7 +418,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
                             Icon(Icons.history, size: 16, color: AppColors.primary),
                             SizedBox(width: 6),
@@ -475,7 +475,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                           color: AppColors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.insert_drive_file_rounded,
                           color: AppColors.primary,
                           size: 24,
@@ -914,7 +914,7 @@ class _ImportBackupDialogState extends State<ImportBackupDialog> {
                             color: AppColors.primary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'RECOMMENDED',
                             style: TextStyle(
                               fontSize: 9.5,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand & Slate Primary
-  static const Color primary = Color(0xFF0F766E); // Teal 700
-  static const Color primaryLight = Color(0xFF14B8A6); // Teal 500
-  static const Color primaryDark = Color(0xFF115E59); // Teal 800
+  // Brand & Primary (dynamically updated from Settings theme palette)
+  static Color primary = const Color(0xFF0F766E); // Teal 700 default
+  static Color primaryLight = const Color(0xFF14B8A6); // Teal 500 default
+  static Color primaryDark = const Color(0xFF115E59); // Teal 800 default
 
   // Warning Highlight (Light Red for Unpaid Cash / Bounced Cheques)
   static const Color warningBgLight = Color(0xFFFFF1F2); // Rose/Red 50
@@ -53,11 +53,11 @@ class AppColors {
   static const Color designBlueDark = Color(0xFF38BDF8);
   static const Color designBlueBg = Color(0xFFE0F2FE);
 
-  // Background Surfaces & Borders
-  static const Color darkScaffold = Color(0xFF0F172A);
-  static const Color darkCard = Color(0xFF1E293B);
-  static const Color darkBorder = Color(0xFF334155);
-  static const Color darkMutedText = Color(0xFF64748B);
+  // Background Surfaces & Borders (Pure Black / Neutral Dark & White)
+  static const Color darkScaffold = Color(0xFF000000);
+  static const Color darkCard = Color(0xFF121212);
+  static const Color darkBorder = Color(0xFF262626);
+  static const Color darkMutedText = Color(0xFF8E8E93);
 
   /// Helper to derive high-contrast color for dark theme
   static Color getHighContrast(Color color, bool isDark) {
@@ -80,6 +80,10 @@ class AppTheme {
   }) {
     final hsl = HSLColor.fromColor(primary);
     final primaryLight = hsl.withLightness((hsl.lightness + 0.15).clamp(0.0, 1.0)).toColor();
+    final primaryDark = hsl.withLightness((hsl.lightness - 0.10).clamp(0.0, 1.0)).toColor();
+    AppColors.primary = primary;
+    AppColors.primaryLight = primaryLight;
+    AppColors.primaryDark = primaryDark;
 
     if (isDark) {
       return ThemeData(
@@ -90,34 +94,34 @@ class AppTheme {
           primary: primaryLight,
           secondary: primary,
           brightness: Brightness.dark,
-          surface: const Color(0xFF1E293B),
+          surface: const Color(0xFF121212),
         ),
         primaryColor: primary,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        scaffoldBackgroundColor: const Color(0xFF000000),
         cardTheme: CardThemeData(
-          color: const Color(0xFF1E293B),
+          color: const Color(0xFF121212),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFF334155), width: 1),
+            side: const BorderSide(color: Color(0xFF262626), width: 1),
           ),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1E293B),
+          backgroundColor: Color(0xFF121212),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: false,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF1E293B),
+          fillColor: const Color(0xFF121212),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFF475569)),
+            borderSide: const BorderSide(color: Color(0xFF3A3A3C)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: Color(0xFF334155)),
+            borderSide: const BorderSide(color: Color(0xFF262626)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -128,7 +132,7 @@ class AppTheme {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryLight,
-            foregroundColor: const Color(0xFF0F172A),
+            foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -145,21 +149,21 @@ class AppTheme {
         primary: primary,
         secondary: primaryLight,
         brightness: Brightness.light,
-        surface: const Color(0xFFF8FAFC),
+        surface: Colors.white,
       ),
       primaryColor: primary,
-      scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+      scaffoldBackgroundColor: const Color(0xFFFAFAFA),
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          side: const BorderSide(color: Color(0xFFE5E5E5), width: 1),
         ),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
-        foregroundColor: Color(0xFF0F172A),
+        foregroundColor: Colors.black,
         elevation: 0,
         centerTitle: false,
       ),

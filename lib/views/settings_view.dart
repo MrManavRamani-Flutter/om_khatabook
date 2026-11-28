@@ -288,7 +288,7 @@ class _SettingsViewState extends State<SettingsView> {
                       color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.lock_reset, color: AppColors.primary, size: 22),
+                    child: Icon(Icons.lock_reset, color: AppColors.primary, size: 22),
                   ),
                   const SizedBox(width: 12),
                   const Column(
@@ -559,7 +559,7 @@ class _SettingsViewState extends State<SettingsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
                           Icon(
                             Icons.tune_rounded,
@@ -667,7 +667,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                   child: Row(
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 14,
                         backgroundColor: AppColors.primary,
                         child: Icon(
@@ -690,7 +690,7 @@ class _SettingsViewState extends State<SettingsView> {
                             ),
                             Text(
                               provider.companyTagline,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 9.5,
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
@@ -819,7 +819,7 @@ class _SettingsViewState extends State<SettingsView> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
+                  child: Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -832,75 +832,49 @@ class _SettingsViewState extends State<SettingsView> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                color: isDark ? const Color(0xFF121212) : Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.account_circle, size: 16, color: AppColors.primary),
+                      Icon(Icons.account_circle, size: 16, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Text(
-                        'Master Operator: OMMAVTAR36 (OM MAVTAR)',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      const Expanded(
+                        child: Text(
+                          'Master Operator: OMMAVTAR36',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Protected by master password (Default: OMMAVTAR36).',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   const Divider(height: 1),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.bedtime_outlined, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Auto-Logout on Sleep / Inactive',
-                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
-                              ),
-                              Text(
-                                'Logs out automatically when system sleeps or is idle',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  LayoutBuilder(
+                    builder: (ctx, box) {
+                      final isNarrow = box.maxWidth < 460;
+                      final dropdown = Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          color: isDark ? Colors.black : Colors.white,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.35),
+                            color: AppColors.primary.withValues(alpha: 0.4),
                             width: 1.2,
                           ),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
+                            isExpanded: isNarrow,
                             value: auth.sessionTimeoutMinutes,
-                            dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            dropdownColor: isDark ? const Color(0xFF121212) : Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.keyboard_arrow_down_rounded,
                               color: AppColors.primary,
                               size: 20,
@@ -924,8 +898,43 @@ class _SettingsViewState extends State<SettingsView> {
                             },
                           ),
                         ),
-                      ),
-                    ],
+                      );
+
+                      final labelRow = Row(
+                        mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bedtime_outlined, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Auto-Logout on Sleep / Idle',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            labelRow,
+                            const SizedBox(height: 10),
+                            dropdown,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(child: labelRow),
+                          const SizedBox(width: 12),
+                          dropdown,
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -938,7 +947,7 @@ class _SettingsViewState extends State<SettingsView> {
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 1.5),
+                    side: BorderSide(color: AppColors.primary, width: 1.5),
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -988,7 +997,7 @@ class _SettingsViewState extends State<SettingsView> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.business_center, color: AppColors.primary, size: 22),
+                  child: Icon(Icons.business_center, color: AppColors.primary, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1091,7 +1100,7 @@ class _SettingsViewState extends State<SettingsView> {
                                   provider.setAppLogoBase64(b64);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                      SnackBar(
                                         content: Text('Company brand logo updated successfully!'),
                                         backgroundColor: AppColors.primary,
                                         duration: Duration(seconds: 2),
@@ -1156,7 +1165,7 @@ class _SettingsViewState extends State<SettingsView> {
                           _manualLogoPathController.clear();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text('Loaded and saved logo from file path!'),
                                 backgroundColor: AppColors.primary,
                               ),
@@ -1399,7 +1408,7 @@ class _SettingsViewState extends State<SettingsView> {
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Company and invoice details saved successfully! All PDF outputs updated.'),
                         backgroundColor: AppColors.primary,
                         duration: Duration(seconds: 2),
@@ -1438,7 +1447,7 @@ class _SettingsViewState extends State<SettingsView> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.person_pin_circle_outlined, color: AppColors.primary, size: 22),
+                  child: Icon(Icons.person_pin_circle_outlined, color: AppColors.primary, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1540,7 +1549,7 @@ class _SettingsViewState extends State<SettingsView> {
                                   provider.setProfileLogoBase64(b64);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                      SnackBar(
                                         content: Text('Profile avatar updated successfully!'),
                                         backgroundColor: AppColors.primary,
                                         duration: Duration(seconds: 2),
@@ -1605,7 +1614,7 @@ class _SettingsViewState extends State<SettingsView> {
                           _manualAvatarPathController.clear();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text('Loaded and saved profile avatar from file path!'),
                                 backgroundColor: AppColors.primary,
                               ),
@@ -1709,7 +1718,7 @@ class _SettingsViewState extends State<SettingsView> {
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Profile updated successfully!'),
                         backgroundColor: AppColors.primary,
                         duration: Duration(seconds: 2),
@@ -1738,7 +1747,7 @@ class _SettingsViewState extends State<SettingsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.palette_outlined, color: AppColors.primary),
                 SizedBox(width: 10),
@@ -2147,7 +2156,7 @@ class _SettingsViewState extends State<SettingsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.text_fields_rounded, color: AppColors.primary, size: 20),
                 SizedBox(width: 8),
@@ -2219,7 +2228,7 @@ class _SettingsViewState extends State<SettingsView> {
                                         color: AppColors.primary.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text(
+                                      child: Text(
                                         'Default',
                                         style: TextStyle(
                                           fontSize: 9.5,
@@ -2301,7 +2310,7 @@ class _SettingsViewState extends State<SettingsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.storage_outlined, color: AppColors.primary),
                       SizedBox(width: 10),
@@ -2381,7 +2390,7 @@ class _SettingsViewState extends State<SettingsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.backup_outlined, color: AppColors.primary),
                       SizedBox(width: 10),

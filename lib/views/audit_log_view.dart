@@ -471,7 +471,7 @@ class _AuditLogViewState extends State<AuditLogView> {
                     ),
                     child: Text(
                       '${log.performedBy} [${log.userRole}]',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,

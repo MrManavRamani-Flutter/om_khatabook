@@ -158,7 +158,7 @@ class _LedgerCategoriesViewState extends State<LedgerCategoriesView> {
             color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(Icons.category_rounded, color: AppColors.primary, size: 24),
+          child: Icon(Icons.category_rounded, color: AppColors.primary, size: 24),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -180,7 +180,7 @@ class _LedgerCategoriesViewState extends State<LedgerCategoriesView> {
                     ),
                     child: Text(
                       '${totalExpenses + totalIncomes} Presets',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,

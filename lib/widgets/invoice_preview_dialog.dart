@@ -152,7 +152,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                              child: Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -174,7 +174,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                         ),
                                         child: Text(
                                           '#${widget.entry.challanNo}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 10.5,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.primary,
@@ -271,7 +271,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 22),
+                          child: Icon(Icons.receipt_long, color: AppColors.primary, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -293,7 +293,7 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                                     ),
                                     child: Text(
                                       '#${widget.entry.challanNo}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,

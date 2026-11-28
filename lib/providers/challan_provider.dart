@@ -345,7 +345,10 @@ class ChallanProvider extends ChangeNotifier {
 
     _isDarkMode = _storage.isDarkMode;
     final pVal = _storage.themePrimaryColorValue;
-    if (pVal != null) _primaryColor = Color(pVal);
+    if (pVal != null) {
+      _primaryColor = Color(pVal);
+      AppColors.primary = _primaryColor;
+    }
     final sVal = _storage.statusSuccessColorValue;
     if (sVal != null) _successColor = Color(sVal);
     final wVal = _storage.statusWarningColorValue;
@@ -1338,6 +1341,7 @@ class ChallanProvider extends ChangeNotifier {
   Future<void> setThemePreset(String name, Color primary) async {
     _themePreset = name;
     _primaryColor = primary;
+    AppColors.primary = primary;
     await _storage.setThemePresetName(name);
     await _storage.setThemePrimaryColorValue(primary.toARGB32());
     notifyListeners();
@@ -1345,6 +1349,7 @@ class ChallanProvider extends ChangeNotifier {
 
   Future<void> setPrimaryColor(Color color) async {
     _primaryColor = color;
+    AppColors.primary = color;
     _themePreset = 'Custom';
     await _storage.setThemePresetName('Custom');
     await _storage.setThemePrimaryColorValue(color.toARGB32());

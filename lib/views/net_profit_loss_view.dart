@@ -82,7 +82,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
+            title: Row(
               children: [
                 Icon(Icons.calendar_month, color: AppColors.primary),
                 SizedBox(width: 10),
@@ -297,7 +297,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               );
                             },
                             borderRadius: BorderRadius.circular(4),
-                            child: const Padding(
+                            child: Padding(
                               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -350,7 +350,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   if (ctx.mounted) {
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Note saved successfully!'),
                         backgroundColor: AppColors.primary,
                         duration: Duration(seconds: 2),
@@ -701,7 +701,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     if (!confirmed) {
                       if (ctx.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text('Password verification cancelled. Your entry details are preserved.'),
                             backgroundColor: AppColors.primaryDark,
                             duration: Duration(seconds: 2),
@@ -732,7 +732,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     if (!confirmed) {
                       if (ctx.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text('Password verification cancelled. Your entry details are preserved.'),
                             backgroundColor: AppColors.primaryDark,
                             duration: Duration(seconds: 2),
@@ -858,7 +858,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Chip(
+                  Chip(
                     visualDensity: VisualDensity.compact,
                     label: Text(
                       'FINANCIAL',
@@ -2249,7 +2249,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Row(
+                  Row(
                     children: [
                       Icon(Icons.date_range, color: AppColors.primary, size: 20),
                       SizedBox(width: 8),
@@ -2298,7 +2298,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         },
                       ),
                       ActionChip(
-                        avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                        avatar: Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
                         label: const Text('Select Custom Months...'),
                         backgroundColor: _activePreset == 'custom'
                             ? AppColors.primary.withValues(alpha: 0.15)

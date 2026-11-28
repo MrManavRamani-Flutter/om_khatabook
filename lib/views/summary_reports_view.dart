@@ -90,7 +90,7 @@ class SummaryReportsView extends StatelessWidget {
     final exportButtons = [
       OutlinedButton.icon(
         onPressed: () => _quickExportPdf(context),
-        icon: const Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
+        icon: Icon(Icons.picture_as_pdf, color: AppColors.primary, size: 18),
         label: const Text('Quick PDF'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -146,7 +146,7 @@ class SummaryReportsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.money, color: AppColors.primary),
                 SizedBox(width: 10),
@@ -182,7 +182,7 @@ class SummaryReportsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.account_balance, color: AppColors.primary),
                 SizedBox(width: 10),

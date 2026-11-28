@@ -61,7 +61,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-            title: const Row(
+            title: Row(
               children: [
                 Icon(Icons.business_center, color: AppColors.primary),
                 SizedBox(width: 10),
@@ -260,7 +260,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                   }
                   Navigator.of(ctx).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('App logo and branding updated successfully!'),
                       backgroundColor: AppColors.primary,
                     ),
@@ -289,7 +289,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         builder: (dialogCtx, setDialogState) {
           return AlertDialog(
             insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-            title: const Row(
+            title: Row(
               children: [
                 Icon(Icons.person, color: AppColors.primary),
                 SizedBox(width: 10),
@@ -332,7 +332,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                                         provider.adminName.isNotEmpty
                                             ? provider.adminName[0].toUpperCase()
                                             : 'O',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 32,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary,
@@ -475,7 +475,7 @@ if (\$f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                   }
                   Navigator.of(ctx).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Admin profile and avatar updated successfully!'),
                       backgroundColor: AppColors.primary,
                     ),
@@ -577,7 +577,7 @@ class AppLogoWidget extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.primary, width: 1),
               ),
-              child: const Icon(Icons.edit, size: 9, color: AppColors.primary),
+              child: Icon(Icons.edit, size: 9, color: AppColors.primary),
             ),
           ),
         ],
@@ -654,7 +654,7 @@ class ProfileAvatarWidget extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.primary, width: 0.8),
               ),
-              child: const Icon(Icons.edit, size: 7, color: AppColors.primary),
+              child: Icon(Icons.edit, size: 7, color: AppColors.primary),
             ),
           ),
         ],
