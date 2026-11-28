@@ -7,6 +7,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_party_dialog.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/password_confirmation_dialog.dart';
 import 'party_ledger_detail_view.dart';
 
@@ -49,17 +50,12 @@ class _PartiesViewState extends State<PartiesView> {
     if (!confirmed || !context.mounted) return;
 
     context.read<ChallanProvider>().moveToBinParty(party.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${party.name} moved to Recycle Bin'),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: Colors.amberAccent,
-          onPressed: () {
-            context.read<ChallanProvider>().restoreParty(party.id);
-          },
-        ),
-      ),
+    AppSnackBar.showRecycleBinSnackBar(
+      context,
+      message: '"${party.name}" moved to Recycle Bin',
+      onUndo: () {
+        context.read<ChallanProvider>().restoreParty(party.id);
+      },
     );
   }
 

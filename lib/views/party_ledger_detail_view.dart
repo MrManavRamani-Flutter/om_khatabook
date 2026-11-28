@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
 import '../widgets/add_edit_party_dialog.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/export_report_dialog.dart';
 import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/password_confirmation_dialog.dart';
@@ -27,7 +28,9 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   String _searchQuery = '';
   PaymentOption? _paymentOptionFilter;
   String? _statusFilter; // 'all', 'paid', 'unpaid', 'bounced'
-  String _dateFilter = 'all'; // 'all', 'today', 'week', 'month', 'monthly_picker'
+  String _dateFilter = 'all'; // 'all', 'today', 'week', 'month', 'monthly_picker', 'custom'
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
   int? _selectedMonth;
   int? _selectedYear;
   ChallanSortField _sortField = ChallanSortField.date;
@@ -174,6 +177,46 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     );
   }
 
+  Future<void> _showCustomDateRangePicker(BuildContext context) async {
+    final now = DateTime.now();
+    final initialStart = _customStartDate ?? now.subtract(const Duration(days: 30));
+    final initialEnd = _customEndDate ?? now;
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      initialDateRange: DateTimeRange(
+        start: initialStart.isBefore(DateTime(2020)) ? DateTime(2020) : initialStart,
+        end: initialEnd.isAfter(DateTime(2035)) ? DateTime(2035) : initialEnd,
+      ),
+      helpText: 'Select Date Range (From - To)',
+      cancelText: 'Cancel',
+      confirmText: 'Apply Filter',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dateFilter = 'custom';
+        _customStartDate = picked.start;
+        _customEndDate = picked.end;
+        _selectedMonth = null;
+        _selectedYear = null;
+      });
+    }
+  }
+
   Future<void> _confirmDeleteChallan(BuildContext context, ChallanEntry entry) async {
     final confirmed = await promptPasswordConfirmation(
       context,
@@ -187,17 +230,10 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
     if (!confirmed || !context.mounted) return;
 
     context.read<ChallanProvider>().moveToBinChallan(entry.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Challan #${entry.challanNo} moved to Recycle Bin'),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: Colors.amberAccent,
-          onPressed: () {
-            context.read<ChallanProvider>().restoreChallan(entry.id);
-          },
-        ),
-      ),
+    AppSnackBar.showRecycleBinSnackBar(
+      context,
+      message: 'Challan #${entry.challanNo} moved to Recycle Bin',
+      onUndo: () => context.read<ChallanProvider>().restoreChallan(entry.id),
     );
   }
 
@@ -328,6 +364,14 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           _selectedYear != null) {
         if (item.date.month != _selectedMonth ||
             item.date.year != _selectedYear) {
+          return false;
+        }
+      } else if (_dateFilter == 'custom' &&
+          _customStartDate != null &&
+          _customEndDate != null) {
+        final startBound = DateTime(_customStartDate!.year, _customStartDate!.month, _customStartDate!.day);
+        final endBound = DateTime(_customEndDate!.year, _customEndDate!.month, _customEndDate!.day, 23, 59, 59, 999);
+        if (item.date.isBefore(startBound) || item.date.isAfter(endBound)) {
           return false;
         }
       }
@@ -880,6 +924,51 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                               ? AppColors.primary.withValues(alpha: 0.15)
                               : null,
                           onPressed: () => _showMonthPicker(context, allPartyChallans),
+                        ),
+
+                        // CUSTOM DATE RANGE (FROM - TO)
+                        ActionChip(
+                          avatar: Icon(
+                            Icons.date_range,
+                            size: 16,
+                            color: _dateFilter == 'custom' ? AppColors.primary : Colors.grey,
+                          ),
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _dateFilter == 'custom' &&
+                                        _customStartDate != null &&
+                                        _customEndDate != null
+                                    ? 'From: ${DateFormat('dd/MM/yy').format(_customStartDate!)} To: ${DateFormat('dd/MM/yy').format(_customEndDate!)}'
+                                    : 'From - To Date...',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _dateFilter == 'custom'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: _dateFilter == 'custom' ? AppColors.primary : null,
+                                ),
+                              ),
+                              if (_dateFilter == 'custom') ...[
+                                const SizedBox(width: 4),
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _dateFilter = 'all';
+                                      _customStartDate = null;
+                                      _customEndDate = null;
+                                    });
+                                  },
+                                  child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                ),
+                              ],
+                            ],
+                          ),
+                          backgroundColor: _dateFilter == 'custom'
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () => _showCustomDateRangePicker(context),
                         ),
 
                         const Padding(

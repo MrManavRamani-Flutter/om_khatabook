@@ -53,9 +53,11 @@ void main() {
       expect(challans.first.paidAmount, 5000.0);
       expect(challans.first.createdBy, 'OM MAVTAR');
 
-      // Verify AuthProvider initializes with OMMAVTAR36 (OM MAVTAR)
+      // Verify AuthProvider initializes in logged-out state and authenticates OMMAVTAR36 (OM MAVTAR)
       final auth = AuthProvider(storage);
       await auth.initialize();
+      expect(auth.currentUser, isNull);
+      await auth.login('OMMAVTAR36', 'OMMAVTAR36');
       expect(auth.currentUser?.username, 'OMMAVTAR36');
       expect(auth.currentUser?.displayName, 'OM MAVTAR');
     });

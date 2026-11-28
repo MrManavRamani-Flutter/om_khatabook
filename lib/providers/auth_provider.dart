@@ -318,17 +318,9 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
-    final masterUser = _users.firstWhere(
-      (u) => u.username.toUpperCase() == 'OMMAVTAR36',
-    );
-
-    // Try to restore existing active session
-    final savedUser = await _storage.loadActiveSessionUser();
-    if (savedUser != null) {
-      // Automatically migrate any legacy session (e.g. developer or admin) to OMMAVTAR36
-      _currentUser = masterUser;
-      await _storage.saveActiveSessionUser(_currentUser);
-    }
+    // Always require fresh login whenever app is opened / launched
+    _currentUser = null;
+    await _storage.saveActiveSessionUser(null);
 
     _isLoading = false;
     notifyListeners();

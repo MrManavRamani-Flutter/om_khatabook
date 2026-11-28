@@ -584,8 +584,9 @@ class ChallanProvider extends ChangeNotifier {
       } else if (_dateFilter == 'custom' &&
           _customStartDate != null &&
           _customEndDate != null) {
-        if (item.date.isBefore(_customStartDate!) ||
-            item.date.isAfter(_customEndDate!.add(const Duration(days: 1)))) {
+        final startBound = DateTime(_customStartDate!.year, _customStartDate!.month, _customStartDate!.day);
+        final endBound = DateTime(_customEndDate!.year, _customEndDate!.month, _customEndDate!.day, 23, 59, 59, 999);
+        if (item.date.isBefore(startBound) || item.date.isAfter(endBound)) {
           return false;
         }
       }

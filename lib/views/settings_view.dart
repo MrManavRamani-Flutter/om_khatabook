@@ -885,26 +885,45 @@ class _SettingsViewState extends State<SettingsView> {
                           ),
                         ],
                       ),
-                      DropdownButton<int>(
-                        value: auth.sessionTimeoutMinutes,
-                        underline: const SizedBox(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            width: 1.2,
+                          ),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 0, child: Text('On Sleep (Immediate)')),
-                          DropdownMenuItem(value: 5, child: Text('5 Minutes')),
-                          DropdownMenuItem(value: 15, child: Text('15 Minutes')),
-                          DropdownMenuItem(value: 30, child: Text('30 Minutes')),
-                          DropdownMenuItem(value: -1, child: Text('Never')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            auth.setSessionTimeoutMinutes(val);
-                          }
-                        },
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: auth.sessionTimeoutMinutes,
+                            dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 0, child: Text('On Sleep (Immediate)')),
+                              DropdownMenuItem(value: 5, child: Text('5 Minutes')),
+                              DropdownMenuItem(value: 15, child: Text('15 Minutes')),
+                              DropdownMenuItem(value: 30, child: Text('30 Minutes')),
+                              DropdownMenuItem(value: -1, child: Text('Never')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                auth.setSessionTimeoutMinutes(val);
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ],
                   ),

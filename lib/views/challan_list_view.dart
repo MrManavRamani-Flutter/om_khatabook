@@ -8,6 +8,7 @@ import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/add_edit_challan_dialog.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/export_report_dialog.dart';
 import '../widgets/invoice_preview_dialog.dart';
 import '../widgets/password_confirmation_dialog.dart';
@@ -225,6 +226,40 @@ class ChallanListView extends StatelessWidget {
     );
   }
 
+  Future<void> _showCustomDateRangePicker(BuildContext context, ChallanProvider provider) async {
+    final now = DateTime.now();
+    final initialStart = provider.customStartDate ?? now.subtract(const Duration(days: 30));
+    final initialEnd = provider.customEndDate ?? now;
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      initialDateRange: DateTimeRange(
+        start: initialStart.isBefore(DateTime(2020)) ? DateTime(2020) : initialStart,
+        end: initialEnd.isAfter(DateTime(2035)) ? DateTime(2035) : initialEnd,
+      ),
+      helpText: 'Select Date Range (From - To)',
+      cancelText: 'Cancel',
+      confirmText: 'Apply Filter',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: provider.primaryColor,
+              onPrimary: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      provider.setDateFilter('custom', start: picked.start, end: picked.end);
+    }
+  }
+
   Future<void> _confirmDelete(BuildContext context, ChallanEntry entry) async {
     final confirmed = await promptPasswordConfirmation(
       context,
@@ -238,17 +273,10 @@ class ChallanListView extends StatelessWidget {
     if (!confirmed || !context.mounted) return;
 
     context.read<ChallanProvider>().moveToBinChallan(entry.id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Challan #${entry.challanNo} moved to Recycle Bin'),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: Colors.amberAccent,
-          onPressed: () {
-            context.read<ChallanProvider>().restoreChallan(entry.id);
-          },
-        ),
-      ),
+    AppSnackBar.showRecycleBinSnackBar(
+      context,
+      message: 'Challan #${entry.challanNo} moved to Recycle Bin',
+      onUndo: () => context.read<ChallanProvider>().restoreChallan(entry.id),
     );
   }
 
@@ -716,6 +744,45 @@ class ChallanListView extends StatelessWidget {
                               ? AppColors.primary.withValues(alpha: 0.15)
                               : null,
                           onPressed: () => _showMonthPicker(context, provider),
+                        ),
+
+                        // CUSTOM DATE RANGE (FROM - TO)
+                        ActionChip(
+                          avatar: Icon(
+                            Icons.date_range,
+                            size: 16,
+                            color: provider.dateFilter == 'custom' ? AppColors.primary : Colors.grey,
+                          ),
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                provider.dateFilter == 'custom' &&
+                                        provider.customStartDate != null &&
+                                        provider.customEndDate != null
+                                    ? 'From: ${DateFormat('dd/MM/yy').format(provider.customStartDate!)} To: ${DateFormat('dd/MM/yy').format(provider.customEndDate!)}'
+                                    : 'From - To Date...',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: provider.dateFilter == 'custom'
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: provider.dateFilter == 'custom' ? AppColors.primary : null,
+                                ),
+                              ),
+                              if (provider.dateFilter == 'custom') ...[
+                                const SizedBox(width: 4),
+                                InkWell(
+                                  onTap: () => provider.setDateFilter('all'),
+                                  child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                ),
+                              ],
+                            ],
+                          ),
+                          backgroundColor: provider.dateFilter == 'custom'
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : null,
+                          onPressed: () => _showCustomDateRangePicker(context, provider),
                         ),
 
                         const Padding(
