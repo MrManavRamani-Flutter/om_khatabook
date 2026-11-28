@@ -156,6 +156,45 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             ],
           ),
           actions: [
+            if (_selectedIndex == 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: provider.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.add, size: 15),
+                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () => _openAddChallan(context),
+                ),
+              )
+            else if (_selectedIndex == 1)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: provider.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.person_add_alt_1, size: 15),
+                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const AddEditPartyDialog(),
+                    );
+                  },
+                ),
+              ),
             if (warningCount > 0)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
@@ -259,28 +298,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             ),
           ],
         ),
-        floatingActionButton: _selectedIndex == 0
-            ? FloatingActionButton.extended(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                onPressed: () => _openAddChallan(context),
-                icon: const Icon(Icons.add),
-                label: const Text('New Challan', style: TextStyle(fontWeight: FontWeight.bold)),
-              )
-            : (_selectedIndex == 1
-                ? FloatingActionButton.extended(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => const AddEditPartyDialog(),
-                      );
-                    },
-                    icon: const Icon(Icons.person_add_outlined),
-                    label: const Text('New Party', style: TextStyle(fontWeight: FontWeight.bold)),
-                  )
-                : null),
       );
     }
 

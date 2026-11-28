@@ -910,11 +910,7 @@ class ChallanListView extends StatelessWidget {
                   ),
                 ),
               )
-            else if (provider.viewMode == LedgerViewMode.table)
-              _buildExcelTableView(context, entries)
-            else if (provider.viewMode == LedgerViewMode.compact)
-              _buildCompactListView(context, entries)
-            else
+            else if (isMobile || provider.viewMode == LedgerViewMode.cards)
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -923,7 +919,11 @@ class ChallanListView extends StatelessWidget {
                   final item = entries[index];
                   return _buildChallanCard(context, item);
                 },
-              ),
+              )
+            else if (provider.viewMode == LedgerViewMode.compact)
+              _buildCompactListView(context, entries)
+            else
+              _buildExcelTableView(context, entries),
           ],
         ),
       ),
@@ -932,6 +932,7 @@ class ChallanListView extends StatelessWidget {
 
   Widget _buildChallanCard(BuildContext context, ChallanEntry item) {
     final provider = context.watch<ChallanProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isCash = item.paymentOption == PaymentOption.cash;
     final isUnpaidCash = isCash && !item.isCashPaid && !item.isPartiallyPaid;
     final isPartialCash = isCash && item.isPartiallyPaid;
@@ -940,19 +941,15 @@ class ChallanListView extends StatelessWidget {
     final isMobileCard = MediaQuery.of(context).size.width < 700;
 
     final cardBgColor = hasWarning
-        ? (Theme.of(context).brightness == Brightness.dark
-            ? AppColors.warningBgDark
-            : AppColors.warningBgLight)
+        ? provider.getEffectiveWarningBgColor(isDark)
         : (isPartialCash
-            ? (Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF2E2205)
-                : const Color(0xFFFFFDF5))
+            ? provider.getEffectivePartialBgColor(isDark)
             : Theme.of(context).cardColor);
 
     final borderColor = hasWarning
-        ? (Theme.of(context).brightness == Brightness.dark
-            ? AppColors.warningBorderDark
-            : AppColors.warningBorder)
+        ? (isDark
+            ? const Color(0xFFE11D48)
+            : provider.warningColor.withValues(alpha: 0.5))
         : (isPartialCash
             ? const Color(0xFFFDE68A)
             : Theme.of(context).dividerColor.withValues(alpha: 0.2));
@@ -1006,8 +1003,8 @@ class ChallanListView extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: hasWarning
-                                ? AppColors.warningText.withValues(alpha: 0.15)
-                                : AppColors.primary.withValues(alpha: 0.1),
+                                ? provider.getEffectiveWarningTextColor(isDark).withValues(alpha: 0.15)
+                                : provider.primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1015,10 +1012,27 @@ class ChallanListView extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: hasWarning ? AppColors.warningText : AppColors.primary,
+                              color: hasWarning ? provider.getEffectiveWarningTextColor(isDark) : provider.primaryColor,
                             ),
                           ),
                         ),
+                        if (item.designNo.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              '🎨 ${item.designNo}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                          ),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1030,7 +1044,7 @@ class ChallanListView extends StatelessWidget {
                             ),
                           ],
                         ),
-                        _buildStatusBadge(item),
+                        _buildStatusBadge(context, item),
                       ],
                     ),
                   ),
@@ -1123,14 +1137,14 @@ class ChallanListView extends StatelessWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: hasWarning
-                                ? AppColors.warningText
-                                : (item.isPartiallyPaid ? const Color(0xFFB45309) : AppColors.primary),
+                                ? provider.getEffectiveWarningTextColor(isDark)
+                                : (item.isPartiallyPaid ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
                           ),
                         ),
                         if (item.isPartiallyPaid)
                           Text(
                             'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
-                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: provider.getEffectivePartialTextColor(isDark)),
                           ),
                       ],
                     ),
@@ -1227,18 +1241,18 @@ class ChallanListView extends StatelessWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: hasWarning
-                                  ? AppColors.warningText
-                                  : (item.isPartiallyPaid ? const Color(0xFFB45309) : AppColors.primary),
+                                  ? provider.getEffectiveWarningTextColor(isDark)
+                                  : (item.isPartiallyPaid ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
                             ),
                           ),
                           if (item.isPartiallyPaid) ...[
                             const SizedBox(height: 2),
                             Text(
                               'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFB45309),
+                                color: provider.getEffectivePartialTextColor(isDark),
                               ),
                             ),
                           ],
@@ -1512,9 +1526,9 @@ class ChallanListView extends StatelessWidget {
 
               Color rowBg;
               if (hasWarning) {
-                rowBg = isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2);
+                rowBg = provider.getEffectiveWarningBgColor(isDark);
               } else if (isPartialCash) {
-                rowBg = isDark ? const Color(0xFF332707) : const Color(0xFFFFFDF5);
+                rowBg = provider.getEffectivePartialBgColor(isDark);
               } else {
                 rowBg = index.isEven
                     ? Theme.of(context).cardColor
@@ -1652,8 +1666,8 @@ class ChallanListView extends StatelessWidget {
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: hasWarning
-                                    ? AppColors.warningText
-                                    : (isPartialCash ? const Color(0xFFB45309) : AppColors.primary),
+                                    ? provider.getEffectiveWarningTextColor(isDark)
+                                    : (isPartialCash ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
                               ),
                             ),
                           ),
@@ -1668,7 +1682,7 @@ class ChallanListView extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: item.isFullyPaid ? AppColors.successText : const Color(0xFFB45309),
+                                color: item.isFullyPaid ? provider.getEffectiveSuccessTextColor(isDark) : provider.getEffectivePartialTextColor(isDark),
                               ),
                             ),
                           ),
@@ -1687,7 +1701,9 @@ class ChallanListView extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: dueAmt > 0 ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : AppColors.warningText) : Colors.grey,
+                                    color: dueAmt > 0
+                                        ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : provider.getEffectiveWarningTextColor(isDark))
+                                        : Colors.grey,
                                   ),
                                 ),
                                 if (!item.isFullyPaid && item.paymentDueDate != null)
@@ -1723,7 +1739,7 @@ class ChallanListView extends StatelessWidget {
                         SizedBox(
                           width: 135,
                           child: Center(
-                            child: _buildStatusBadge(item, compact: true),
+                            child: _buildStatusBadge(context, item, compact: true),
                           ),
                         ),
                         // ACTIONS
@@ -1981,7 +1997,7 @@ class ChallanListView extends StatelessWidget {
                                   color: hasWarning ? AppColors.warningText : AppColors.primary,
                                 ),
                               ),
-                              _buildStatusBadge(item, compact: true),
+                              _buildStatusBadge(context, item, compact: true),
                             ],
                           ),
                           const SizedBox(width: 6),
@@ -2025,7 +2041,7 @@ class ChallanListView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _buildStatusBadge(item, compact: true),
+                          _buildStatusBadge(context, item, compact: true),
                           const SizedBox(width: 14),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -2117,7 +2133,8 @@ class ChallanListView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(ChallanEntry item, {bool compact = false}) {
+  Widget _buildStatusBadge(BuildContext context, ChallanEntry item, {bool compact = false}) {
+    final provider = context.watch<ChallanProvider>();
     if (item.paymentOption == PaymentOption.cash) {
       if (item.isPartiallyPaid) {
         return Container(
@@ -2125,12 +2142,12 @@ class ChallanListView extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFFFFBEB),
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFFDE68A)),
+            border: Border.all(color: provider.partialColor.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.pie_chart, size: 11, color: Color(0xFFB45309)),
+              Icon(Icons.pie_chart, size: 11, color: provider.partialColor),
               const SizedBox(width: 4),
               Text(
                 compact
@@ -2138,10 +2155,10 @@ class ChallanListView extends StatelessWidget {
                     : 'PARTIAL: PAID ${Formatters.currency(item.paidAmount)} • DUE ${Formatters.currency(item.remainingAmount)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF92400E),
+                  color: provider.partialColor,
                 ),
               ),
             ],
@@ -2151,23 +2168,23 @@ class ChallanListView extends StatelessWidget {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: AppColors.successBgLight,
+            color: provider.successColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: AppColors.successBorder),
+            border: Border.all(color: provider.successColor.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check, size: 11, color: AppColors.successText),
+              Icon(Icons.check, size: 11, color: provider.successColor),
               const SizedBox(width: 3),
               Text(
                 compact ? 'PAID' : 'CASH PAID',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.successText,
+                  color: provider.successColor,
                 ),
               ),
             ],
@@ -2178,7 +2195,7 @@ class ChallanListView extends StatelessWidget {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: isOverdue ? const Color(0xFFDC2626) : AppColors.warningText,
+            color: isOverdue ? const Color(0xFFDC2626) : provider.warningColor,
             borderRadius: BorderRadius.circular(5),
             border: isOverdue ? Border.all(color: const Color(0xFFFCA5A5), width: 1) : null,
           ),

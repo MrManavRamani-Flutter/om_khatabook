@@ -759,6 +759,10 @@ class _SettingsViewState extends State<SettingsView> {
           _buildThemeModeCard(context, provider, isDark),
           const SizedBox(height: 20),
 
+          // 3.1. THEME COLOR COMBINATIONS & STATUS COLORS
+          _buildThemeColorCombinationAndStatusCard(context, provider, isDark),
+          const SizedBox(height: 20),
+
           // 4. TEXT CASING & TYPOGRAPHY
           _buildTextCasingCard(context, provider, isDark),
           const SizedBox(height: 20),
@@ -1571,6 +1575,372 @@ class _SettingsViewState extends State<SettingsView> {
               secondary: Icon(
                 provider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeColorCombinationAndStatusCard(
+    BuildContext context,
+    ChallanProvider provider,
+    bool isDark,
+  ) {
+    final presets = <({String name, Color primary, String label})>[
+      (name: 'Teal', primary: const Color(0xFF0F766E), label: 'Teal Classic (ડીફોલ્ટ)'),
+      (name: 'Royal Blue', primary: const Color(0xFF1D4ED8), label: 'Royal Blue (રોયલ બ્લુ)'),
+      (name: 'Indigo', primary: const Color(0xFF4F46E5), label: 'Indigo Violet (ઈન્ડિગો)'),
+      (name: 'Emerald', primary: const Color(0xFF059669), label: 'Emerald Forest (લીલો)'),
+      (name: 'Crimson', primary: const Color(0xFFBE123C), label: 'Ruby Crimson (લાલ)'),
+      (name: 'Slate', primary: const Color(0xFF334155), label: 'Slate Gray (સ્લેટ)'),
+      (name: 'Amber', primary: const Color(0xFFD97706), label: 'Golden Amber (એમ્બર)'),
+      (name: 'Cyan', primary: const Color(0xFF0891B2), label: 'Ocean Cyan (સિયાન)'),
+    ];
+
+    final successOptions = <({Color color, String name})>[
+      (color: const Color(0xFF16A34A), name: 'Emerald Green'),
+      (color: const Color(0xFF15803D), name: 'Deep Forest'),
+      (color: const Color(0xFF0D9488), name: 'Teal Green'),
+      (color: const Color(0xFF0284C7), name: 'Sky Blue'),
+    ];
+
+    final partialOptions = <({Color color, String name})>[
+      (color: const Color(0xFFD97706), name: 'Vibrant Amber'),
+      (color: const Color(0xFFEA580C), name: 'Warm Orange'),
+      (color: const Color(0xFFCA8A04), name: 'Golden Yellow'),
+      (color: const Color(0xFF92400E), name: 'Ochre Bronze'),
+    ];
+
+    final warningOptions = <({Color color, String name})>[
+      (color: const Color(0xFFE11D48), name: 'Rose Red'),
+      (color: const Color(0xFFDC2626), name: 'Vivid Crimson'),
+      (color: const Color(0xFFF97316), name: 'Coral Orange'),
+      (color: const Color(0xFF9F1239), name: 'Deep Ruby'),
+    ];
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: isDark ? 0 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.color_lens_outlined, color: provider.primaryColor, size: 22),
+                const SizedBox(width: 10),
+                const Text(
+                  'Theme Color Combinations & Status Management',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Customize full app color theme, high-contrast text, and ledger status badges.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // 1. PRESET COLOR COMBINATIONS
+            const Text(
+              'Theme Palette Combinations (એપ થીમ પેલેટ્સ)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: presets.map((p) {
+                final isSelected = provider.primaryColor.toARGB32() == p.primary.toARGB32();
+                return InkWell(
+                  onTap: () => provider.setThemePreset(p.name, p.primary),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? p.primary.withValues(alpha: 0.15) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? p.primary : Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: p.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          p.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? p.primary : null,
+                          ),
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 6),
+                          Icon(Icons.check_circle, size: 14, color: p.primary),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 22),
+            const Divider(height: 1),
+            const SizedBox(height: 18),
+
+            // 2. STATUS COLOR CUSTOMIZATION
+            const Text(
+              'Ledger Status Colors (સ્ટેટસ કલર મેનેજમેન્ટ)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+
+            // A. Success / Paid Color
+            Row(
+              children: [
+                const SizedBox(
+                  width: 130,
+                  child: Text(
+                    'Fully Paid (પેઇડ):',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  children: successOptions.map((opt) {
+                    final isSel = provider.successColor.toARGB32() == opt.color.toARGB32();
+                    return Tooltip(
+                      message: opt.name,
+                      child: InkWell(
+                        onTap: () => provider.setSuccessColor(opt.color),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: opt.color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSel ? Colors.white : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isSel ? [BoxShadow(color: opt.color.withValues(alpha: 0.6), blurRadius: 6)] : null,
+                          ),
+                          child: isSel ? const Icon(Icons.check, size: 15, color: Colors.white) : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // B. Partially Paid Color
+            Row(
+              children: [
+                const SizedBox(
+                  width: 130,
+                  child: Text(
+                    'Partially Paid (પાર્શિયલ):',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  children: partialOptions.map((opt) {
+                    final isSel = provider.partialColor.toARGB32() == opt.color.toARGB32();
+                    return Tooltip(
+                      message: opt.name,
+                      child: InkWell(
+                        onTap: () => provider.setPartialColor(opt.color),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: opt.color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSel ? Colors.white : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isSel ? [BoxShadow(color: opt.color.withValues(alpha: 0.6), blurRadius: 6)] : null,
+                          ),
+                          child: isSel ? const Icon(Icons.check, size: 15, color: Colors.white) : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // C. Warning / Unpaid Color
+            Row(
+              children: [
+                const SizedBox(
+                  width: 130,
+                  child: Text(
+                    'Unpaid Due (અનપેઇડ):',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  children: warningOptions.map((opt) {
+                    final isSel = provider.warningColor.toARGB32() == opt.color.toARGB32();
+                    return Tooltip(
+                      message: opt.name,
+                      child: InkWell(
+                        onTap: () => provider.setWarningColor(opt.color),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: opt.color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSel ? Colors.white : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isSel ? [BoxShadow(color: opt.color.withValues(alpha: 0.6), blurRadius: 6)] : null,
+                          ),
+                          child: isSel ? const Icon(Icons.check, size: 15, color: Colors.white) : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 14),
+
+            // 3. EYE COMFORT: HIGH CONTRAST TEXT
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Enhanced High-Contrast Text (આંખો માટે હાઈ-કોન્ટ્રાસ્ટ)',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Numbers and warning text will have crisp, high-luminance contrast against dark backgrounds, preventing eye strain.',
+                style: TextStyle(fontSize: 11.5, color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
+              ),
+              value: provider.isHighContrast,
+              onChanged: (val) => provider.setHighContrast(val),
+              secondary: Icon(Icons.visibility, color: provider.primaryColor),
+            ),
+
+            const SizedBox(height: 14),
+
+            // 4. LIVE INTERACTIVE PREVIEW
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.15)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Live Preview (ચલાન લુક એન્ડ ફીલ):',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Active Theme: ${provider.themePreset}',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: provider.primaryColor),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: provider.successColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: provider.successColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          '✓ PAID',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: provider.getEffectiveSuccessTextColor(isDark)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: provider.partialColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          '◐ PARTIAL',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: provider.getEffectivePartialTextColor(isDark)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: provider.warningColor,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          '⚠ UNPAID DUE',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: provider.getEffectiveWarningBgColor(isDark),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: provider.warningColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          'Final: ₹ 57,200',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: provider.getEffectiveWarningTextColor(isDark),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

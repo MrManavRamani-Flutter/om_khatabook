@@ -8,6 +8,7 @@ import '../models/challan_entry.dart';
 import '../models/income_expense_entry.dart';
 import '../models/party.dart';
 import '../services/storage_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 
 enum BackupImportMode {
@@ -97,6 +98,56 @@ class ChallanProvider extends ChangeNotifier {
   List<ChallanEntry> _challans = [];
   bool _isDarkMode = false;
   bool _isLoading = true;
+
+  // Theme & Status Colors
+  Color _primaryColor = AppColors.primary;
+  Color _successColor = const Color(0xFF16A34A);
+  Color _warningColor = const Color(0xFFE11D48);
+  Color _partialColor = const Color(0xFFD97706);
+  bool _isHighContrast = true;
+  String _themePreset = 'Teal';
+
+  Color get primaryColor => _primaryColor;
+  Color get successColor => _successColor;
+  Color get warningColor => _warningColor;
+  Color get partialColor => _partialColor;
+  bool get isHighContrast => _isHighContrast;
+  String get themePreset => _themePreset;
+
+  Color getEffectiveWarningTextColor(bool isDark) {
+    if (isDark) {
+      return _isHighContrast ? const Color(0xFFFDA4AF) : AppColors.getHighContrast(_warningColor, true);
+    }
+    return _warningColor;
+  }
+
+  Color getEffectiveSuccessTextColor(bool isDark) {
+    if (isDark) {
+      return _isHighContrast ? const Color(0xFF86EFAC) : AppColors.getHighContrast(_successColor, true);
+    }
+    return _successColor;
+  }
+
+  Color getEffectivePartialTextColor(bool isDark) {
+    if (isDark) {
+      return _isHighContrast ? const Color(0xFFFDE68A) : AppColors.getHighContrast(_partialColor, true);
+    }
+    return _partialColor;
+  }
+
+  Color getEffectiveWarningBgColor(bool isDark) {
+    if (isDark) {
+      return const Color(0xFF261418);
+    }
+    return const Color(0xFFFFF1F2);
+  }
+
+  Color getEffectivePartialBgColor(bool isDark) {
+    if (isDark) {
+      return const Color(0xFF291E05);
+    }
+    return const Color(0xFFFFFBEB);
+  }
 
   // Filter state
   String _searchQuery = '';
@@ -237,6 +288,16 @@ class ChallanProvider extends ChangeNotifier {
     notifyListeners();
 
     _isDarkMode = _storage.isDarkMode;
+    final pVal = _storage.themePrimaryColorValue;
+    if (pVal != null) _primaryColor = Color(pVal);
+    final sVal = _storage.statusSuccessColorValue;
+    if (sVal != null) _successColor = Color(sVal);
+    final wVal = _storage.statusWarningColorValue;
+    if (wVal != null) _warningColor = Color(wVal);
+    final ptVal = _storage.statusPartialColorValue;
+    if (ptVal != null) _partialColor = Color(ptVal);
+    _isHighContrast = _storage.isHighContrast;
+    _themePreset = _storage.themePresetName;
     final savedMode = _storage.ledgerViewMode;
     _viewMode = LedgerViewMode.values.firstWhere(
       (e) => e.name == savedMode,
@@ -1133,10 +1194,50 @@ class ChallanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- THEME ---
+  // --- THEME & COLOR CUSTOMIZATION ---
   Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
     await _storage.setDarkMode(_isDarkMode);
+    notifyListeners();
+  }
+
+  Future<void> setThemePreset(String name, Color primary) async {
+    _themePreset = name;
+    _primaryColor = primary;
+    await _storage.setThemePresetName(name);
+    await _storage.setThemePrimaryColorValue(primary.toARGB32());
+    notifyListeners();
+  }
+
+  Future<void> setPrimaryColor(Color color) async {
+    _primaryColor = color;
+    _themePreset = 'Custom';
+    await _storage.setThemePresetName('Custom');
+    await _storage.setThemePrimaryColorValue(color.toARGB32());
+    notifyListeners();
+  }
+
+  Future<void> setSuccessColor(Color color) async {
+    _successColor = color;
+    await _storage.setStatusSuccessColorValue(color.toARGB32());
+    notifyListeners();
+  }
+
+  Future<void> setWarningColor(Color color) async {
+    _warningColor = color;
+    await _storage.setStatusWarningColorValue(color.toARGB32());
+    notifyListeners();
+  }
+
+  Future<void> setPartialColor(Color color) async {
+    _partialColor = color;
+    await _storage.setStatusPartialColorValue(color.toARGB32());
+    notifyListeners();
+  }
+
+  Future<void> setHighContrast(bool value) async {
+    _isHighContrast = value;
+    await _storage.setHighContrast(value);
     notifyListeners();
   }
 

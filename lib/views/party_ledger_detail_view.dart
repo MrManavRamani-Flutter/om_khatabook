@@ -1035,11 +1035,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   ),
                 ),
               )
-            else if (provider.viewMode == LedgerViewMode.table)
-              _buildExcelTableView(context, filtered)
-            else if (provider.viewMode == LedgerViewMode.compact)
-              _buildCompactListView(context, filtered)
-            else
+            else if (isMobile || provider.viewMode == LedgerViewMode.cards)
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1048,7 +1044,11 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                   final item = filtered[index];
                   return _buildChallanCard(context, item);
                 },
-              ),
+              )
+            else if (provider.viewMode == LedgerViewMode.compact)
+              _buildCompactListView(context, filtered)
+            else
+              _buildExcelTableView(context, filtered),
           ],
         ),
       ),
@@ -1440,6 +1440,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   }
 
   Widget _buildExcelTableView(BuildContext context, List<ChallanEntry> entries) {
+    final provider = context.watch<ChallanProvider>();
     final sumChallan = entries.fold(0.0, (s, c) => s + c.challanAmount);
     final sumDiscount = entries.fold(0.0, (s, c) => s + c.discountAmount);
     final sumGst = entries.fold(0.0, (s, c) => s + c.gstAmount);
@@ -1591,9 +1592,9 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
 
               Color rowBg;
               if (hasWarning) {
-                rowBg = isDark ? const Color(0xFF3B1E1E) : const Color(0xFFFEF2F2);
+                rowBg = provider.getEffectiveWarningBgColor(isDark);
               } else if (isPartialCash) {
-                rowBg = isDark ? const Color(0xFF332707) : const Color(0xFFFFFDF5);
+                rowBg = provider.getEffectivePartialBgColor(isDark);
               } else {
                 rowBg = index.isEven
                     ? Theme.of(context).cardColor
@@ -1735,8 +1736,8 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: hasWarning
-                                    ? AppColors.warningText
-                                    : (isPartialCash ? const Color(0xFFB45309) : AppColors.primary),
+                                    ? provider.getEffectiveWarningTextColor(isDark)
+                                    : (isPartialCash ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
                               ),
                             ),
                           ),
@@ -1751,7 +1752,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: item.isFullyPaid ? AppColors.successText : const Color(0xFFB45309),
+                                color: item.isFullyPaid ? provider.getEffectiveSuccessTextColor(isDark) : provider.getEffectivePartialTextColor(isDark),
                               ),
                             ),
                           ),
@@ -1770,7 +1771,9 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: dueAmt > 0 ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : AppColors.warningText) : Colors.grey,
+                                    color: dueAmt > 0
+                                        ? (item.isPaymentOverdue ? const Color(0xFFDC2626) : provider.getEffectiveWarningTextColor(isDark))
+                                        : Colors.grey,
                                   ),
                                 ),
                                 if (!item.isFullyPaid && item.paymentDueDate != null)
@@ -2132,6 +2135,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
   }
 
   Widget _buildStatusBadge(ChallanEntry item, {bool compact = false}) {
+    final provider = context.watch<ChallanProvider>();
     if (item.paymentOption == PaymentOption.cash) {
       if (item.isPartiallyPaid) {
         return Container(
@@ -2139,12 +2143,12 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           decoration: BoxDecoration(
             color: const Color(0xFFFFFBEB),
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: const Color(0xFFFDE68A)),
+            border: Border.all(color: provider.partialColor.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.pie_chart, size: 11, color: Color(0xFFB45309)),
+              Icon(Icons.pie_chart, size: 11, color: provider.partialColor),
               const SizedBox(width: 4),
               Text(
                 compact
@@ -2152,10 +2156,10 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                     : 'PARTIAL: PAID ${Formatters.currency(item.paidAmount)} • DUE ${Formatters.currency(item.remainingAmount)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF92400E),
+                  color: provider.partialColor,
                 ),
               ),
             ],
@@ -2165,23 +2169,23 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: AppColors.successBgLight,
+            color: provider.successColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: AppColors.successBorder),
+            border: Border.all(color: provider.successColor.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check, size: 11, color: AppColors.successText),
+              Icon(Icons.check, size: 11, color: provider.successColor),
               const SizedBox(width: 3),
               Text(
                 compact ? 'PAID' : 'CASH PAID',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.successText,
+                  color: provider.successColor,
                 ),
               ),
             ],
@@ -2192,7 +2196,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: compact ? 2 : 3),
           decoration: BoxDecoration(
-            color: isOverdue ? const Color(0xFFDC2626) : AppColors.warningText,
+            color: isOverdue ? const Color(0xFFDC2626) : provider.warningColor,
             borderRadius: BorderRadius.circular(5),
             border: isOverdue ? Border.all(color: const Color(0xFFFCA5A5), width: 1) : null,
           ),

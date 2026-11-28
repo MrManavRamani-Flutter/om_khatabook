@@ -37,11 +37,24 @@ class OmKhataBookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.select<ChallanProvider, bool>((p) => p.isDarkMode);
+    final provider = context.watch<ChallanProvider>();
+    final isDark = provider.isDarkMode;
 
     return MaterialApp(
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.buildTheme(
+        isDark: false,
+        primary: provider.primaryColor,
+        success: provider.successColor,
+        warning: provider.warningColor,
+        partial: provider.partialColor,
+      ),
+      darkTheme: AppTheme.buildTheme(
+        isDark: true,
+        primary: provider.primaryColor,
+        success: provider.successColor,
+        warning: provider.warningColor,
+        partial: provider.partialColor,
+      ),
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {

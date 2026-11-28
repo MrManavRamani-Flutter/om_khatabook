@@ -320,6 +320,25 @@ class StorageService {
     await _prefs.setInt(key, value);
   }
 
+  // --- THEME & STATUS COLORS ---
+  int? get themePrimaryColorValue => _prefs.getInt('om_theme_primary_color');
+  Future<void> setThemePrimaryColorValue(int value) => _prefs.setInt('om_theme_primary_color', value);
+
+  int? get statusSuccessColorValue => _prefs.getInt('om_status_success_color');
+  Future<void> setStatusSuccessColorValue(int value) => _prefs.setInt('om_status_success_color', value);
+
+  int? get statusPartialColorValue => _prefs.getInt('om_status_partial_color');
+  Future<void> setStatusPartialColorValue(int value) => _prefs.setInt('om_status_partial_color', value);
+
+  int? get statusWarningColorValue => _prefs.getInt('om_status_warning_color');
+  Future<void> setStatusWarningColorValue(int value) => _prefs.setInt('om_status_warning_color', value);
+
+  bool get isHighContrast => _prefs.getBool('om_high_contrast_text') ?? true;
+  Future<void> setHighContrast(bool value) => _prefs.setBool('om_high_contrast_text', value);
+
+  String get themePresetName => _prefs.getString('om_theme_preset') ?? 'Teal';
+  Future<void> setThemePresetName(String name) => _prefs.setString('om_theme_preset', name);
+
   // --- PARTIES ---
   Future<List<Party>> loadParties() async {
     final str = _prefs.getString(_keyParties);
