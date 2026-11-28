@@ -20,6 +20,8 @@ class PartiesView extends StatefulWidget {
 
 class _PartiesViewState extends State<PartiesView> {
   String _searchQuery = '';
+  String _statusFilter = 'all'; // 'all', 'due', 'settled'
+  String _sortBy = 'name'; // 'name', 'billed_desc', 'due_desc'
 
   void _openAddParty(BuildContext context) {
     showDialog(
@@ -66,6 +68,21 @@ class _PartiesViewState extends State<PartiesView> {
     final allParties = provider.parties;
     final challans = provider.challans;
 
+    double partyBilled(Party p) {
+      return challans.where((c) => c.partyId == p.id).fold(0.0, (s, c) => s + c.finalAmount);
+    }
+
+    double partyDue(Party p) {
+      return challans.where((c) => c.partyId == p.id).fold(
+            0.0,
+            (s, c) =>
+                s +
+                (c.paymentOption == PaymentOption.cash
+                    ? c.remainingAmount
+                    : (c.chequeDetails?.status != ChequeStatus.cleared ? c.finalAmount : 0.0)),
+          );
+    }
+
     final filtered = allParties.where((p) {
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
@@ -75,8 +92,18 @@ class _PartiesViewState extends State<PartiesView> {
         final matchGst = p.gstNumber.toLowerCase().contains(q);
         if (!matchName && !matchPhone && !matchAddress && !matchGst) return false;
       }
+      if (_statusFilter == 'due' && partyDue(p) <= 0.001) return false;
+      if (_statusFilter == 'settled' && partyDue(p) > 0.001) return false;
       return true;
     }).toList();
+
+    if (_sortBy == 'billed_desc') {
+      filtered.sort((a, b) => partyBilled(b).compareTo(partyBilled(a)));
+    } else if (_sortBy == 'due_desc') {
+      filtered.sort((a, b) => partyDue(b).compareTo(partyDue(a)));
+    } else {
+      filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    }
 
     final isMobile = MediaQuery.of(context).size.width < 768;
 
@@ -177,24 +204,82 @@ class _PartiesViewState extends State<PartiesView> {
             ],
             const SizedBox(height: 20),
 
-            // SEARCH BAR
+            // SEARCH & FILTER BAR
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search party by name, phone, city, or GSTIN...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    isDense: true,
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () => setState(() => _searchQuery = ''),
-                          )
-                        : null,
-                  ),
-                  onChanged: (val) => setState(() => _searchQuery = val),
-                ),
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
+                child: isMobile
+                    ? Builder(
+                        builder: (ctx) {
+                          int activeFilters = 0;
+                          if (_statusFilter != 'all') activeFilters++;
+                          if (_sortBy != 'name') activeFilters++;
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search party, phone, GST...',
+                                    prefixIcon: const Icon(Icons.search, size: 18),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    suffixIcon: _searchQuery.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear, size: 16),
+                                            onPressed: () => setState(() => _searchQuery = ''),
+                                          )
+                                        : null,
+                                  ),
+                                  onChanged: (val) => setState(() => _searchQuery = val),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.tonalIcon(
+                                onPressed: () => _showMobilePartyFilterSheet(context),
+                                icon: const Icon(Icons.tune_rounded, size: 17),
+                                label: Text(
+                                  activeFilters > 0 ? 'Filters ($activeFilters)' : 'Filters',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  backgroundColor: activeFilters > 0
+                                      ? AppColors.primary.withValues(alpha: 0.16)
+                                      : null,
+                                  foregroundColor: activeFilters > 0 ? AppColors.primary : null,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                              if (activeFilters > 0 || _searchQuery.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                IconButton.filledTonal(
+                                  tooltip: 'Reset Filters',
+                                  icon: const Icon(Icons.filter_alt_off, size: 18),
+                                  onPressed: () => setState(() {
+                                    _searchQuery = '';
+                                    _statusFilter = 'all';
+                                    _sortBy = 'name';
+                                  }),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      )
+                    : TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search party by name, phone, city, or GSTIN...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          isDense: true,
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () => setState(() => _searchQuery = ''),
+                                )
+                              : null,
+                        ),
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                      ),
               ),
             ),
             const SizedBox(height: 14),
@@ -230,7 +315,7 @@ class _PartiesViewState extends State<PartiesView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (!isMobile) ...[
+                  if (!isMobile && filtered.isNotEmpty) ...[
                     const SizedBox(width: 12),
                     _buildViewModeSwitcher(context, provider),
                   ],
@@ -1308,6 +1393,155 @@ class _PartiesViewState extends State<PartiesView> {
           child: Icon(icon, size: 16, color: color),
         ),
       ),
+    );
+  }
+
+  void _showMobilePartyFilterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Filter & Sort Parties',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _statusFilter = 'all';
+                            _sortBy = 'name';
+                          });
+                          setSheetState(() {});
+                        },
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Reset'),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Balance Status',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('All Parties'),
+                        selected: _statusFilter == 'all',
+                        onSelected: (_) {
+                          setState(() => _statusFilter = 'all');
+                          setSheetState(() {});
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('With Due Balance'),
+                        selected: _statusFilter == 'due',
+                        onSelected: (_) {
+                          setState(() => _statusFilter = 'due');
+                          setSheetState(() {});
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Settled'),
+                        selected: _statusFilter == 'settled',
+                        onSelected: (_) {
+                          setState(() => _statusFilter = 'settled');
+                          setSheetState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Sort By',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Name (A → Z)'),
+                        selected: _sortBy == 'name',
+                        onSelected: (_) {
+                          setState(() => _sortBy = 'name');
+                          setSheetState(() {});
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Highest Billed'),
+                        selected: _sortBy == 'billed_desc',
+                        onSelected: (_) {
+                          setState(() => _sortBy = 'billed_desc');
+                          setSheetState(() {});
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Highest Due'),
+                        selected: _sortBy == 'due_desc',
+                        onSelected: (_) {
+                          setState(() => _sortBy = 'due_desc');
+                          setSheetState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                      child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

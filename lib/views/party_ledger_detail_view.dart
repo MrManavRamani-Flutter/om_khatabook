@@ -724,66 +724,81 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
             // PARTY-SPECIFIC FILTER TOOLBAR (ZERO HORIZONTAL SCROLL)
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
                 child: Column(
                   children: [
                     // ROW 1: SEARCH & PAYMENT OPTION (RESPONSIVE)
                     if (isMobile) ...[
-                      TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Search Challan No, GST Bill, Cheque No, or Notes...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          isDense: true,
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () => setState(() => _searchQuery = ''),
-                                )
-                              : null,
-                        ),
-                        controller: TextEditingController(text: _searchQuery)
-                          ..selection = TextSelection.fromPosition(
-                            TextPosition(offset: _searchQuery.length),
-                          ),
-                        onChanged: (val) => setState(() => _searchQuery = val),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<PaymentOption?>(
-                              initialValue: _paymentOptionFilter,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Payment Option',
-                                isDense: true,
+                      Builder(
+                        builder: (ctx) {
+                          int activeCount = 0;
+                          if (_paymentOptionFilter != null) activeCount++;
+                          if (_statusFilter != null && _statusFilter != 'all') activeCount++;
+                          if (_dateFilter != 'all') activeCount++;
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search Challan, GST, Notes...',
+                                    prefixIcon: const Icon(Icons.search, size: 18),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    suffixIcon: _searchQuery.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear, size: 16),
+                                            onPressed: () => setState(() => _searchQuery = ''),
+                                          )
+                                        : null,
+                                  ),
+                                  controller: TextEditingController(text: _searchQuery)
+                                    ..selection = TextSelection.fromPosition(
+                                      TextPosition(offset: _searchQuery.length),
+                                    ),
+                                  onChanged: (val) => setState(() => _searchQuery = val),
+                                ),
                               ),
-                              items: const [
-                                DropdownMenuItem(value: null, child: Text('All Modes')),
-                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
-                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              const SizedBox(width: 8),
+                              FilledButton.tonalIcon(
+                                onPressed: () => _showMobilePartyLedgerFilterSheet(context, allPartyChallans),
+                                icon: const Icon(Icons.tune_rounded, size: 17),
+                                label: Text(
+                                  activeCount > 0 ? 'Filters ($activeCount)' : 'Filters',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  backgroundColor: activeCount > 0
+                                      ? AppColors.primary.withValues(alpha: 0.16)
+                                      : null,
+                                  foregroundColor: activeCount > 0 ? AppColors.primary : null,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                              if (activeCount > 0 || _searchQuery.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                IconButton.filledTonal(
+                                  tooltip: 'Reset Filters',
+                                  icon: const Icon(Icons.filter_alt_off, size: 18),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _paymentOptionFilter = null;
+                                      _statusFilter = null;
+                                      _dateFilter = 'all';
+                                      _selectedMonth = null;
+                                      _selectedYear = null;
+                                      _customStartDate = null;
+                                      _customEndDate = null;
+                                      _sortField = ChallanSortField.date;
+                                      _sortAscending = false;
+                                    });
+                                  },
+                                ),
                               ],
-                              onChanged: (val) => setState(() => _paymentOptionFilter = val),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            tooltip: 'Reset Filters',
-                            icon: const Icon(Icons.filter_alt_off, size: 18),
-                            onPressed: () {
-                              setState(() {
-                                _searchQuery = '';
-                                _paymentOptionFilter = null;
-                                _statusFilter = null;
-                                _dateFilter = 'all';
-                                _selectedMonth = null;
-                                _selectedYear = null;
-                                _sortField = ChallanSortField.date;
-                                _sortAscending = false;
-                              });
-                            },
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     ] else ...[
                       Row(
@@ -847,10 +862,11 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         ],
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    if (!isMobile) ...[
+                      const SizedBox(height: 12),
 
-                    // ROW 2: STATUS, PERIOD, SORT (IN ZERO-SCROLL WRAP)
-                    Wrap(
+                      // ROW 2: STATUS, PERIOD, SORT (IN ZERO-SCROLL WRAP)
+                      Wrap(
                       spacing: 8,
                       runSpacing: 10,
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -1047,6 +1063,7 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                         ),
                       ],
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -1072,9 +1089,11 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // WINDOWS EXPLORER STYLE VIEW MODE SWITCHER
-                  _buildViewModeSwitcher(context, provider),
+                  if (!isMobile && filtered.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    // WINDOWS EXPLORER STYLE VIEW MODE SWITCHER
+                    _buildViewModeSwitcher(context, provider),
+                  ],
                 ],
               ),
             ),
@@ -1084,14 +1103,14 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
             if (filtered.isEmpty)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  padding: EdgeInsets.symmetric(vertical: isMobile ? 32 : 48, horizontal: 20),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.receipt_long_outlined,
-                          size: 56,
+                          size: 52,
                           color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
@@ -1099,13 +1118,15 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
                           allPartyChallans.isEmpty
                               ? 'No challan records found for ${provider.formatCasedText(party.name)}'
                               : 'No challans match the active filters',
+                          textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           allPartyChallans.isEmpty
-                              ? 'Click "Add Challan" to create the first delivery challan for this party.'
-                              : 'Adjust your search or click the reset filter icon above.',
+                              ? 'Tap "Add Challan" to create the first delivery challan for this party.'
+                              : 'Adjust your search or tap the reset filter icon above.',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context).textTheme.bodySmall?.color,
@@ -1221,78 +1242,204 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
         onTap: () => _openViewChallan(context, item),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(MediaQuery.of(context).size.width < 700 ? 12 : 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ROW 1: CHALLAN NO, DATE, STATUS BADGE, ACTIONS
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: hasWarning
-                                ? AppColors.warningText.withValues(alpha: 0.15)
-                                : AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '# ${item.challanNo}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: hasWarning ? AppColors.warningText : AppColors.primary,
+              if (MediaQuery.of(context).size.width < 700) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: hasWarning
+                                  ? AppColors.warningText.withValues(alpha: 0.15)
+                                  : AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '# ${item.challanNo}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                                color: hasWarning ? AppColors.warningText : AppColors.primary,
+                              ),
                             ),
                           ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                            const SizedBox(width: 6),
-                            Text(
-                              Formatters.date(item.date),
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          if (item.designNo.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                item.designNo,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
                             ),
-                          ],
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      onSelected: (val) {
+                        if (val == 'print') _openInvoiceDialog(context, item);
+                        if (val == 'view') _openViewChallan(context, item);
+                        if (val == 'edit') _openEditChallan(context, item);
+                        if (val == 'delete') _confirmDeleteChallan(context, item);
+                      },
+                      itemBuilder: (ctx) => [
+                        if (ctx.read<AuthProvider>().canPrintInvoice)
+                          PopupMenuItem(
+                            value: 'print',
+                            child: Row(
+                              children: [
+                                Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                                const SizedBox(width: 10),
+                                const Text('Print Tax Invoice (A4/A5)'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 18),
+                              SizedBox(width: 10),
+                              Text('View Full Details'),
+                            ],
+                          ),
                         ),
-                        _buildStatusBadge(item),
+                        if (ctx.read<AuthProvider>().canEditChallan)
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined, size: 18),
+                                SizedBox(width: 10),
+                                Text('Edit Entry'),
+                              ],
+                            ),
+                          ),
+                        if (ctx.read<AuthProvider>().canDelete)
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                                SizedBox(width: 10),
+                                Text('Move to Recycle Bin', style: TextStyle(color: AppColors.warningText)),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (context.watch<AuthProvider>().canPrintInvoice)
-                    IconButton(
-                      icon: Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
-                      tooltip: 'Print Tax Invoice (A4/A5)',
-                      onPressed: () => _openInvoiceDialog(context, item),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_today, size: 13, color: Colors.grey),
+                        const SizedBox(width: 5),
+                        Text(
+                          Formatters.date(item.date),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                        ),
+                      ],
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.visibility_outlined, size: 18),
-                    tooltip: 'View Full Details',
-                    onPressed: () => _openViewChallan(context, item),
-                  ),
-                  if (context.watch<AuthProvider>().canEditChallan)
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: 'Edit Entry',
-                      onPressed: () => _openEditChallan(context, item),
+                    _buildStatusBadge(item),
+                  ],
+                ),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: hasWarning
+                                  ? AppColors.warningText.withValues(alpha: 0.15)
+                                  : AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '# ${item.challanNo}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: hasWarning ? AppColors.warningText : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(
+                                Formatters.date(item.date),
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          _buildStatusBadge(item),
+                        ],
+                      ),
                     ),
-                  if (context.watch<AuthProvider>().canDelete)
+                    const SizedBox(width: 8),
+                    if (context.watch<AuthProvider>().canPrintInvoice)
+                      IconButton(
+                        icon: Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                        tooltip: 'Print Tax Invoice (A4/A5)',
+                        onPressed: () => _openInvoiceDialog(context, item),
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                      tooltip: 'Delete Entry',
-                      onPressed: () => _confirmDeleteChallan(context, item),
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
+                      tooltip: 'View Full Details',
+                      onPressed: () => _openViewChallan(context, item),
                     ),
-                ],
-              ),
+                    if (context.watch<AuthProvider>().canEditChallan)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        tooltip: 'Edit Entry',
+                        onPressed: () => _openEditChallan(context, item),
+                      ),
+                    if (context.watch<AuthProvider>().canDelete)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                        tooltip: 'Delete Entry',
+                        onPressed: () => _confirmDeleteChallan(context, item),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 12),
 
               // ROW 2: AMOUNTS
@@ -2454,6 +2601,301 @@ class _PartyLedgerDetailViewState extends State<PartyLedgerDetailView> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showMobilePartyLedgerFilterSheet(
+    BuildContext context,
+    List<ChallanEntry> allPartyChallans,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) {
+            return StatefulBuilder(
+              builder: (ctx, setSheetState) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Filter & Sort Challans',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _paymentOptionFilter = null;
+                                _statusFilter = null;
+                                _dateFilter = 'all';
+                                _selectedMonth = null;
+                                _selectedYear = null;
+                                _customStartDate = null;
+                                _customEndDate = null;
+                                _sortField = ChallanSortField.date;
+                                _sortAscending = false;
+                              });
+                              setSheetState(() {});
+                            },
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Reset All'),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Payment Mode',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<PaymentOption?>(
+                              initialValue: _paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) {
+                                setState(() => _paymentOptionFilter = val);
+                                setSheetState(() {});
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Status',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildFilterChip('all', 'All', _statusFilter == null || _statusFilter == 'all', () {
+                                  setState(() => _statusFilter = 'all');
+                                  setSheetState(() {});
+                                }),
+                                _buildFilterChip('paid', 'Paid', _statusFilter == 'paid', () {
+                                  setState(() => _statusFilter = 'paid');
+                                  setSheetState(() {});
+                                }, color: AppColors.successText),
+                                _buildFilterChip('unpaid', 'Unpaid Warning', _statusFilter == 'unpaid', () {
+                                  setState(() => _statusFilter = 'unpaid');
+                                  setSheetState(() {});
+                                }, color: AppColors.warningText),
+                                if (allPartyChallans.any((c) => !c.isFullyPaid && c.isPaymentOverdue))
+                                  _buildFilterChip(
+                                    'overdue',
+                                    'Overdue (${allPartyChallans.where((c) => !c.isFullyPaid && c.isPaymentOverdue).length})',
+                                    _statusFilter == 'overdue',
+                                    () {
+                                      setState(() => _statusFilter = 'overdue');
+                                      setSheetState(() {});
+                                    },
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                _buildFilterChip('bounced', 'Bounced', _statusFilter == 'bounced', () {
+                                  setState(() => _statusFilter = 'bounced');
+                                  setSheetState(() {});
+                                }, color: AppColors.warningText),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Period & Date Range',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildFilterChip('all', 'All Time', _dateFilter == 'all', () {
+                                  setState(() => _dateFilter = 'all');
+                                  setSheetState(() {});
+                                }),
+                                _buildFilterChip('today', 'Today', _dateFilter == 'today', () {
+                                  setState(() => _dateFilter = 'today');
+                                  setSheetState(() {});
+                                }),
+                                _buildFilterChip('week', 'Last 7 Days', _dateFilter == 'week', () {
+                                  setState(() => _dateFilter = 'week');
+                                  setSheetState(() {});
+                                }),
+                                _buildFilterChip('month', 'Last 30 Days', _dateFilter == 'month', () {
+                                  setState(() => _dateFilter = 'month');
+                                  setSheetState(() {});
+                                }),
+                                ActionChip(
+                                  avatar: Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                                  label: Text(
+                                    _dateFilter == 'monthly_picker' && _selectedMonth != null
+                                        ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(_selectedYear!, _selectedMonth!))}'
+                                        : 'Pick Month...',
+                                  ),
+                                  backgroundColor: _dateFilter == 'monthly_picker'
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () {
+                                    Navigator.of(sheetCtx).pop();
+                                    _showMonthPicker(context, allPartyChallans);
+                                  },
+                                ),
+                                ActionChip(
+                                  avatar: Icon(
+                                    Icons.date_range,
+                                    size: 16,
+                                    color: _dateFilter == 'custom' ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Text(
+                                    _dateFilter == 'custom' && _customStartDate != null && _customEndDate != null
+                                        ? 'From: ${DateFormat('dd/MM/yy').format(_customStartDate!)} To: ${DateFormat('dd/MM/yy').format(_customEndDate!)}'
+                                        : 'From - To Date...',
+                                  ),
+                                  backgroundColor: _dateFilter == 'custom'
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () {
+                                    Navigator.of(sheetCtx).pop();
+                                    _showCustomDateRangePicker(context);
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Sort Order',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ActionChip(
+                                  avatar: Icon(
+                                    _sortField == ChallanSortField.date
+                                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                        : Icons.calendar_today,
+                                    size: 15,
+                                    color: _sortField == ChallanSortField.date ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Text(
+                                    _sortField == ChallanSortField.date
+                                        ? (_sortAscending ? 'Date: Oldest' : 'Date: Newest')
+                                        : 'Date Wise',
+                                  ),
+                                  backgroundColor: _sortField == ChallanSortField.date
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () {
+                                    setState(() {
+                                      if (_sortField == ChallanSortField.date) {
+                                        _sortAscending = !_sortAscending;
+                                      } else {
+                                        _sortField = ChallanSortField.date;
+                                        _sortAscending = false;
+                                      }
+                                    });
+                                    setSheetState(() {});
+                                  },
+                                ),
+                                ActionChip(
+                                  avatar: Icon(
+                                    _sortField == ChallanSortField.challanNo
+                                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                        : Icons.tag,
+                                    size: 15,
+                                    color: _sortField == ChallanSortField.challanNo ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Text(
+                                    _sortField == ChallanSortField.challanNo
+                                        ? (_sortAscending ? 'Challan #: 1-9' : 'Challan #: 9-1')
+                                        : 'Challan # Wise',
+                                  ),
+                                  backgroundColor: _sortField == ChallanSortField.challanNo
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () {
+                                    setState(() {
+                                      if (_sortField == ChallanSortField.challanNo) {
+                                        _sortAscending = !_sortAscending;
+                                      } else {
+                                        _sortField = ChallanSortField.challanNo;
+                                        _sortAscending = true;
+                                      }
+                                    });
+                                    setSheetState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => Navigator.of(sheetCtx).pop(),
+                          child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

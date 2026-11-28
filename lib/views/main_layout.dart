@@ -4,8 +4,6 @@ import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
-import '../widgets/add_edit_ledger_item_dialog.dart';
-import '../widgets/add_edit_party_dialog.dart';
 import '../widgets/branding_dialogs.dart';
 import 'challan_list_view.dart';
 import 'ledger_categories_view.dart';
@@ -160,50 +158,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             ],
           ),
           actions: [
-            if (_selectedIndex == 1)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: provider.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.person_add_alt_1, size: 15),
-                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const AddEditPartyDialog(),
-                    );
-                  },
-                ),
-              )
-            else if (_selectedIndex == 2)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: provider.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.add, size: 15),
-                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const AddEditLedgerItemDialog(),
-                    );
-                  },
-                ),
-              ),
             if (warningCount > 0)
               Padding(
                 padding: const EdgeInsets.only(right: 4),
@@ -427,7 +381,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                 index: 2,
                 icon: Icons.category_outlined,
                 activeIcon: Icons.category,
-                label: 'Ledger Categories',
+                label: 'Expense & Income Categories',
                 badge: '${provider.ledgerCategoryItems.length}',
                 isCollapsed: isCollapsed,
                 isDrawer: isDrawer,

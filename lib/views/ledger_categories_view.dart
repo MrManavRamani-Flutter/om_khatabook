@@ -168,7 +168,7 @@ class _LedgerCategoriesViewState extends State<LedgerCategoriesView> {
               Row(
                 children: [
                   const Text(
-                    'Ledger Categories',
+                    'Expense & Income Categories',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
@@ -272,7 +272,7 @@ class _LedgerCategoriesViewState extends State<LedgerCategoriesView> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Expense Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  label: const Text('Expense Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   onPressed: () => _openAddItem(context, EntryType.expense),
                 ),
               ),
@@ -286,7 +286,7 @@ class _LedgerCategoriesViewState extends State<LedgerCategoriesView> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('+ Income Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  label: const Text('Income Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   onPressed: () => _openAddItem(context, EntryType.income),
                 ),
               ),

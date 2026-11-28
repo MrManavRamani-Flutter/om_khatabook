@@ -869,8 +869,10 @@ class ChallanListView extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Center(child: _buildViewModeSwitcher(context, provider)),
+                        if (entries.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Center(child: _buildViewModeSwitcher(context, provider)),
+                        ],
                       ],
                     )
                   : Row(
@@ -884,8 +886,10 @@ class ChallanListView extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        _buildViewModeSwitcher(context, provider),
+                        if (entries.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          _buildViewModeSwitcher(context, provider),
+                        ],
                         const SizedBox(width: 12),
                         InkWell(
                           onTap: () => _openExportDialog(context),

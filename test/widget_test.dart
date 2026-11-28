@@ -42,8 +42,9 @@ void main() {
     expect(find.text('Parties Directory'), findsWidgets);
     expect(find.text('Financial Reports'), findsOneWidget);
     expect(find.text('No Challan entries recorded yet'), findsOneWidget);
-    expect(find.text('Excel Table'), findsOneWidget);
-    expect(find.text('Compact'), findsOneWidget);
-    expect(find.text('Cards'), findsOneWidget);
+    // View mode switcher is intentionally hidden when challan list is empty
+    expect(find.text('Excel Table'), findsNothing);
+    expect(find.text('Compact'), findsNothing);
+    expect(find.text('Cards'), findsNothing);
   });
 }

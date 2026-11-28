@@ -7,7 +7,6 @@ import '../models/ledger_category_item.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-import '../widgets/add_edit_ledger_item_dialog.dart';
 import '../widgets/password_confirmation_dialog.dart';
 import '../services/whatsapp_share_service.dart';
 
@@ -23,10 +22,11 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
   final DateFormat _monthFormat = DateFormat('MMM yyyy');
 
-  // Month filtering state
+  // Month & Item filtering state
   // If empty -> All Months mode
   Set<String> _selectedMonthKeys = {};
   String _activePreset = 'all'; // 'all', 'current', 'last_2', 'last_3', 'custom'
+  String? _selectedParticularFilter; // null = All Items
 
   @override
   void initState() {
@@ -426,75 +426,48 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // QUICK SUGGESTION CHIPS HEADER & ADD SHORTCUT
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Quick Presets (1-Click Select):',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-                          ),
+                    // LOCKED PREDEFINED ITEM SELECTOR (NO FREE TEXT TYPING)
+                    if (particularController.text.trim().isEmpty)
+                      DropdownButtonFormField<LedgerCategoryItem>(
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: isExpense ? 'Select Expense Item *' : 'Select Income Item *',
+                          prefixIcon: const Icon(Icons.category_outlined, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          filled: true,
+                          fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
                         ),
-                        InkWell(
-                          onTap: () async {
-                            final added = await showDialog<bool>(
-                              context: ctx,
-                              builder: (_) => AddEditLedgerItemDialog(defaultType: type),
-                            );
-                            if (added == true) {
-                              setDialogState(() {});
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        hint: Text(
+                          isExpense ? 'Choose an expense item...' : 'Choose an income item...',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        items: dynamicCategoryItems.map((item) {
+                          return DropdownMenuItem<LedgerCategoryItem>(
+                            value: item,
                             child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(Icons.add_circle_outline, size: 13, color: accentColor),
-                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    item.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
-                                  '+ Add Preset',
+                                  item.category,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: accentColor,
+                                    color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: dynamicCategoryItems.map((item) {
-                        final isSelected = particularController.text.trim().toLowerCase() ==
-                            item.name.trim().toLowerCase();
-                        return ActionChip(
-                          visualDensity: VisualDensity.compact,
-                          label: Text(
-                            item.name,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? accentColor : null,
-                            ),
-                          ),
-                          backgroundColor: isSelected
-                              ? accentColor.withValues(alpha: 0.18)
-                              : accentColor.withValues(alpha: 0.08),
-                          side: BorderSide(
-                            color: isSelected ? accentColor : accentColor.withValues(alpha: 0.2),
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                          onPressed: () {
+                          );
+                        }).toList(),
+                        onChanged: (item) {
+                          if (item != null) {
                             setDialogState(() {
                               particularController.text = item.name;
                               categoryController.text = item.category;
@@ -502,65 +475,54 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                                 amountController.text = item.defaultAmount.toStringAsFixed(2);
                               }
                             });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // PARTICULAR / DETAILS WITH DROPDOWN SHORTCUT
-                    TextField(
-                      controller: particularController,
-                      decoration: InputDecoration(
-                        labelText: 'Particulars / Details *',
-                        hintText: isExpense ? 'e.g. Electricity Bill, Staff Salary' : 'e.g. Om Kiran, Cash Sales',
-                        prefixIcon: const Icon(Icons.description_outlined, size: 20),
-                        suffixIcon: dynamicCategoryItems.isNotEmpty
-                            ? PopupMenuButton<LedgerCategoryItem>(
-                                tooltip: 'Select from saved presets',
-                                icon: Icon(
-                                  Icons.arrow_drop_down_circle_outlined,
-                                  size: 20,
-                                  color: accentColor,
-                                ),
-                                onSelected: (item) {
-                                  setDialogState(() {
-                                    particularController.text = item.name;
-                                    categoryController.text = item.category;
-                                    if (item.defaultAmount > 0) {
-                                      amountController.text = item.defaultAmount.toStringAsFixed(2);
-                                    }
-                                  });
-                                },
-                                itemBuilder: (_) => dynamicCategoryItems.map((item) {
-                                  return PopupMenuItem<LedgerCategoryItem>(
-                                    value: item,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          item.category,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                          ),
-                                        ),
-                                      ],
+                          }
+                        },
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.45), width: 1.2),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_outline, size: 18, color: accentColor),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isExpense ? 'Selected Expense Item' : 'Selected Income Item',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: accentColor,
                                     ),
-                                  );
-                                }).toList(),
-                              )
-                            : null,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        filled: true,
-                        fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    particularController.text,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Change / Clear Selection',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                setDialogState(() {
+                                  particularController.clear();
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 14),
 
                     // AMOUNT
@@ -791,11 +753,31 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 850;
 
-    // Compute Profit & Loss with active month filter and search
-    final calc = provider.computeProfitLoss(
+    // Compute Profit & Loss with active month filter, search, and particular item filter
+    final rawCalc = provider.computeProfitLoss(
       selectedMonthKeys: _selectedMonthKeys,
       searchQuery: _searchController.text,
     );
+
+    final ProfitLossCalculation calc;
+    if (_selectedParticularFilter != null && _selectedParticularFilter!.isNotEmpty) {
+      final q = _selectedParticularFilter!.trim().toLowerCase();
+      final filteredExp = rawCalc.expenses.where((e) => e.particular.trim().toLowerCase() == q).toList();
+      final filteredInc = rawCalc.incomes.where((e) => e.particular.trim().toLowerCase() == q).toList();
+      final totExp = filteredExp.fold(0.0, (s, e) => s + e.amount);
+      final totInc = filteredInc.fold(0.0, (s, e) => s + e.amount);
+      final net = totInc - totExp;
+      calc = ProfitLossCalculation(
+        expenses: filteredExp,
+        incomes: filteredInc,
+        totalExpenses: totExp,
+        totalIncome: totInc,
+        netAmount: net,
+        isProfit: net >= 0,
+      );
+    } else {
+      calc = rawCalc;
+    }
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -947,6 +929,26 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         : null,
                     onPressed: () => _showMultiMonthPickerDialog(context, provider),
                   ),
+                  // ITEM / CATEGORY FILTER DROPDOWN (DESKTOP)
+                  ActionChip(
+                    avatar: Icon(
+                      Icons.filter_alt_outlined,
+                      size: 16,
+                      color: _selectedParticularFilter != null ? AppColors.primary : null,
+                    ),
+                    label: Text(
+                      _selectedParticularFilter ?? 'All Items',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: _selectedParticularFilter != null ? FontWeight.bold : FontWeight.normal,
+                        color: _selectedParticularFilter != null ? AppColors.primary : null,
+                      ),
+                    ),
+                    backgroundColor: _selectedParticularFilter != null
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : null,
+                    onPressed: () => _showItemFilterDialog(context, provider),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -981,25 +983,28 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton.tonalIcon(
-                    onPressed: () => _showMobileMonthFilterSheet(context, provider),
-                    icon: const Icon(Icons.date_range, size: 17),
-                    label: Text(
-                      _activePreset == 'all' || _selectedMonthKeys.isEmpty
-                          ? 'Period'
-                          : '${_selectedMonthKeys.length} Mo',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                      backgroundColor: (_activePreset != 'all' && _selectedMonthKeys.isNotEmpty)
-                          ? AppColors.primary.withValues(alpha: 0.16)
-                          : null,
-                      foregroundColor: (_activePreset != 'all' && _selectedMonthKeys.isNotEmpty)
-                          ? AppColors.primary
-                          : null,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+                  Builder(
+                    builder: (ctx) {
+                      int activeFilters = 0;
+                      if (_activePreset != 'all' && _selectedMonthKeys.isNotEmpty) activeFilters++;
+                      if (_selectedParticularFilter != null) activeFilters++;
+                      return FilledButton.tonalIcon(
+                        onPressed: () => _showMobileMonthFilterSheet(context, provider),
+                        icon: const Icon(Icons.tune_rounded, size: 17),
+                        label: Text(
+                          activeFilters > 0 ? 'Filters ($activeFilters)' : 'Filters',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          backgroundColor: activeFilters > 0
+                              ? AppColors.primary.withValues(alpha: 0.16)
+                              : null,
+                          foregroundColor: activeFilters > 0 ? AppColors.primary : null,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -2222,9 +2227,103 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
     );
   }
 
+  void _showItemFilterDialog(BuildContext context, ChallanProvider provider) {
+    final Set<String> allItemNames = {};
+    for (final item in provider.expenseCategoryItems) {
+      allItemNames.add(item.name);
+    }
+    for (final item in provider.incomeCategoryItems) {
+      allItemNames.add(item.name);
+    }
+    for (final e in provider.incomeExpenseEntries) {
+      if (e.particular.trim().isNotEmpty) {
+        allItemNames.add(e.particular.trim());
+      }
+    }
+    final sortedNames = allItemNames.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.filter_alt_outlined, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            const Text('Filter by Expense / Income Item', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.all_inclusive),
+                  title: const Text('All Items (Show Everything)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  selected: _selectedParticularFilter == null,
+                  onTap: () {
+                    setState(() => _selectedParticularFilter = null);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                const Divider(),
+                ...sortedNames.map((name) {
+                  final isSelected = _selectedParticularFilter?.toLowerCase() == name.toLowerCase();
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      isSelected ? Icons.check_circle : Icons.label_outline,
+                      size: 18,
+                      color: isSelected ? AppColors.primary : Colors.grey,
+                    ),
+                    title: Text(
+                      name,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? AppColors.primary : null,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onTap: () {
+                      setState(() => _selectedParticularFilter = name);
+                      Navigator.of(ctx).pop();
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMobileMonthFilterSheet(BuildContext context, ChallanProvider provider) {
+    final Set<String> allItemNames = {};
+    for (final item in provider.expenseCategoryItems) {
+      allItemNames.add(item.name);
+    }
+    for (final item in provider.incomeCategoryItems) {
+      allItemNames.add(item.name);
+    }
+    for (final e in provider.incomeExpenseEntries) {
+      if (e.particular.trim().isNotEmpty) {
+        allItemNames.add(e.particular.trim());
+      }
+    }
+    final sortedNames = allItemNames.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2250,16 +2349,61 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   ),
                   const SizedBox(height: 12),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.date_range, color: AppColors.primary, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Select Period Filter',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Filter P & L Records',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          _setPreset('all', provider);
+                          setState(() => _selectedParticularFilter = null);
+                          setSheetState(() {});
+                        },
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Reset'),
                       ),
                     ],
                   ),
                   const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Filter by Expense / Income Item',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String?>(
+                    initialValue: sortedNames.contains(_selectedParticularFilter) ? _selectedParticularFilter : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Item Filter (e.g. Staff Salary)',
+                      isDense: true,
+                      prefixIcon: Icon(Icons.category_outlined, size: 18),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All Items (Show Everything)')),
+                      ...sortedNames.map((name) => DropdownMenuItem(
+                            value: name,
+                            child: Text(name, overflow: TextOverflow.ellipsis),
+                          )),
+                    ],
+                    onChanged: (val) {
+                      setState(() => _selectedParticularFilter = val);
+                      setSheetState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Period',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -2270,7 +2414,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         selected: _activePreset == 'all' || _selectedMonthKeys.isEmpty,
                         onSelected: (_) {
                           _setPreset('all', provider);
-                          Navigator.of(sheetCtx).pop();
+                          setSheetState(() {});
                         },
                       ),
                       ChoiceChip(
@@ -2278,7 +2422,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         selected: _activePreset == 'current',
                         onSelected: (_) {
                           _setPreset('current', provider);
-                          Navigator.of(sheetCtx).pop();
+                          setSheetState(() {});
                         },
                       ),
                       ChoiceChip(
@@ -2286,7 +2430,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         selected: _activePreset == 'last_2',
                         onSelected: (_) {
                           _setPreset('last_2', provider);
-                          Navigator.of(sheetCtx).pop();
+                          setSheetState(() {});
                         },
                       ),
                       ChoiceChip(
@@ -2294,7 +2438,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         selected: _activePreset == 'last_3',
                         onSelected: (_) {
                           _setPreset('last_3', provider);
-                          Navigator.of(sheetCtx).pop();
+                          setSheetState(() {});
                         },
                       ),
                       ActionChip(
@@ -2310,12 +2454,18 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                       onPressed: () => Navigator.of(sheetCtx).pop(),
-                      child: const Text('Close'),
+                      child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
