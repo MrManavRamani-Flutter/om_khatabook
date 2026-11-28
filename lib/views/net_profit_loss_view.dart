@@ -904,75 +904,104 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       elevation: isDark ? 0 : 1,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(isMobile ? 12 : 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                // ALL MONTHS
-                ChoiceChip(
-                  label: const Text('All Months'),
-                  selected: _activePreset == 'all' || _selectedMonthKeys.isEmpty,
-                  onSelected: (_) => _setPreset('all', provider),
-                ),
-                // CURRENT MONTH
-                ChoiceChip(
-                  label: const Text('Current Month'),
-                  selected: _activePreset == 'current',
-                  onSelected: (_) => _setPreset('current', provider),
-                ),
-                // LAST 2 MONTHS
-                ChoiceChip(
-                  label: const Text('Last 2 Months'),
-                  selected: _activePreset == 'last_2',
-                  onSelected: (_) => _setPreset('last_2', provider),
-                ),
-                // LAST 3 MONTHS
-                ChoiceChip(
-                  label: const Text('Last 3 Months (Quarter)'),
-                  selected: _activePreset == 'last_3',
-                  onSelected: (_) => _setPreset('last_3', provider),
-                ),
-                // CUSTOM MULTI-MONTH PICKER
-                ActionChip(
-                  avatar: const Icon(Icons.date_range, size: 16),
-                  label: const Text('Select Months...'),
-                  backgroundColor: _activePreset == 'custom'
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : null,
-                  onPressed: () => _showMultiMonthPickerDialog(context, provider),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
+            if (!isMobile) ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // ALL MONTHS
+                  ChoiceChip(
+                    label: const Text('All Months'),
+                    selected: _activePreset == 'all' || _selectedMonthKeys.isEmpty,
+                    onSelected: (_) => _setPreset('all', provider),
+                  ),
+                  // CURRENT MONTH
+                  ChoiceChip(
+                    label: const Text('Current Month'),
+                    selected: _activePreset == 'current',
+                    onSelected: (_) => _setPreset('current', provider),
+                  ),
+                  // LAST 2 MONTHS
+                  ChoiceChip(
+                    label: const Text('Last 2 Months'),
+                    selected: _activePreset == 'last_2',
+                    onSelected: (_) => _setPreset('last_2', provider),
+                  ),
+                  // LAST 3 MONTHS
+                  ChoiceChip(
+                    label: const Text('Last 3 Months (Quarter)'),
+                    selected: _activePreset == 'last_3',
+                    onSelected: (_) => _setPreset('last_3', provider),
+                  ),
+                  // CUSTOM MULTI-MONTH PICKER
+                  ActionChip(
+                    avatar: const Icon(Icons.date_range, size: 16),
+                    label: const Text('Select Months...'),
+                    backgroundColor: _activePreset == 'custom'
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : null,
+                    onPressed: () => _showMultiMonthPickerDialog(context, provider),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+            ],
 
             // SEARCH BAR & QUICK ACTION BUTTONS (RESPONSIVE)
             if (isMobile) ...[
-              TextField(
-                controller: _searchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Search Particulars, Category, or Party...',
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 16),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search Particulars, Category...',
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _showMobileMonthFilterSheet(context, provider),
+                    icon: const Icon(Icons.date_range, size: 17),
+                    label: Text(
+                      _activePreset == 'all' || _selectedMonthKeys.isEmpty
+                          ? 'Period'
+                          : '${_selectedMonthKeys.length} Mo',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                      backgroundColor: (_activePreset != 'all' && _selectedMonthKeys.isNotEmpty)
+                          ? AppColors.primary.withValues(alpha: 0.16)
+                          : null,
+                      foregroundColor: (_activePreset != 'all' && _selectedMonthKeys.isNotEmpty)
+                          ? AppColors.primary
+                          : null,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               Row(
@@ -986,7 +1015,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('+ Expense', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      label: const Text('Expense', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       onPressed: () => _openAddEditEntryDialog(context, type: EntryType.expense),
                     ),
                   ),
@@ -1000,7 +1029,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('+ Income', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      label: const Text('Income', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       onPressed: () => _openAddEditEntryDialog(context, type: EntryType.income),
                     ),
                   ),
@@ -1009,7 +1038,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF16A34A),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     icon: const Icon(Icons.share, size: 15),
@@ -1365,28 +1394,29 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             ),
           ),
 
-          // TABLE HEADER (Sr | Particulars | Date | Amount)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
-            child: Row(
-              children: [
-                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                const Expanded(flex: 3, child: Text('Particulars / Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                if (!isMobile)
+          // TABLE HEADER (DESKTOP ONLY)
+          if (!isMobile) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
+              child: Row(
+                children: [
+                  const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  const Expanded(flex: 3, child: Text('Particulars / Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                   const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                const Expanded(
-                  flex: 2,
-                  child: Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 82, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              ],
+                  const SizedBox(width: 82, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
+            const Divider(height: 1),
+          ],
 
           // ROWS LIST
           if (calc.expenses.isEmpty)
@@ -1411,6 +1441,134 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final e = calc.expenses[index];
+                if (isMobile) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: redColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: redColor),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.particular,
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${e.category} • ${_dateFormat.format(e.date)}',
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (e.notes.trim().isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                InkWell(
+                                  onTap: () => _openNoteDialog(context, e),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.sticky_note_2_outlined, size: 11, color: Colors.amber),
+                                      const SizedBox(width: 3),
+                                      Flexible(
+                                        child: Text(
+                                          e.notes.trim(),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          Formatters.currency(e.amount),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: redColor,
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: const Icon(Icons.more_vert, size: 18),
+                          onSelected: (val) {
+                            if (val == 'note') _openNoteDialog(context, e);
+                            if (val == 'edit') {
+                              _openAddEditEntryDialog(context, type: EntryType.expense, entryToEdit: e);
+                            }
+                            if (val == 'delete') _confirmDeleteEntry(context, e);
+                          },
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'note',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    e.notes.trim().isNotEmpty ? Icons.note_alt : Icons.note_alt_outlined,
+                                    size: 18,
+                                    color: Colors.amber.shade700,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(e.notes.trim().isNotEmpty ? 'View / Edit Note' : 'Add Note'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 18),
+                                  SizedBox(width: 10),
+                                  Text('Edit Expense'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                  SizedBox(width: 10),
+                                  Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Row(
@@ -1433,9 +1591,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              isMobile
-                                  ? '${e.category} • ${_dateFormat.format(e.date)}'
-                                  : e.category,
+                              e.category,
                               style: const TextStyle(fontSize: 10.5, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1468,14 +1624,13 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                           ],
                         ),
                       ),
-                      if (!isMobile)
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            _dateFormat.format(e.date),
-                            style: const TextStyle(fontSize: 11.5, color: Colors.grey),
-                          ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          _dateFormat.format(e.date),
+                          style: const TextStyle(fontSize: 11.5, color: Colors.grey),
                         ),
+                      ),
                       Expanded(
                         flex: 2,
                         child: Padding(
@@ -1501,7 +1656,7 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                               onTap: () => _openNoteDialog(context, e),
                               borderRadius: BorderRadius.circular(6),
                               child: Tooltip(
-                                message: e.notes.trim().isNotEmpty ? 'View Note:\n${e.notes}' : 'Add Note 📝',
+                                message: e.notes.trim().isNotEmpty ? 'View Note:\n${e.notes}' : 'Add Note',
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
@@ -1663,28 +1818,29 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
             ),
           ),
 
-          // TABLE HEADER (Sr | Particulars | Source | Amount)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
-            child: Row(
-              children: [
-                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                const Expanded(flex: 3, child: Text('Particulars / Party', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                if (!isMobile)
+          // TABLE HEADER (DESKTOP ONLY)
+          if (!isMobile) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100,
+              child: Row(
+                children: [
+                  const SizedBox(width: 32, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                  const Expanded(flex: 3, child: Text('Particulars / Party', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
                   const Expanded(flex: 2, child: Text('Source / Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                const Expanded(
-                  flex: 2,
-                  child: Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 8),
+                      child: Text('Amount (₹)', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 82, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              ],
+                  const SizedBox(width: 82, child: Text('Action', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
+            const Divider(height: 1),
+          ],
 
           // ROWS LIST
           if (calc.incomes.isEmpty)
@@ -1710,6 +1866,143 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
               itemBuilder: (context, index) {
                 final e = calc.incomes[index];
                 final isPartyCollection = e.id.startsWith('party_inc_');
+
+                if (isMobile) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: greenColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: greenColor),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.particular,
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isPartyCollection ? 'Party Payment' : '${e.category} • ${_dateFormat.format(e.date)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isPartyCollection ? greenColor.withValues(alpha: 0.85) : Colors.grey,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (!isPartyCollection && e.notes.trim().isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                InkWell(
+                                  onTap: () => _openNoteDialog(context, e),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.sticky_note_2_outlined, size: 11, color: Colors.amber),
+                                      const SizedBox(width: 3),
+                                      Flexible(
+                                        child: Text(
+                                          e.notes.trim(),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          Formatters.currency(e.amount),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: greenColor,
+                          ),
+                        ),
+                        if (isPartyCollection)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(Icons.check_circle_outline, size: 18, color: greenColor),
+                          )
+                        else
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: const Icon(Icons.more_vert, size: 18),
+                            onSelected: (val) {
+                              if (val == 'note') _openNoteDialog(context, e);
+                              if (val == 'edit') {
+                                _openAddEditEntryDialog(context, type: EntryType.income, entryToEdit: e);
+                              }
+                              if (val == 'delete') _confirmDeleteEntry(context, e);
+                            },
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: 'note',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      e.notes.trim().isNotEmpty ? Icons.note_alt : Icons.note_alt_outlined,
+                                      size: 18,
+                                      color: Colors.amber.shade700,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(e.notes.trim().isNotEmpty ? 'View / Edit Note' : 'Add Note'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit_outlined, size: 18),
+                                    SizedBox(width: 10),
+                                    Text('Edit Income'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                    SizedBox(width: 10),
+                                    Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                }
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1926,6 +2219,111 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showMobileMonthFilterSheet(BuildContext context, ChallanProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Icon(Icons.date_range, color: AppColors.primary, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Select Period Filter',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('All Months'),
+                        selected: _activePreset == 'all' || _selectedMonthKeys.isEmpty,
+                        onSelected: (_) {
+                          _setPreset('all', provider);
+                          Navigator.of(sheetCtx).pop();
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Current Month'),
+                        selected: _activePreset == 'current',
+                        onSelected: (_) {
+                          _setPreset('current', provider);
+                          Navigator.of(sheetCtx).pop();
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Last 2 Months'),
+                        selected: _activePreset == 'last_2',
+                        onSelected: (_) {
+                          _setPreset('last_2', provider);
+                          Navigator.of(sheetCtx).pop();
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Last 3 Months (Quarter)'),
+                        selected: _activePreset == 'last_3',
+                        onSelected: (_) {
+                          _setPreset('last_3', provider);
+                          Navigator.of(sheetCtx).pop();
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                        label: const Text('Select Custom Months...'),
+                        backgroundColor: _activePreset == 'custom'
+                            ? AppColors.primary.withValues(alpha: 0.15)
+                            : null,
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          _showMultiMonthPickerDialog(context, provider);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

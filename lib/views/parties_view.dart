@@ -230,35 +230,39 @@ class _PartiesViewState extends State<PartiesView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildViewModeSwitcher(context, provider),
+                  if (!isMobile) ...[
+                    const SizedBox(width: 12),
+                    _buildViewModeSwitcher(context, provider),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 12),
 
-            // LIST OF PARTIES (TABLE / COMPACT / CARDS)
+            // LIST OF PARTIES (ALWAYS CLEAN CARDS ON MOBILE; TABLE / COMPACT / CARDS ON DESKTOP)
             if (filtered.isEmpty)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  padding: EdgeInsets.symmetric(vertical: isMobile ? 32 : 48, horizontal: 20),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.people_outline,
-                          size: 56,
+                          size: 52,
                           color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
                         const Text(
                           'No parties found',
+                          textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Click "Add New Party" above to pre-register your business parties.',
+                          'Tap "Add New Party" above to pre-register your business parties.',
+                          textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
                       ],
@@ -266,12 +270,12 @@ class _PartiesViewState extends State<PartiesView> {
                   ),
                 ),
               )
+            else if (isMobile || provider.partyViewMode == LedgerViewMode.cards)
+              _buildCardsView(context, filtered, challans, provider)
             else if (provider.partyViewMode == LedgerViewMode.table)
               _buildExcelTableView(context, filtered, challans, provider)
-            else if (provider.partyViewMode == LedgerViewMode.compact)
-              _buildCompactListView(context, filtered, challans, provider)
             else
-              _buildCardsView(context, filtered, challans, provider),
+              _buildCompactListView(context, filtered, challans, provider),
           ],
         ),
       ),
@@ -939,6 +943,9 @@ class _PartiesViewState extends State<PartiesView> {
     List<ChallanEntry> challans,
     ChallanProvider provider,
   ) {
+    final isMobileCard = MediaQuery.of(context).size.width < 700;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -957,7 +964,7 @@ class _PartiesViewState extends State<PartiesView> {
         );
 
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
+          margin: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
@@ -978,116 +985,305 @@ class _PartiesViewState extends State<PartiesView> {
                 );
               },
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                      foregroundColor: AppColors.primary,
-                      child: Text(
-                        party.name.isNotEmpty ? party.name[0].toUpperCase() : 'P',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
+                padding: EdgeInsets.all(isMobileCard ? 12 : 16),
+                child: isMobileCard
+                    ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            provider.formatCasedText(party.name),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                                foregroundColor: AppColors.primary,
+                                child: Text(
+                                  party.name.isNotEmpty ? party.name[0].toUpperCase() : 'P',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      provider.formatCasedText(party.name),
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (party.phone.isNotEmpty || party.gstNumber.isNotEmpty || party.address.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          if (party.gstNumber.isNotEmpty)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'GST: ${party.gstNumber}',
+                                                style: const TextStyle(
+                                                  fontSize: 10.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          if (party.phone.isNotEmpty)
+                                            Text(
+                                              party.phone,
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: Theme.of(context).textTheme.bodySmall?.color,
+                                              ),
+                                            ),
+                                          if (party.address.isNotEmpty)
+                                            Text(
+                                              provider.formatCasedText(party.address),
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              if (context.watch<AuthProvider>().canManageParties)
+                                PopupMenuButton<String>(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                  icon: const Icon(Icons.more_vert, size: 20),
+                                  onSelected: (val) {
+                                    if (val == 'edit') _openEditParty(context, party);
+                                    if (val == 'delete') _confirmDelete(context, party);
+                                  },
+                                  itemBuilder: (_) => const [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18),
+                                          SizedBox(width: 10),
+                                          Text('Edit Party'),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                                          SizedBox(width: 10),
+                                          Text('Move to Recycle Bin', style: TextStyle(color: AppColors.warningText)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.03)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor.withValues(alpha: 0.12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'CHALLANS',
+                                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${partyChallans.length}',
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'TOTAL BILLED',
+                                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        Formatters.currency(totalBilled),
+                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      const Text(
+                                        'BALANCE DUE',
+                                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.grey),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        totalDue > 0 ? Formatters.currency(totalDue) : 'Settled',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: totalDue > 0 ? AppColors.warningText : AppColors.successText,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                            foregroundColor: AppColors.primary,
+                            child: Text(
+                              party.name.isNotEmpty ? party.name[0].toUpperCase() : 'P',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  provider.formatCasedText(party.name),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    if (party.phone.isNotEmpty)
+                                      Text(
+                                        '📞 ${party.phone}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).textTheme.bodySmall?.color,
+                                        ),
+                                      ),
+                                    if (party.address.isNotEmpty)
+                                      Text(
+                                        '📍 ${provider.formatCasedText(party.address)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    if (party.gstNumber.isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'GSTIN: ${party.gstNumber}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              if (party.phone.isNotEmpty)
-                                Text(
-                                  '📞 ${party.phone}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).textTheme.bodySmall?.color,
-                                  ),
+                              Text(
+                                Formatters.currency(totalBilled),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              if (party.address.isNotEmpty)
-                                Text(
-                                  '📍 ${provider.formatCasedText(party.address)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                  ),
+                              ),
+                              Text(
+                                totalDue > 0
+                                    ? '${partyChallans.length} Challans • Due: ${Formatters.currency(totalDue)}'
+                                    : '${partyChallans.length} Challans • Settled',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: totalDue > 0 ? AppColors.warningText : Colors.grey,
                                 ),
-                              if (party.gstNumber.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'GSTIN: ${party.gstNumber}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
+                              ),
                             ],
+                          ),
+                          if (context.watch<AuthProvider>().canManageParties) ...[
+                            const SizedBox(width: 12),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              tooltip: 'Edit Party',
+                              onPressed: () => _openEditParty(context, party),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                              tooltip: 'Delete Party',
+                              onPressed: () => _confirmDelete(context, party),
+                            ),
+                          ],
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 20,
+                            color: AppColors.primary,
                           ),
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currency(totalBilled),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          totalDue > 0
-                              ? '${partyChallans.length} Challans • Due: ${Formatters.currency(totalDue)}'
-                              : '${partyChallans.length} Challans • Settled',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: totalDue > 0 ? AppColors.warningText : Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (context.watch<AuthProvider>().canManageParties) ...[
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        tooltip: 'Edit Party',
-                        onPressed: () => _openEditParty(context, party),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                        tooltip: 'Delete Party',
-                        onPressed: () => _confirmDelete(context, party),
-                      ),
-                    ],
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
