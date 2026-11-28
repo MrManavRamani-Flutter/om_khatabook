@@ -484,91 +484,66 @@ class ChallanListView extends StatelessWidget {
                   children: [
                     // ROW 1: SEARCH, PARTY DROPDOWN, MULTI-PARTY BUTTON, PAYMENT OPTION, RESET (RESPONSIVE)
                     if (isMobile) ...[
-                      // MOBILE STACKED FILTER BAR
-                      TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Search Challan No, Party, GST Bill, or Cheque...',
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          isDense: true,
-                          suffixIcon: provider.searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 16),
-                                  onPressed: () => provider.setSearchQuery(''),
-                                )
-                              : null,
-                        ),
-                        controller: TextEditingController(text: provider.searchQuery)
-                          ..selection = TextSelection.fromPosition(
-                            TextPosition(offset: provider.searchQuery.length),
-                          ),
-                        onChanged: (val) => provider.setSearchQuery(val),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String?>(
-                              initialValue: provider.selectedSinglePartyId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: provider.selectedPartyIds.length > 1
-                                    ? '${provider.selectedPartyIds.length} Parties Selected'
-                                    : 'Party Filter',
-                                isDense: true,
-                                prefixIcon: const Icon(Icons.business, size: 18),
+                      // COMPACT MOBILE SEARCH + FILTER SHEET TRIGGER
+                      Builder(
+                        builder: (ctx) {
+                          int activeFilterCount = 0;
+                          if (provider.selectedPartyIds.isNotEmpty) activeFilterCount++;
+                          if (provider.paymentOptionFilter != null) activeFilterCount++;
+                          if (provider.statusFilter != null && provider.statusFilter != 'all') activeFilterCount++;
+                          if (provider.dateFilter != 'all') activeFilterCount++;
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search Challan, Party, GST...',
+                                    prefixIcon: const Icon(Icons.search, size: 18),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    suffixIcon: provider.searchQuery.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear, size: 16),
+                                            onPressed: () => provider.setSearchQuery(''),
+                                          )
+                                        : null,
+                                  ),
+                                  controller: TextEditingController(text: provider.searchQuery)
+                                    ..selection = TextSelection.fromPosition(
+                                      TextPosition(offset: provider.searchQuery.length),
+                                    ),
+                                  onChanged: (val) => provider.setSearchQuery(val),
+                                ),
                               ),
-                              items: [
-                                const DropdownMenuItem(value: null, child: Text('All Parties')),
-                                ...parties.map((p) => DropdownMenuItem(
-                                      value: p.id,
-                                      child: Text(p.name, overflow: TextOverflow.ellipsis),
-                                    )),
-                              ],
-                              onChanged: (val) => provider.setSelectedPartyId(val),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton.icon(
-                            onPressed: () => _showMultiPartyDialog(context, provider),
-                            icon: const Icon(Icons.checklist, size: 16),
-                            label: Text(
-                              provider.selectedPartyIds.length > 1
-                                  ? '${provider.selectedPartyIds.length}'
-                                  : 'Multi',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<PaymentOption?>(
-                              initialValue: provider.paymentOptionFilter,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Payment Option',
-                                isDense: true,
+                              const SizedBox(width: 8),
+                              FilledButton.tonalIcon(
+                                onPressed: () => _showMobileFilterSheet(context, provider),
+                                icon: const Icon(Icons.tune_rounded, size: 17),
+                                label: Text(
+                                  activeFilterCount > 0 ? 'Filters ($activeFilterCount)' : 'Filters',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  backgroundColor: activeFilterCount > 0
+                                      ? AppColors.primary.withValues(alpha: 0.16)
+                                      : null,
+                                  foregroundColor: activeFilterCount > 0 ? AppColors.primary : null,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                               ),
-                              items: const [
-                                DropdownMenuItem(value: null, child: Text('All Modes')),
-                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
-                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              if (activeFilterCount > 0 || provider.searchQuery.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                IconButton.filledTonal(
+                                  tooltip: 'Reset Filters',
+                                  icon: const Icon(Icons.filter_alt_off, size: 18),
+                                  onPressed: () => provider.resetFilters(),
+                                ),
                               ],
-                              onChanged: (val) => provider.setPaymentOptionFilter(val),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            tooltip: 'Reset All Filters',
-                            icon: const Icon(Icons.filter_alt_off, size: 18),
-                            onPressed: () => provider.resetFilters(),
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     ] else ...[
                       // DESKTOP HORIZONTAL ROW
@@ -676,10 +651,11 @@ class ChallanListView extends StatelessWidget {
                         ],
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    if (!isMobile) ...[
+                      const SizedBox(height: 12),
 
-                    // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC (NO HORIZONTAL SCROLL)
-                    Wrap(
+                      // ROW 2: STATUS FILTER, PERIOD FILTER, MONTH PICKER, SORT ASC/DESC (NO HORIZONTAL SCROLL)
+                      Wrap(
                       spacing: 8,
                       runSpacing: 10,
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -843,6 +819,7 @@ class ChallanListView extends StatelessWidget {
                         ),
                       ],
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -937,14 +914,17 @@ class ChallanListView extends StatelessWidget {
             if (entries.isEmpty)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isMobile ? 32 : 48,
+                    horizontal: 20,
+                  ),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.receipt_long_outlined,
-                          size: 56,
+                          size: 52,
                           color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 12),
@@ -952,13 +932,15 @@ class ChallanListView extends StatelessWidget {
                           provider.challans.isEmpty
                               ? 'No Challan entries recorded yet'
                               : 'No Challan entries match the active filters',
+                          textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           provider.challans.isEmpty
-                              ? 'Click "Add Challan Entry" above or below to create your first challan.'
-                              : 'Adjust your search, clear filters, or click "Add Challan Entry".',
+                              ? 'Tap "Add Entry" above or below to create your first challan.'
+                              : 'Adjust your search, clear filters, or tap "Add Entry".',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context).textTheme.bodySmall?.color,
@@ -1057,90 +1039,217 @@ class ChallanListView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ROW 1: CHALLAN NO, DATE, WARNING / STATUS BADGE, ACTIONS
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: hasWarning
-                                ? provider.getEffectiveWarningTextColor(isDark).withValues(alpha: 0.15)
-                                : provider.primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '# ${item.challanNo}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: hasWarning ? provider.getEffectiveWarningTextColor(isDark) : provider.primaryColor,
-                            ),
-                          ),
-                        ),
-                        if (item.designNo.isNotEmpty)
+              if (isMobileCard) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                              color: hasWarning
+                                  ? provider.getEffectiveWarningTextColor(isDark).withValues(alpha: 0.15)
+                                  : provider.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
                             ),
                             child: Text(
-                              '🎨 ${item.designNo}',
-                              style: const TextStyle(
-                                fontSize: 11,
+                              '# ${item.challanNo}',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0284C7),
+                                fontSize: 13.5,
+                                color: hasWarning ? provider.getEffectiveWarningTextColor(isDark) : provider.primaryColor,
                               ),
                             ),
                           ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                            const SizedBox(width: 6),
-                            Text(
-                              Formatters.date(item.date),
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          if (item.designNo.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '🎨 ${item.designNo}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
                             ),
-                          ],
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      tooltip: 'Challan Actions',
+                      onSelected: (val) {
+                        if (val == 'print') _openInvoiceDialog(context, item);
+                        if (val == 'view') _openViewDialog(context, item);
+                        if (val == 'edit') _openEditDialog(context, item);
+                        if (val == 'delete') _confirmDelete(context, item);
+                      },
+                      itemBuilder: (ctx) => [
+                        if (ctx.read<AuthProvider>().canPrintInvoice)
+                          const PopupMenuItem(
+                            value: 'print',
+                            child: Row(
+                              children: [
+                                Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                                SizedBox(width: 10),
+                                Text('Print Tax Invoice (A4/A5)'),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 18),
+                              SizedBox(width: 10),
+                              Text('View Full Details'),
+                            ],
+                          ),
                         ),
-                        _buildStatusBadge(context, item),
+                        if (ctx.read<AuthProvider>().canEditChallan)
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined, size: 18),
+                                SizedBox(width: 10),
+                                Text('Edit Entry'),
+                              ],
+                            ),
+                          ),
+                        if (ctx.read<AuthProvider>().canDelete)
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                                SizedBox(width: 10),
+                                Text('Move to Recycle Bin', style: TextStyle(color: AppColors.warningText)),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (context.watch<AuthProvider>().canPrintInvoice)
-                    IconButton(
-                      icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
-                      tooltip: 'Print Tax Invoice (A4/A5)',
-                      onPressed: () => _openInvoiceDialog(context, item),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_today, size: 13, color: Colors.grey),
+                        const SizedBox(width: 5),
+                        Text(
+                          Formatters.date(item.date),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                        ),
+                      ],
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.visibility_outlined, size: 18),
-                    tooltip: 'View Full Details',
-                    onPressed: () => _openViewDialog(context, item),
-                  ),
-                  if (context.watch<AuthProvider>().canEditChallan)
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: 'Edit Entry',
-                      onPressed: () => _openEditDialog(context, item),
+                    _buildStatusBadge(context, item),
+                  ],
+                ),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: hasWarning
+                                  ? provider.getEffectiveWarningTextColor(isDark).withValues(alpha: 0.15)
+                                  : provider.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '# ${item.challanNo}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: hasWarning ? provider.getEffectiveWarningTextColor(isDark) : provider.primaryColor,
+                              ),
+                            ),
+                          ),
+                          if (item.designNo.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '🎨 ${item.designNo}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
+                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(
+                                Formatters.date(item.date),
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          _buildStatusBadge(context, item),
+                        ],
+                      ),
                     ),
-                  if (context.watch<AuthProvider>().canDelete)
+                    const SizedBox(width: 8),
+                    if (context.watch<AuthProvider>().canPrintInvoice)
+                      IconButton(
+                        icon: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
+                        tooltip: 'Print Tax Invoice (A4/A5)',
+                        onPressed: () => _openInvoiceDialog(context, item),
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
-                      tooltip: 'Delete Entry',
-                      onPressed: () => _confirmDelete(context, item),
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
+                      tooltip: 'View Full Details',
+                      onPressed: () => _openViewDialog(context, item),
                     ),
-                ],
-              ),
+                    if (context.watch<AuthProvider>().canEditChallan)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        tooltip: 'Edit Entry',
+                        onPressed: () => _openEditDialog(context, item),
+                      ),
+                    if (context.watch<AuthProvider>().canDelete)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.warningText),
+                        tooltip: 'Delete Entry',
+                        onPressed: () => _confirmDelete(context, item),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 12),
 
               // ROW 2: PARTY NAME & AMOUNTS (RESPONSIVE)
@@ -1174,46 +1283,62 @@ class ChallanListView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('CHALLAN AMT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                        const SizedBox(height: 2),
-                        Text(Formatters.currency(item.challanAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    if (item.gstBillNo.isNotEmpty)
-                      Column(
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('GST BILL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                          const Text('CHALLAN AMT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                           const SizedBox(height: 2),
-                          Text('${item.gstBillNo} (${Formatters.currency(item.gstAmount)})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                          Text(
+                            Formatters.currency(item.challanAmount),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('FINAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                        const SizedBox(height: 2),
-                        Text(
-                          Formatters.currency(item.finalAmount),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: hasWarning
-                                ? provider.getEffectiveWarningTextColor(isDark)
-                                : (item.isPartiallyPaid ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
-                          ),
+                    ),
+                    if (item.gstBillNo.isNotEmpty)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text('GST BILL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${item.gstBillNo} (${Formatters.currency(item.gstAmount)})',
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        if (item.isPartiallyPaid)
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('FINAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                          const SizedBox(height: 2),
                           Text(
-                            'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: provider.getEffectivePartialTextColor(isDark)),
+                            Formatters.currency(item.finalAmount),
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: hasWarning
+                                  ? provider.getEffectiveWarningTextColor(isDark)
+                                  : (item.isPartiallyPaid ? provider.getEffectivePartialTextColor(isDark) : provider.primaryColor),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                      ],
+                          if (item.isPartiallyPaid)
+                            Text(
+                              'Paid: ${Formatters.currency(item.paidAmount)} • Due: ${Formatters.currency(item.remainingAmount)}',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: provider.getEffectivePartialTextColor(isDark)),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2605,6 +2730,312 @@ class ChallanListView extends StatelessWidget {
       ),
       selectedColor: AppColors.primary.withValues(alpha: 0.15),
       onSelected: (_) => provider.setDateFilter(value),
+    );
+  }
+
+  void _showMobileFilterSheet(BuildContext context, ChallanProvider initialProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.78,
+          minChildSize: 0.5,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, scrollController) {
+            return Consumer<ChallanProvider>(
+              builder: (ctx, provider, _) {
+                final parties = provider.parties;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Filter & Sort Challans',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          TextButton.icon(
+                            onPressed: () => provider.resetFilters(),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Reset All'),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Party Filter',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String?>(
+                                    initialValue: provider.selectedSinglePartyId,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: provider.selectedPartyIds.length > 1
+                                          ? '${provider.selectedPartyIds.length} Parties Selected'
+                                          : 'Select Party',
+                                      isDense: true,
+                                      prefixIcon: const Icon(Icons.business, size: 18),
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem(value: null, child: Text('All Parties')),
+                                      ...parties.map((p) => DropdownMenuItem(
+                                            value: p.id,
+                                            child: Text(p.name, overflow: TextOverflow.ellipsis),
+                                          )),
+                                    ],
+                                    onChanged: (val) => provider.setSelectedPartyId(val),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () => _showMultiPartyDialog(context, provider),
+                                  icon: const Icon(Icons.checklist, size: 16),
+                                  label: Text(
+                                    provider.selectedPartyIds.length > 1
+                                        ? '${provider.selectedPartyIds.length}'
+                                        : 'Multi',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Payment Mode',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<PaymentOption?>(
+                              initialValue: provider.paymentOptionFilter,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Payment Option',
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: null, child: Text('All Modes')),
+                                DropdownMenuItem(value: PaymentOption.cash, child: Text('Cash Only')),
+                                DropdownMenuItem(value: PaymentOption.cheque, child: Text('Cheque Only')),
+                              ],
+                              onChanged: (val) => provider.setPaymentOptionFilter(val),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Status',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildStatusChip(ctx, provider, 'all', 'All'),
+                                _buildStatusChip(ctx, provider, 'paid', 'Paid', color: AppColors.successText),
+                                _buildStatusChip(ctx, provider, 'unpaid', 'Unpaid Warning', color: AppColors.warningText),
+                                if (provider.overdueCount > 0)
+                                  _buildStatusChip(
+                                    ctx,
+                                    provider,
+                                    'overdue',
+                                    'Overdue (${provider.overdueCount}) 🚨',
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                _buildStatusChip(ctx, provider, 'bounced', 'Bounced', color: AppColors.warningText),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Period & Date Range',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildDateChip(ctx, provider, 'all', 'All Time'),
+                                _buildDateChip(ctx, provider, 'today', 'Today'),
+                                _buildDateChip(ctx, provider, 'week', 'Last 7 Days'),
+                                _buildDateChip(ctx, provider, 'month', 'Last 30 Days'),
+                                ActionChip(
+                                  avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                                  label: Text(
+                                    provider.dateFilter == 'monthly_picker' && provider.selectedMonth != null
+                                        ? 'Month: ${DateFormat('MMM yyyy').format(DateTime(provider.selectedYear!, provider.selectedMonth!))}'
+                                        : 'Pick Month...',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: provider.dateFilter == 'monthly_picker' ? FontWeight.bold : FontWeight.normal,
+                                      color: provider.dateFilter == 'monthly_picker' ? AppColors.primary : null,
+                                    ),
+                                  ),
+                                  backgroundColor: provider.dateFilter == 'monthly_picker'
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () => _showMonthPicker(context, provider),
+                                ),
+                                ActionChip(
+                                  avatar: Icon(
+                                    Icons.date_range,
+                                    size: 16,
+                                    color: provider.dateFilter == 'custom' ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        provider.dateFilter == 'custom' &&
+                                                provider.customStartDate != null &&
+                                                provider.customEndDate != null
+                                            ? 'From: ${DateFormat('dd/MM/yy').format(provider.customStartDate!)} To: ${DateFormat('dd/MM/yy').format(provider.customEndDate!)}'
+                                            : 'From - To Date...',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: provider.dateFilter == 'custom' ? FontWeight.bold : FontWeight.normal,
+                                          color: provider.dateFilter == 'custom' ? AppColors.primary : null,
+                                        ),
+                                      ),
+                                      if (provider.dateFilter == 'custom') ...[
+                                        const SizedBox(width: 4),
+                                        InkWell(
+                                          onTap: () => provider.setDateFilter('all'),
+                                          child: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  backgroundColor: provider.dateFilter == 'custom'
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () => _showCustomDateRangePicker(context, provider),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Sort Order',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ActionChip(
+                                  avatar: Icon(
+                                    provider.sortField == ChallanSortField.date
+                                        ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                        : Icons.calendar_today,
+                                    size: 15,
+                                    color: provider.sortField == ChallanSortField.date ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Text(
+                                    provider.sortField == ChallanSortField.date
+                                        ? (provider.sortAscending ? 'Date: Oldest ↑' : 'Date: Newest ↓')
+                                        : 'Date Wise',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: provider.sortField == ChallanSortField.date ? FontWeight.bold : FontWeight.normal,
+                                      color: provider.sortField == ChallanSortField.date ? AppColors.primary : null,
+                                    ),
+                                  ),
+                                  backgroundColor: provider.sortField == ChallanSortField.date
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () => provider.setSortField(ChallanSortField.date),
+                                ),
+                                ActionChip(
+                                  avatar: Icon(
+                                    provider.sortField == ChallanSortField.challanNo
+                                        ? (provider.sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+                                        : Icons.tag,
+                                    size: 15,
+                                    color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : Colors.grey,
+                                  ),
+                                  label: Text(
+                                    provider.sortField == ChallanSortField.challanNo
+                                        ? (provider.sortAscending ? 'Challan #: 1→9 ↑' : 'Challan #: 9→1 ↓')
+                                        : 'Challan # Wise',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: provider.sortField == ChallanSortField.challanNo ? FontWeight.bold : FontWeight.normal,
+                                      color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : null,
+                                    ),
+                                  ),
+                                  backgroundColor: provider.sortField == ChallanSortField.challanNo
+                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      : null,
+                                  onPressed: () => provider.setSortField(ChallanSortField.challanNo),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => Navigator.of(sheetCtx).pop(),
+                          child: Text(
+                            'Apply Filters (${provider.filteredChallans.length} Records)',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

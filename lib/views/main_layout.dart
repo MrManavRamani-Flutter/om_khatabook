@@ -127,7 +127,6 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
     // Mobile layout with drawer & bottom navigation bar
     if (isMobile) {
-      final navIndex = _selectedIndex == 6 ? 4 : (_selectedIndex < 4 ? _selectedIndex : 0);
       return Scaffold(
         appBar: AppBar(
           elevation: 0,
@@ -161,24 +160,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             ],
           ),
           actions: [
-            if (_selectedIndex == 0)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: provider.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.add, size: 15),
-                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  onPressed: () => _openAddChallan(context),
-                ),
-              )
-            else if (_selectedIndex == 1)
+            if (_selectedIndex == 1)
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: FilledButton.icon(
@@ -268,63 +250,20 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           ],
         ),
         drawer: Drawer(
-          child: _buildSidebarContent(
-            context: context,
-            provider: provider,
-            auth: auth,
-            isCollapsed: false,
-            warningCount: warningCount,
-            recycleBinCount: recycleBinCount,
-            isDrawer: true,
+          child: SafeArea(
+            child: _buildSidebarContent(
+              context: context,
+              provider: provider,
+              auth: auth,
+              isCollapsed: false,
+              warningCount: warningCount,
+              recycleBinCount: recycleBinCount,
+              isDrawer: true,
+            ),
           ),
         ),
         body: contentBody,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: navIndex,
-          onDestinationSelected: (idx) {
-            setState(() {
-              if (idx == 4) {
-                _selectedIndex = 6;
-              } else {
-                _selectedIndex = idx;
-              }
-            });
-          },
-          height: 64,
-          destinations: [
-            NavigationDestination(
-              icon: warningCount > 0
-                  ? Badge(
-                      label: Text('$warningCount'),
-                      backgroundColor: const Color(0xFFE11D48),
-                      child: const Icon(Icons.receipt_long_outlined),
-                    )
-                  : const Icon(Icons.receipt_long_outlined),
-              selectedIcon: const Icon(Icons.receipt_long),
-              label: 'Challans',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.people_alt_outlined),
-              selectedIcon: Icon(Icons.people_alt),
-              label: 'Parties',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics),
-              label: 'P & L',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              selectedIcon: Icon(Icons.assessment),
-              label: 'Reports',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune),
-              label: 'Settings',
-            ),
-          ],
-        ),
+        bottomNavigationBar: _buildMobileBottomBar(context, provider, warningCount),
       );
     }
 
@@ -463,25 +402,27 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           child: ListView(
             padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 12),
             children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long,
-                label: 'Challan Ledger',
-                badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
-                isWarningBadge: warningCount > 0,
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 1,
-                icon: Icons.people_outline,
-                activeIcon: Icons.people,
-                label: 'Parties Directory',
-                badge: '${provider.parties.length}',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
+              if (!isDrawer) ...[
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long,
+                  label: 'Challan Ledger',
+                  badge: warningCount > 0 ? '$warningCount Alert' : '${provider.challans.length}',
+                  isWarningBadge: warningCount > 0,
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.people_outline,
+                  activeIcon: Icons.people,
+                  label: 'Parties Directory',
+                  badge: '${provider.parties.length}',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+              ],
               _buildNavItem(
                 index: 2,
                 icon: Icons.category_outlined,
@@ -491,22 +432,24 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                 isCollapsed: isCollapsed,
                 isDrawer: isDrawer,
               ),
-              _buildNavItem(
-                index: 3,
-                icon: Icons.analytics_outlined,
-                activeIcon: Icons.analytics,
-                label: 'Net Profit - Loss',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
-              _buildNavItem(
-                index: 4,
-                icon: Icons.bar_chart_outlined,
-                activeIcon: Icons.bar_chart,
-                label: 'Financial Reports',
-                isCollapsed: isCollapsed,
-                isDrawer: isDrawer,
-              ),
+              if (!isDrawer) ...[
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.analytics_outlined,
+                  activeIcon: Icons.analytics,
+                  label: 'Net Profit - Loss',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+                _buildNavItem(
+                  index: 4,
+                  icon: Icons.bar_chart_outlined,
+                  activeIcon: Icons.bar_chart,
+                  label: 'Financial Reports',
+                  isCollapsed: isCollapsed,
+                  isDrawer: isDrawer,
+                ),
+              ],
               _buildNavItem(
                 index: 5,
                 icon: Icons.delete_outline,
@@ -529,48 +472,48 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           ),
         ),
 
-        // PRIMARY ACTION BUTTON IN SIDEBAR
-        Padding(
-          padding: EdgeInsets.all(isCollapsed ? 8 : 14),
-          child: isCollapsed
-              ? Tooltip(
-                  message: 'New Challan Entry',
-                  child: IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+        // PRIMARY ACTION BUTTON IN SIDEBAR (DESKTOP ONLY — HIDDEN IN MOBILE DRAWER)
+        if (!isDrawer)
+          Padding(
+            padding: EdgeInsets.all(isCollapsed ? 8 : 14),
+            child: isCollapsed
+                ? Tooltip(
+                    message: 'New Challan Entry',
+                    child: IconButton.filled(
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                      icon: const Icon(Icons.add, size: 20),
+                      onPressed: () => _openAddChallan(context),
                     ),
-                    icon: const Icon(Icons.add, size: 20),
-                    onPressed: () => _openAddChallan(context),
-                  ),
-                )
-              : SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  )
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text(
+                        'New Challan Entry',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        _openAddChallan(context);
+                      },
                     ),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text(
-                      'New Challan Entry',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onPressed: () {
-                      if (isDrawer) Navigator.of(context).pop();
-                      _openAddChallan(context);
-                    },
                   ),
-                ),
-        ),
+          ),
 
         const Divider(height: 1),
 
@@ -762,6 +705,111 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
             if (isDrawer) Navigator.of(context).pop();
             setState(() => _selectedIndex = index);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileBottomBar(
+    BuildContext context,
+    ChallanProvider provider,
+    int warningCount,
+  ) {
+    final primaryColor = provider.primaryColor;
+    final items = [
+      (
+        index: 0,
+        icon: Icons.receipt_long_outlined,
+        activeIcon: Icons.receipt_long,
+        label: 'Challans',
+        badge: warningCount,
+      ),
+      (
+        index: 1,
+        icon: Icons.people_alt_outlined,
+        activeIcon: Icons.people_alt,
+        label: 'Parties',
+        badge: 0,
+      ),
+      (
+        index: 3,
+        icon: Icons.analytics_outlined,
+        activeIcon: Icons.analytics,
+        label: 'P & L',
+        badge: 0,
+      ),
+      (
+        index: 4,
+        icon: Icons.assessment_outlined,
+        activeIcon: Icons.assessment,
+        label: 'Reports',
+        badge: 0,
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: items.map((item) {
+              final isSelected = _selectedIndex == item.index;
+              final iconWidget = Icon(
+                isSelected ? item.activeIcon : item.icon,
+                size: 22,
+                color: isSelected
+                    ? primaryColor
+                    : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+              );
+
+              return Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => _selectedIndex = item.index),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? primaryColor.withValues(alpha: 0.14)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: item.badge > 0
+                            ? Badge(
+                                label: Text('${item.badge}'),
+                                backgroundColor: const Color(0xFFE11D48),
+                                child: iconWidget,
+                              )
+                            : iconWidget,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected
+                              ? primaryColor
+                              : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
