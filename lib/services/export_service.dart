@@ -1657,7 +1657,7 @@ class ExportService {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('1. OPERATING EXPENSES (વ્યાપાર ખર્ચ વિગત)', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                pw.Text('1. OPERATING EXPENSES', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
                 pw.Text('Total: Rs. ${Formatters.currencyPdf(calc.totalExpenses)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
               ],
             ),
@@ -1701,7 +1701,7 @@ class ExportService {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('2. REVENUE & COLLECTIONS (આવક વિગત)', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+                pw.Text('2. REVENUE & COLLECTIONS', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
                 pw.Text('Total: Rs. ${Formatters.currencyPdf(calc.totalIncome)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
               ],
             ),
@@ -1748,7 +1748,7 @@ class ExportService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('3. FINANCIAL CONCLUSION (અંતિમ નાણાકીય તારણ)', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: netColor)),
+                    pw.Text('3. FINANCIAL CONCLUSION', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: netColor)),
                     pw.Container(
                       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: pw.BoxDecoration(color: netColor, borderRadius: pw.BorderRadius.circular(4)),
@@ -1760,7 +1760,7 @@ class ExportService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Total Operational Revenue (કુલ આવક):', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
+                    pw.Text('Total Operational Revenue:', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
                     pw.Text('Rs. ${Formatters.currencyPdf(calc.totalIncome)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
                   ],
                 ),
@@ -1768,7 +1768,7 @@ class ExportService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Less Total Operating Costs (કુલ ખર્ચ):', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
+                    pw.Text('Less Total Operating Costs:', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
                     pw.Text('- Rs. ${Formatters.currencyPdf(calc.totalExpenses)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
                   ],
                 ),
@@ -1776,7 +1776,7 @@ class ExportService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('NET FINANCIAL BALANCE (ચોખ્ખો નફો / ખોટ):', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: netColor)),
+                    pw.Text('NET FINANCIAL BALANCE:', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: netColor)),
                     pw.Text('${calc.isProfit ? '+' : '-'}Rs. ${Formatters.currencyPdf(calc.netAmount)}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: netColor)),
                   ],
                 ),

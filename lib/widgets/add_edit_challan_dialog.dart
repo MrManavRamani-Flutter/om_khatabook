@@ -99,6 +99,11 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _challanNoController.text = e.challanNo;
       _designNoController.text = e.designNo;
       _partySearchController.text = e.partyName;
+      final allParties = context.read<ChallanProvider>().parties;
+      _selectedParty = allParties.cast<Party?>().firstWhere(
+        (p) => p?.name.trim().toLowerCase() == e.partyName.trim().toLowerCase(),
+        orElse: () => Party(id: 'existing_${e.partyName}', name: e.partyName, createdAt: e.date),
+      );
       _challanAmountController.text = e.challanAmount.toStringAsFixed(0);
       if (e.discountAmount > 0) {
         _discountController.text = e.discountAmount % 1 == 0
@@ -269,12 +274,15 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       context: context,
       builder: (_) => const AddEditPartyDialog(),
     );
+    if (!mounted) return;
     if (newParty != null) {
+      final casingStyle = context.read<ChallanProvider>().textCasingStyle;
+      final formattedName = casingStyle.apply(newParty.name);
       setState(() {
         _selectedParty = newParty;
-        _partySearchController.text = newParty.name;
+        _partySearchController.text = formattedName;
         if (_partyTextEditingController != null) {
-          _partyTextEditingController!.text = newParty.name;
+          _partyTextEditingController!.text = formattedName;
         }
       });
     }
@@ -283,7 +291,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   Future<void> _saveEntry() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final partyName = _partySearchController.text.trim();
+    final partyName = (_selectedParty != null ? _selectedParty!.name : _partySearchController.text).trim();
     if (partyName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -619,7 +627,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                             Expanded(
                               child: Autocomplete<Party>(
                                 initialValue: TextEditingValue(text: _partySearchController.text),
-                                displayStringForOption: (Party p) => p.name,
+                                displayStringForOption: (Party p) => casingStyle.apply(p.name),
                                 optionsBuilder: (TextEditingValue textEditingValue) {
                                   if (textEditingValue.text.isEmpty) {
                                     return parties;
@@ -631,26 +639,79 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                       (p.name.toLowerCase().contains(q) || p.phone.contains(q)));
                                   return [...startsWith, ...contains];
                                 },
+                                optionsViewBuilder: (context, onSelected, options) {
+                                  return Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Material(
+                                      elevation: 6,
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: Theme.of(context).cardColor,
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(maxHeight: 250, maxWidth: 380),
+                                        child: ListView.builder(
+                                          padding: const EdgeInsets.symmetric(vertical: 4),
+                                          shrinkWrap: true,
+                                          itemCount: options.length,
+                                          itemBuilder: (context, index) {
+                                            final party = options.elementAt(index);
+                                            final displayName = casingStyle.apply(party.name);
+                                            return ListTile(
+                                              dense: true,
+                                              leading: const Icon(Icons.business, size: 18),
+                                              title: Text(
+                                                displayName,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                              ),
+                                              subtitle: party.phone.isNotEmpty || party.gstNumber.isNotEmpty
+                                                  ? Text(
+                                                      [
+                                                        if (party.phone.isNotEmpty) party.phone,
+                                                        if (party.gstNumber.isNotEmpty) 'GST: ${party.gstNumber}',
+                                                      ].join(' • '),
+                                                      style: const TextStyle(fontSize: 11),
+                                                    )
+                                                  : null,
+                                              onTap: () => onSelected(party),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                                 onSelected: (Party selection) {
+                                  final formattedName = casingStyle.apply(selection.name);
                                   setState(() {
                                     _selectedParty = selection;
-                                    _partySearchController.text = selection.name;
+                                    _partySearchController.text = formattedName;
+                                    if (_partyTextEditingController != null) {
+                                      _partyTextEditingController!.text = formattedName;
+                                    }
                                   });
                                 },
                                 fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
                                   _partyTextEditingController = controller;
-                                  // Keep text sync
-                                  controller.addListener(() {
-                                    _partySearchController.text = controller.text;
-                                  });
-                                  if (_partySearchController.text.isNotEmpty &&
-                                      controller.text.isEmpty) {
-                                    controller.text = _partySearchController.text;
+                                  final isLocked = _selectedParty != null;
+
+                                  // If locked, ensure controller always holds the formatted selected party name
+                                  if (isLocked && _selectedParty != null) {
+                                    final formatted = casingStyle.apply(_selectedParty!.name);
+                                    if (controller.text != formatted) {
+                                      controller.text = formatted;
+                                      _partySearchController.text = formatted;
+                                    }
+                                  } else {
+                                    controller.addListener(() {
+                                      if (_selectedParty == null) {
+                                        _partySearchController.text = controller.text;
+                                      }
+                                    });
                                   }
 
                                   return TextFormField(
                                     controller: controller,
                                     focusNode: focusNode,
+                                    readOnly: isLocked,
                                     inputFormatters: [DynamicCaseTextInputFormatter(casingStyle)],
                                     textCapitalization: casingStyle == TextCasingStyle.uppercase
                                         ? TextCapitalization.characters
@@ -658,8 +719,65 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                             ? TextCapitalization.words
                                             : TextCapitalization.none),
                                     decoration: InputDecoration(
-                                      labelText: 'Party / Business Name *',
-                                      prefixIcon: const Icon(Icons.business, size: 18),
+                                      labelText: isLocked ? 'Selected Party (Locked) *' : 'Party / Business Name *',
+                                      prefixIcon: Icon(
+                                        isLocked ? Icons.verified : Icons.business,
+                                        size: 18,
+                                        color: isLocked ? Colors.green : null,
+                                      ),
+                                      suffixIcon: isLocked
+                                          ? Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  margin: const EdgeInsets.only(right: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green.withValues(alpha: 0.15),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.check_circle, size: 13, color: Colors.green),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'Locked',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.green,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.close, size: 18),
+                                                  tooltip: 'Change / Unselect Party',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _selectedParty = null;
+                                                      controller.clear();
+                                                      _partySearchController.clear();
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            )
+                                          : (controller.text.isNotEmpty
+                                              ? IconButton(
+                                                  icon: const Icon(Icons.clear, size: 18),
+                                                  tooltip: 'Clear Query',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      controller.clear();
+                                                      _partySearchController.clear();
+                                                    });
+                                                  },
+                                                )
+                                              : null),
                                       hintText: casingStyle.apply('Type to search or select party...'),
                                     ),
                                     onFieldSubmitted: (val) {
@@ -679,23 +797,22 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                                           ),
                                         );
                                         if (match != null) {
+                                          final formatted = casingStyle.apply(match.name);
                                           setState(() {
                                             _selectedParty = match;
-                                            controller.text = match.name;
-                                            _partySearchController.text = match.name;
+                                            controller.text = formatted;
+                                            _partySearchController.text = formatted;
                                           });
                                         }
                                       }
                                       onEditingComplete();
                                     },
                                     validator: (v) {
+                                      if (_selectedParty == null) {
+                                        return 'Please select a party from suggestions or click "+" to add party.';
+                                      }
                                       if (v == null || v.trim().isEmpty) {
                                         return 'Party name is required';
-                                      }
-                                      final q = v.trim().toLowerCase();
-                                      final exists = parties.any((p) => p.name.trim().toLowerCase() == q);
-                                      if (!exists) {
-                                        return 'Invalid party name. Select from suggestions or click "+" to add party.';
                                       }
                                       return null;
                                     },
@@ -1668,7 +1785,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Payment Due Date (પેમેન્ટ મળવાની તારીખ) *',
+                    'Payment Due Date *',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.bold,

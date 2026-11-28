@@ -1403,27 +1403,22 @@ class ChallanListView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth = constraints.maxWidth < 1320 ? 1320.0 : constraints.maxWidth;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: tableWidth,
-            child: Card(
-              elevation: 0,
-              margin: EdgeInsets.zero,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+        final tableCard = Card(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           // EXCEL TABLE HEADER ROW
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
               border: Border(
@@ -1435,9 +1430,9 @@ class ChallanListView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 32, child: Text('#', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                const SizedBox(width: 26, child: Text('#', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
                 SizedBox(
-                  width: 80,
+                  width: 72,
                   child: InkWell(
                     onTap: () => provider.setSortField(ChallanSortField.date),
                     borderRadius: BorderRadius.circular(4),
@@ -1447,7 +1442,7 @@ class ChallanListView extends StatelessWidget {
                         Text(
                           'DATE',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.bold,
                             color: provider.sortField == ChallanSortField.date ? AppColors.primary : const Color(0xFF64748B),
                           ),
@@ -1465,7 +1460,7 @@ class ChallanListView extends StatelessWidget {
                   ),
                 ),
                 SizedBox(
-                  width: 95,
+                  width: 75,
                   child: InkWell(
                     onTap: () => provider.setSortField(ChallanSortField.challanNo),
                     borderRadius: BorderRadius.circular(4),
@@ -1475,7 +1470,7 @@ class ChallanListView extends StatelessWidget {
                         Text(
                           'CHALLAN #',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.bold,
                             color: provider.sortField == ChallanSortField.challanNo ? AppColors.primary : const Color(0xFF64748B),
                           ),
@@ -1492,16 +1487,16 @@ class ChallanListView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 8), child: Text('DESIGN NO.', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('DISCOUNT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const SizedBox(width: 135, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
-                const SizedBox(width: 106, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 8), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 1, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 4), child: Text('DESIGN', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('DISC.', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('BALANCE DUE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 80, child: Center(child: Text('STATUS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
+                const SizedBox(width: 88, child: Center(child: Text('ACTIONS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
               ],
             ),
           ),
@@ -1548,30 +1543,30 @@ class ChallanListView extends StatelessWidget {
                       children: [
                         // #
                         SizedBox(
-                          width: 32,
+                          width: 26,
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                             ),
                           ),
                         ),
                         // DATE
                         SizedBox(
-                          width: 80,
+                          width: 72,
                           child: Text(
                             Formatters.shortDate(item.date),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500),
                           ),
                         ),
                         // CHALLAN NO
                         SizedBox(
-                          width: 95,
+                          width: 75,
                           child: Text(
                             item.challanNo,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: hasWarning ? AppColors.warningText : AppColors.primary,
                             ),
@@ -1602,7 +1597,7 @@ class ChallanListView extends StatelessWidget {
                         Expanded(
                           flex: 2,
                           child: Padding(
-                            padding: const EdgeInsets.only(left: 12),
+                            padding: const EdgeInsets.only(left: 8),
                             child: Text(
                               item.gstBillNo.isNotEmpty
                                   ? '${item.gstBillNo} (${Formatters.currency(item.gstAmount)})'
@@ -1617,15 +1612,15 @@ class ChallanListView extends StatelessWidget {
                         ),
                         // DESIGN NO.
                         Expanded(
-                          flex: 2,
+                          flex: 1,
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.only(left: 4),
                               child: Text(
                                 item.designNo.isNotEmpty ? item.designNo : '-',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: item.designNo.isNotEmpty
                                       ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
@@ -1638,7 +1633,7 @@ class ChallanListView extends StatelessWidget {
                         ),
                         // DISCOUNT
                         Expanded(
-                          flex: 2,
+                          flex: 1,
                           child: Align(
                             alignment: Alignment.centerRight,
                             child: Text(
@@ -1646,7 +1641,7 @@ class ChallanListView extends StatelessWidget {
                                   ? Formatters.currency(item.discountAmount)
                                   : '-',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
                                 color: item.discountAmount > 0
                                     ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706))
@@ -1737,14 +1732,14 @@ class ChallanListView extends StatelessWidget {
                         ),
                         // STATUS
                         SizedBox(
-                          width: 135,
+                          width: 80,
                           child: Center(
                             child: _buildStatusBadge(context, item, compact: true),
                           ),
                         ),
                         // ACTIONS
                         SizedBox(
-                          width: 106,
+                          width: 88,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -1806,10 +1801,10 @@ class ChallanListView extends StatelessWidget {
             child: Row(
               children: [
                 SizedBox(
-                  width: 207,
+                  width: 173,
                   child: Text(
                     'TOTAL (${entries.length} Entries)',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const Expanded(flex: 3, child: SizedBox()),
@@ -1828,7 +1823,7 @@ class ChallanListView extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 12),
+                      padding: const EdgeInsets.only(left: 8),
                       child: Text(
                         Formatters.currency(sumGst),
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
@@ -1837,16 +1832,16 @@ class ChallanListView extends StatelessWidget {
                   ),
                 ),
                 // DESIGN NO. (empty in totals)
-                const Expanded(flex: 2, child: SizedBox()),
+                const Expanded(flex: 1, child: SizedBox()),
                 // DISCOUNT TOTAL
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: Text(
                       sumDiscount > 0 ? Formatters.currency(sumDiscount) : '-',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.bold,
                         color: sumDiscount > 0
                             ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706))
@@ -1885,15 +1880,28 @@ class ChallanListView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 215),
+                const SizedBox(width: 168),
               ],
             ),
           ),
         ],
       ),
-    ),
-  ),
-);
+    );
+
+    if (constraints.maxWidth < 900) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: 900,
+          child: tableCard,
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: constraints.maxWidth,
+      child: tableCard,
+    );
       },
     );
   }

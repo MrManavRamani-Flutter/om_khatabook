@@ -176,6 +176,14 @@ class ChallanProvider extends ChangeNotifier {
   String _profileLogoBase64 = '';
   String _companyName = 'OM Mavtar Group';
   String _companyTagline = 'Khata Book Desktop';
+  String _companyAddress = 'Ring Road, Surat, Gujarat - 395002';
+  String _companyGstin = '24AAAFO8899M1Z3';
+  String _companyPhone = '+91 98250 12345';
+  String _companyEmail = 'om.mavtar.group@gmail.com';
+  String _bankName = 'State Bank of India';
+  String _bankAccountNo = '39820011002233';
+  String _bankIfsc = 'SBIN0001234';
+  String _bankBranch = 'Ring Road Branch, Surat';
   String _adminName = 'OM Mavtar Admin';
   String _adminRole = 'Administrator';
   bool _isSidebarCollapsed = false;
@@ -238,6 +246,15 @@ class ChallanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  String get companyAddress => _companyAddress;
+  String get companyGstin => _companyGstin;
+  String get companyPhone => _companyPhone;
+  String get companyEmail => _companyEmail;
+  String get bankName => _bankName;
+  String get bankAccountNo => _bankAccountNo;
+  String get bankIfsc => _bankIfsc;
+  String get bankBranch => _bankBranch;
+
   void setCompanyBranding({
     required String name,
     required String tagline,
@@ -246,6 +263,41 @@ class ChallanProvider extends ChangeNotifier {
     _companyTagline = tagline;
     _storage.setCompanyName(name);
     _storage.setCompanyTagline(tagline);
+    notifyListeners();
+  }
+
+  void setCompanyDetails({
+    required String name,
+    required String tagline,
+    required String address,
+    required String gstin,
+    required String phone,
+    required String email,
+    required String bankName,
+    required String bankAccountNo,
+    required String bankIfsc,
+    required String bankBranch,
+  }) {
+    _companyName = name;
+    _companyTagline = tagline;
+    _companyAddress = address;
+    _companyGstin = gstin;
+    _companyPhone = phone;
+    _companyEmail = email;
+    _bankName = bankName;
+    _bankAccountNo = bankAccountNo;
+    _bankIfsc = bankIfsc;
+    _bankBranch = bankBranch;
+    _storage.setCompanyName(name);
+    _storage.setCompanyTagline(tagline);
+    _storage.setCompanyAddress(address);
+    _storage.setCompanyGstin(gstin);
+    _storage.setCompanyPhone(phone);
+    _storage.setCompanyEmail(email);
+    _storage.setBankName(bankName);
+    _storage.setBankAccountNo(bankAccountNo);
+    _storage.setBankIfsc(bankIfsc);
+    _storage.setBankBranch(bankBranch);
     notifyListeners();
   }
 
@@ -320,6 +372,14 @@ class ChallanProvider extends ChangeNotifier {
     _profileLogoBase64 = _storage.profileLogoBase64;
     _companyName = _storage.companyName;
     _companyTagline = _storage.companyTagline;
+    _companyAddress = _storage.companyAddress;
+    _companyGstin = _storage.companyGstin;
+    _companyPhone = _storage.companyPhone;
+    _companyEmail = _storage.companyEmail;
+    _bankName = _storage.bankName;
+    _bankAccountNo = _storage.bankAccountNo;
+    _bankIfsc = _storage.bankIfsc;
+    _bankBranch = _storage.bankBranch;
     _adminName = _storage.adminName;
     _adminRole = _storage.adminRole;
     _isSidebarCollapsed = _storage.isSidebarCollapsed;

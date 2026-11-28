@@ -401,6 +401,14 @@ class _InvoicePreviewDialogState extends State<InvoicePreviewDialog> {
                     pageFormat: _selectedPageFormat,
                     companyName: storage.companyName,
                     companyTagline: storage.companyTagline,
+                    companyAddress: storage.companyAddress,
+                    companyGstin: storage.companyGstin,
+                    companyPhone: storage.companyPhone,
+                    companyEmail: storage.companyEmail,
+                    bankName: storage.bankName,
+                    bankAccountNo: storage.bankAccountNo,
+                    bankIfsc: storage.bankIfsc,
+                    bankBranch: storage.bankBranch,
                     customLogoBytes: storage.appLogoBase64.isNotEmpty
                         ? base64Decode(storage.appLogoBase64)
                         : null,

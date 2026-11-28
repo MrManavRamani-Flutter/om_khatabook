@@ -23,6 +23,14 @@ class StorageService {
   static const String _keyProfileLogoBase64 = 'om_profile_logo_base64_v2';
   static const String _keyCompanyName = 'om_company_name_v2';
   static const String _keyCompanyTagline = 'om_company_tagline_v2';
+  static const String _keyCompanyAddress = 'om_company_address';
+  static const String _keyCompanyGstin = 'om_company_gstin';
+  static const String _keyCompanyPhone = 'om_company_phone';
+  static const String _keyCompanyEmail = 'om_company_email';
+  static const String _keyBankName = 'om_company_bank_name';
+  static const String _keyBankAccountNo = 'om_company_bank_account';
+  static const String _keyBankIfsc = 'om_company_bank_ifsc';
+  static const String _keyBankBranch = 'om_company_bank_branch';
   static const String _keyAdminName = 'om_admin_name_v2';
   static const String _keyAdminRole = 'om_admin_role_v2';
   static const String _keySidebarCollapsed = 'om_sidebar_collapsed_v2';
@@ -302,6 +310,46 @@ class StorageService {
   String get companyTagline => _prefs.getString(_keyCompanyTagline) ?? 'Khata Book Desktop';
   Future<void> setCompanyTagline(String tagline) async {
     await _prefs.setString(_keyCompanyTagline, tagline);
+  }
+
+  String get companyAddress => _prefs.getString(_keyCompanyAddress) ?? 'Ring Road, Surat, Gujarat - 395002';
+  Future<void> setCompanyAddress(String address) async {
+    await _prefs.setString(_keyCompanyAddress, address);
+  }
+
+  String get companyGstin => _prefs.getString(_keyCompanyGstin) ?? '24AAAFO8899M1Z3';
+  Future<void> setCompanyGstin(String gstin) async {
+    await _prefs.setString(_keyCompanyGstin, gstin);
+  }
+
+  String get companyPhone => _prefs.getString(_keyCompanyPhone) ?? '+91 98250 12345';
+  Future<void> setCompanyPhone(String phone) async {
+    await _prefs.setString(_keyCompanyPhone, phone);
+  }
+
+  String get companyEmail => _prefs.getString(_keyCompanyEmail) ?? 'om.mavtar.group@gmail.com';
+  Future<void> setCompanyEmail(String email) async {
+    await _prefs.setString(_keyCompanyEmail, email);
+  }
+
+  String get bankName => _prefs.getString(_keyBankName) ?? 'State Bank of India';
+  Future<void> setBankName(String name) async {
+    await _prefs.setString(_keyBankName, name);
+  }
+
+  String get bankAccountNo => _prefs.getString(_keyBankAccountNo) ?? '39820011002233';
+  Future<void> setBankAccountNo(String accountNo) async {
+    await _prefs.setString(_keyBankAccountNo, accountNo);
+  }
+
+  String get bankIfsc => _prefs.getString(_keyBankIfsc) ?? 'SBIN0001234';
+  Future<void> setBankIfsc(String ifsc) async {
+    await _prefs.setString(_keyBankIfsc, ifsc);
+  }
+
+  String get bankBranch => _prefs.getString(_keyBankBranch) ?? 'Ring Road Branch, Surat';
+  Future<void> setBankBranch(String branch) async {
+    await _prefs.setString(_keyBankBranch, branch);
   }
 
   String get adminName => _prefs.getString(_keyAdminName) ?? 'OM Mavtar Admin';

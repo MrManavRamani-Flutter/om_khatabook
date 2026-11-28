@@ -33,6 +33,32 @@ class AppColors {
   // Neutrals
   static const Color slate = Color(0xFF334155);
 
+  // Financial Indicators
+  static const Color incomeGreen = Color(0xFF10B981);
+  static const Color incomeGreenLight = Color(0xFFD1FAE5);
+  static const Color incomeGreenDark = Color(0xFF064E3B);
+  static const Color expenseRed = Color(0xFFEF4444);
+  static const Color expenseRedLight = Color(0xFFFEE2E2);
+  static const Color expenseRedDark = Color(0xFF7F1D1D);
+
+  // Social & Export Brands
+  static const Color whatsapp = Color(0xFF25D366);
+  static const Color whatsappDark = Color(0xFF128C7E);
+  static const Color whatsappBorder = Color(0xFF16A34A);
+  static const Color excel = Color(0xFF107C41);
+  static const Color pdf = Color(0xFFD32F2F);
+
+  // Design Tag & Accents
+  static const Color designBlue = Color(0xFF0284C7);
+  static const Color designBlueDark = Color(0xFF38BDF8);
+  static const Color designBlueBg = Color(0xFFE0F2FE);
+
+  // Background Surfaces & Borders
+  static const Color darkScaffold = Color(0xFF0F172A);
+  static const Color darkCard = Color(0xFF1E293B);
+  static const Color darkBorder = Color(0xFF334155);
+  static const Color darkMutedText = Color(0xFF64748B);
+
   /// Helper to derive high-contrast color for dark theme
   static Color getHighContrast(Color color, bool isDark) {
     if (!isDark) return color;

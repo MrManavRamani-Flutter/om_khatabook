@@ -27,6 +27,14 @@ class _SettingsViewState extends State<SettingsView> {
 
   late final TextEditingController _companyNameController;
   late final TextEditingController _companyTaglineController;
+  late final TextEditingController _companyAddressController;
+  late final TextEditingController _companyGstinController;
+  late final TextEditingController _companyPhoneController;
+  late final TextEditingController _companyEmailController;
+  late final TextEditingController _bankNameController;
+  late final TextEditingController _bankAccountNoController;
+  late final TextEditingController _bankIfscController;
+  late final TextEditingController _bankBranchController;
   late final TextEditingController _manualLogoPathController;
   late final TextEditingController _adminNameController;
   late final TextEditingController _adminRoleController;
@@ -40,6 +48,14 @@ class _SettingsViewState extends State<SettingsView> {
     final provider = context.read<ChallanProvider>();
     _companyNameController = TextEditingController(text: provider.companyName);
     _companyTaglineController = TextEditingController(text: provider.companyTagline);
+    _companyAddressController = TextEditingController(text: provider.companyAddress);
+    _companyGstinController = TextEditingController(text: provider.companyGstin);
+    _companyPhoneController = TextEditingController(text: provider.companyPhone);
+    _companyEmailController = TextEditingController(text: provider.companyEmail);
+    _bankNameController = TextEditingController(text: provider.bankName);
+    _bankAccountNoController = TextEditingController(text: provider.bankAccountNo);
+    _bankIfscController = TextEditingController(text: provider.bankIfsc);
+    _bankBranchController = TextEditingController(text: provider.bankBranch);
     _manualLogoPathController = TextEditingController();
     _adminNameController = TextEditingController(text: provider.adminName);
     _adminRoleController = TextEditingController(text: provider.adminRole);
@@ -50,6 +66,14 @@ class _SettingsViewState extends State<SettingsView> {
   void dispose() {
     _companyNameController.dispose();
     _companyTaglineController.dispose();
+    _companyAddressController.dispose();
+    _companyGstinController.dispose();
+    _companyPhoneController.dispose();
+    _companyEmailController.dispose();
+    _bankNameController.dispose();
+    _bankAccountNoController.dispose();
+    _bankIfscController.dispose();
+    _bankBranchController.dispose();
     _manualLogoPathController.dispose();
     _adminNameController.dispose();
     _adminRoleController.dispose();
@@ -1143,7 +1167,7 @@ class _SettingsViewState extends State<SettingsView> {
 
             // INLINE FORM FIELDS (COMPANY NAME & TAGLINE)
             Text(
-              'Company Details',
+              'Company & Invoice Details (Dynamic for PDF Statements & Reports)',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1174,6 +1198,128 @@ class _SettingsViewState extends State<SettingsView> {
                 fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
               ),
             ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _companyAddressController,
+              decoration: InputDecoration(
+                labelText: 'Office / Factory Address (Printed on Invoices)',
+                hintText: 'e.g. Ring Road, Surat, Gujarat - 395002',
+                prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _companyGstinController,
+                    decoration: InputDecoration(
+                      labelText: 'Company GSTIN No.',
+                      hintText: 'e.g. 24AAAFO8899M1Z3',
+                      prefixIcon: const Icon(Icons.receipt_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _companyPhoneController,
+                    decoration: InputDecoration(
+                      labelText: 'Company Contact Phone',
+                      hintText: 'e.g. +91 98250 12345',
+                      prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _companyEmailController,
+                    decoration: InputDecoration(
+                      labelText: 'Company Official Email',
+                      hintText: 'e.g. info@ommavtar.com',
+                      prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _bankNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Bank Name (Invoice Payment)',
+                      hintText: 'e.g. State Bank of India',
+                      prefixIcon: const Icon(Icons.account_balance_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _bankAccountNoController,
+                    decoration: InputDecoration(
+                      labelText: 'Bank Account Number',
+                      hintText: 'e.g. 39820011002233',
+                      prefixIcon: const Icon(Icons.credit_card_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _bankIfscController,
+                    decoration: InputDecoration(
+                      labelText: 'Bank IFSC Code',
+                      hintText: 'e.g. SBIN0001234',
+                      prefixIcon: const Icon(Icons.tag_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _bankBranchController,
+                    decoration: InputDecoration(
+                      labelText: 'Branch Name',
+                      hintText: 'e.g. Ring Road Branch, Surat',
+                      prefixIcon: const Icon(Icons.store_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 18),
 
             // SAVE BRANDING BUTTON
@@ -1187,10 +1333,19 @@ class _SettingsViewState extends State<SettingsView> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(Icons.check, size: 18),
-                label: const Text('Save Company Branding', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text('Save Company & Invoice Details', style: TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: () async {
                   final name = _companyNameController.text.trim();
                   final tagline = _companyTaglineController.text.trim();
+                  final address = _companyAddressController.text.trim();
+                  final gstin = _companyGstinController.text.trim();
+                  final phone = _companyPhoneController.text.trim();
+                  final email = _companyEmailController.text.trim();
+                  final bankName = _bankNameController.text.trim();
+                  final bankAcc = _bankAccountNoController.text.trim();
+                  final bankIfsc = _bankIfscController.text.trim();
+                  final bankBranch = _bankBranchController.text.trim();
+
                   if (name.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -1204,18 +1359,29 @@ class _SettingsViewState extends State<SettingsView> {
                   final confirmed = await promptPasswordConfirmation(
                     context,
                     title: 'Confirm Update Branding',
-                    message: 'Enter password to confirm updating company branding to "$name".',
-                    actionLabel: 'Save Branding',
+                    message: 'Enter password to confirm updating company and invoice details for "$name".',
+                    actionLabel: 'Save Details',
                     icon: Icons.branding_watermark,
                     iconColor: AppColors.primary,
                   );
                   if (!confirmed || !context.mounted) return;
 
-                  provider.setCompanyBranding(name: name, tagline: tagline);
+                  provider.setCompanyDetails(
+                    name: name,
+                    tagline: tagline,
+                    address: address,
+                    gstin: gstin,
+                    phone: phone,
+                    email: email,
+                    bankName: bankName,
+                    bankAccountNo: bankAcc,
+                    bankIfsc: bankIfsc,
+                    bankBranch: bankBranch,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Company branding saved successfully!'),
+                        content: Text('Company and invoice details saved successfully! All PDF outputs updated.'),
                         backgroundColor: AppColors.primary,
                         duration: Duration(seconds: 2),
                       ),
@@ -1589,14 +1755,14 @@ class _SettingsViewState extends State<SettingsView> {
     bool isDark,
   ) {
     final presets = <({String name, Color primary, String label})>[
-      (name: 'Teal', primary: const Color(0xFF0F766E), label: 'Teal Classic (ડીફોલ્ટ)'),
-      (name: 'Royal Blue', primary: const Color(0xFF1D4ED8), label: 'Royal Blue (રોયલ બ્લુ)'),
-      (name: 'Indigo', primary: const Color(0xFF4F46E5), label: 'Indigo Violet (ઈન્ડિગો)'),
-      (name: 'Emerald', primary: const Color(0xFF059669), label: 'Emerald Forest (લીલો)'),
-      (name: 'Crimson', primary: const Color(0xFFBE123C), label: 'Ruby Crimson (લાલ)'),
-      (name: 'Slate', primary: const Color(0xFF334155), label: 'Slate Gray (સ્લેટ)'),
-      (name: 'Amber', primary: const Color(0xFFD97706), label: 'Golden Amber (એમ્બર)'),
-      (name: 'Cyan', primary: const Color(0xFF0891B2), label: 'Ocean Cyan (સિયાન)'),
+      (name: 'Teal', primary: const Color(0xFF0F766E), label: 'Teal Classic (Default)'),
+      (name: 'Royal Blue', primary: const Color(0xFF1D4ED8), label: 'Royal Blue'),
+      (name: 'Indigo', primary: const Color(0xFF4F46E5), label: 'Indigo Violet'),
+      (name: 'Emerald', primary: const Color(0xFF059669), label: 'Emerald Forest'),
+      (name: 'Crimson', primary: const Color(0xFFBE123C), label: 'Ruby Crimson'),
+      (name: 'Slate', primary: const Color(0xFF334155), label: 'Slate Gray'),
+      (name: 'Amber', primary: const Color(0xFFD97706), label: 'Golden Amber'),
+      (name: 'Cyan', primary: const Color(0xFF0891B2), label: 'Ocean Cyan'),
     ];
 
     final successOptions = <({Color color, String name})>[
@@ -1650,7 +1816,7 @@ class _SettingsViewState extends State<SettingsView> {
 
             // 1. PRESET COLOR COMBINATIONS
             const Text(
-              'Theme Palette Combinations (એપ થીમ પેલેટ્સ)',
+              'Theme Palette Combinations',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -1709,7 +1875,7 @@ class _SettingsViewState extends State<SettingsView> {
 
             // 2. STATUS COLOR CUSTOMIZATION
             const Text(
-              'Ledger Status Colors (સ્ટેટસ કલર મેનેજમેન્ટ)',
+              'Ledger Status Colors',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -1720,7 +1886,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const SizedBox(
                   width: 130,
                   child: Text(
-                    'Fully Paid (પેઇડ):',
+                    'Fully Paid:',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1761,7 +1927,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const SizedBox(
                   width: 130,
                   child: Text(
-                    'Partially Paid (પાર્શિયલ):',
+                    'Partially Paid:',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1802,7 +1968,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const SizedBox(
                   width: 130,
                   child: Text(
-                    'Unpaid Due (અનપેઇડ):',
+                    'Unpaid Due:',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1844,7 +2010,7 @@ class _SettingsViewState extends State<SettingsView> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Enhanced High-Contrast Text (આંખો માટે હાઈ-કોન્ટ્રાસ્ટ)',
+                'Enhanced High-Contrast Text (Eye Comfort)',
                 style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
@@ -1873,7 +2039,7 @@ class _SettingsViewState extends State<SettingsView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Live Preview (ચલાન લુક એન્ડ ફીલ):',
+                        'Live Preview:',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       Text(
