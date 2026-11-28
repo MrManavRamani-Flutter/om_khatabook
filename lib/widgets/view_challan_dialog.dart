@@ -202,6 +202,15 @@ class ViewChallanDialog extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildRow('Party Name', entry.partyName, isBold: true),
+                    if (entry.designNo.isNotEmpty) ...[
+                      const Divider(height: 16),
+                      _buildRow(
+                        'Design No.',
+                        entry.designNo,
+                        isBold: true,
+                        highlightColor: const Color(0xFF0284C7),
+                      ),
+                    ],
                     const Divider(height: 16),
                     _buildRow('Challan Amount', Formatters.currency(entry.challanAmount)),
                     if (entry.discountAmount > 0) ...[

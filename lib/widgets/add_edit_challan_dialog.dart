@@ -32,6 +32,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
 
   late DateTime _selectedDate;
   final _challanNoController = TextEditingController();
+  final _designNoController = TextEditingController();
   final _partySearchController = TextEditingController();
   final _challanAmountController = TextEditingController();
   final _discountController = TextEditingController();
@@ -96,6 +97,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
       _selectedDate = e.date;
       _paymentDueDate = e.paymentDueDate;
       _challanNoController.text = e.challanNo;
+      _designNoController.text = e.designNo;
       _partySearchController.text = e.partyName;
       _challanAmountController.text = e.challanAmount.toStringAsFixed(0);
       if (e.discountAmount > 0) {
@@ -152,6 +154,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
   @override
   void dispose() {
     _challanNoController.dispose();
+    _designNoController.dispose();
     _partySearchController.dispose();
     _challanAmountController.dispose();
     _discountController.dispose();
@@ -164,6 +167,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     _chequeNoController.dispose();
     _bankNameController.dispose();
     _chequeAmountController.dispose();
+    _customDaysController.dispose();
     super.dispose();
   }
 
@@ -343,6 +347,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
     }
 
     final formattedChallanNo = _challanNoController.text.trim().toUpperCase();
+    final formattedDesignNo = _designNoController.text.trim().toUpperCase();
     final formattedNotes = provider.formatCasedText(_notesController.text.trim());
     final formattedBankName = provider.formatCasedText(_bankNameController.text.trim());
 
@@ -406,6 +411,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         challanNo: formattedChallanNo,
         partyId: partyId.isNotEmpty ? partyId : widget.entryToEdit!.partyId,
         partyName: formattedPartyName,
+        designNo: formattedDesignNo,
         challanAmount: challanAmt,
         discountAmount: discountAmt,
         finalAmount: finalAmt,
@@ -426,6 +432,7 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
         challanNo: formattedChallanNo,
         partyId: partyId,
         partyName: formattedPartyName,
+        designNo: formattedDesignNo,
         challanAmount: challanAmt,
         discountAmount: discountAmt,
         finalAmount: finalAmt,
@@ -496,46 +503,113 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ROW 1: DATE & CHALLAN NO
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 4,
-                              child: InkWell(
-                                onTap: _pickDate,
-                                borderRadius: BorderRadius.circular(10),
-                                child: InputDecorator(
+                        // ROW 1: DATE, CHALLAN NO & DESIGN NO
+                        if (isMobile) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: InkWell(
+                                  onTap: _pickDate,
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Date *',
+                                      prefixIcon: Icon(Icons.calendar_today, size: 18),
+                                    ),
+                                    child: Text(
+                                      Formatters.date(_selectedDate),
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 5,
+                                child: TextFormField(
+                                  controller: _challanNoController,
+                                  autofocus: !isEdit,
+                                  inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                                  textCapitalization: TextCapitalization.characters,
                                   decoration: const InputDecoration(
-                                    labelText: 'Date *',
-                                    prefixIcon: Icon(Icons.calendar_today, size: 18),
+                                    labelText: 'Challan No. *',
+                                    prefixIcon: Icon(Icons.tag, size: 18),
+                                    hintText: 'e.g. 168',
                                   ),
-                                  child: Text(
-                                    Formatters.date(_selectedDate),
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  validator: (v) => v == null || v.trim().isEmpty
+                                      ? 'Challan Number is required'
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _designNoController,
+                            inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: const InputDecoration(
+                              labelText: 'Design No. (Optional)',
+                              prefixIcon: Icon(Icons.style_outlined, size: 18),
+                              hintText: 'e.g. D-101 / 550 / BEADS',
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: InkWell(
+                                  onTap: _pickDate,
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Date *',
+                                      prefixIcon: Icon(Icons.calendar_today, size: 18),
+                                    ),
+                                    child: Text(
+                                      Formatters.date(_selectedDate),
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              flex: 5,
-                              child: TextFormField(
-                                controller: _challanNoController,
-                                autofocus: !isEdit,
-                                inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
-                                textCapitalization: TextCapitalization.characters,
-                                decoration: const InputDecoration(
-                                  labelText: 'Challan No. *',
-                                  prefixIcon: Icon(Icons.tag, size: 18),
-                                  hintText: 'e.g. CH-2026-105',
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 4,
+                                child: TextFormField(
+                                  controller: _challanNoController,
+                                  autofocus: !isEdit,
+                                  inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                                  textCapitalization: TextCapitalization.characters,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Challan No. *',
+                                    prefixIcon: Icon(Icons.tag, size: 18),
+                                    hintText: 'e.g. 168',
+                                  ),
+                                  validator: (v) => v == null || v.trim().isEmpty
+                                      ? 'Challan Number is required'
+                                      : null,
                                 ),
-                                validator: (v) => v == null || v.trim().isEmpty
-                                    ? 'Challan Number is required'
-                                    : null,
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 4,
+                                child: TextFormField(
+                                  controller: _designNoController,
+                                  inputFormatters: const [DynamicCaseTextInputFormatter(TextCasingStyle.uppercase)],
+                                  textCapitalization: TextCapitalization.characters,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Design No. (Optional)',
+                                    prefixIcon: Icon(Icons.style_outlined, size: 18),
+                                    hintText: 'e.g. D-101 / 550',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 14),
 
                         // ROW 2: PARTY AUTOCOMPLETE SEARCH & QUICK ADD
@@ -1710,10 +1784,58 @@ class _AddEditChallanDialogState extends State<AddEditChallanDialog> {
                 label: const Text('+60 Days', style: TextStyle(fontSize: 11)),
                 onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 60))),
               ),
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: const Text('+90 Days', style: TextStyle(fontSize: 11)),
+                onPressed: () => setState(() => _paymentDueDate = _selectedDate.add(const Duration(days: 90))),
+              ),
             ],
           ),
+          const SizedBox(height: 8),
+          _buildCustomDaysRow(),
         ],
       ),
+    );
+  }
+
+  final _customDaysController = TextEditingController();
+
+  Widget _buildCustomDaysRow() {
+    return Row(
+      children: [
+        const Icon(Icons.tune, size: 15, color: AppColors.primary),
+        const SizedBox(width: 6),
+        const Text(
+          'Custom Days:',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 72,
+          child: TextField(
+            controller: _customDaysController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(fontSize: 12),
+            decoration: const InputDecoration(
+              hintText: 'e.g. 75',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        ActionChip(
+          visualDensity: VisualDensity.compact,
+          label: const Text('+ Set', style: TextStyle(fontSize: 11)),
+          onPressed: () {
+            final n = int.tryParse(_customDaysController.text.trim());
+            if (n != null && n > 0) {
+              setState(() => _paymentDueDate = _selectedDate.add(Duration(days: n)));
+              _customDaysController.clear();
+            }
+          },
+        ),
+      ],
     );
   }
 }

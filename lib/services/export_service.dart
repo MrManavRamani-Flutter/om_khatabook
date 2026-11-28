@@ -1107,6 +1107,7 @@ class ExportService {
       TextCellValue('Date'),
       TextCellValue('Challan No.'),
       TextCellValue('Party Name'),
+      TextCellValue('Design No.'),
       TextCellValue('Challan Amount (INR)'),
       TextCellValue('Discount (INR)'),
       TextCellValue('Final Amount (INR)'),
@@ -1163,6 +1164,7 @@ class ExportService {
         TextCellValue(Formatters.date(c.date)),
         TextCellValue(c.challanNo),
         TextCellValue(c.partyName),
+        TextCellValue(c.designNo.isNotEmpty ? c.designNo : '-'),
         DoubleCellValue(c.challanAmount),
         DoubleCellValue(c.discountAmount),
         DoubleCellValue(c.finalAmount),
@@ -1186,6 +1188,7 @@ class ExportService {
       TextCellValue('TOTAL'),
       TextCellValue(''),
       TextCellValue('${sorted.length} Entries'),
+      TextCellValue(''), // Design No. (blank for total)
       DoubleCellValue(sumChallan),
       DoubleCellValue(sumDiscount),
       DoubleCellValue(sumFinal),

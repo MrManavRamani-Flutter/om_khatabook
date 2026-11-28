@@ -829,6 +829,57 @@ class _SettingsViewState extends State<SettingsView> {
                       color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.bedtime_outlined, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Auto-Logout on Sleep / Inactive',
+                                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                              ),
+                              Text(
+                                'Logs out automatically when system sleeps or is idle',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      DropdownButton<int>(
+                        value: auth.sessionTimeoutMinutes,
+                        underline: const SizedBox(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 0, child: Text('On Sleep (Immediate)')),
+                          DropdownMenuItem(value: 5, child: Text('5 Minutes')),
+                          DropdownMenuItem(value: 15, child: Text('15 Minutes')),
+                          DropdownMenuItem(value: 30, child: Text('30 Minutes')),
+                          DropdownMenuItem(value: -1, child: Text('Never')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            auth.setSessionTimeoutMinutes(val);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

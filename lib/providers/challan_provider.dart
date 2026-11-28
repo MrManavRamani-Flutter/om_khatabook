@@ -398,6 +398,7 @@ class ChallanProvider extends ChangeNotifier {
         final q = _searchQuery.toLowerCase();
         final matchChallan = item.challanNo.toLowerCase().contains(q);
         final matchParty = item.partyName.toLowerCase().contains(q);
+        final matchDesign = item.designNo.toLowerCase().contains(q);
         final matchGst = item.gstBillNo.toLowerCase().contains(q);
         final matchChequeNo =
             item.chequeDetails?.chequeNo.toLowerCase().contains(q) ?? false;
@@ -406,6 +407,7 @@ class ChallanProvider extends ChangeNotifier {
 
         if (!matchChallan &&
             !matchParty &&
+            !matchDesign &&
             !matchGst &&
             !matchChequeNo &&
             !matchBank) {
@@ -961,6 +963,7 @@ class ChallanProvider extends ChangeNotifier {
     required String challanNo,
     required String partyId,
     required String partyName,
+    String designNo = '',
     required double challanAmount,
     double discountAmount = 0.0,
     required double finalAmount,
@@ -981,6 +984,7 @@ class ChallanProvider extends ChangeNotifier {
       challanNo: challanNo.trim(),
       partyId: partyId,
       partyName: partyName.trim(),
+      designNo: designNo.trim(),
       challanAmount: challanAmount,
       discountAmount: discountAmount,
       finalAmount: finalAmount,
@@ -1156,6 +1160,10 @@ class ChallanProvider extends ChangeNotifier {
     }
 
     if (a.partyName.trim().toUpperCase() != b.partyName.trim().toUpperCase()) {
+      return false;
+    }
+
+    if (a.designNo.trim().toUpperCase() != b.designNo.trim().toUpperCase()) {
       return false;
     }
 

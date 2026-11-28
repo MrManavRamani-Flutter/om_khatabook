@@ -1380,6 +1380,7 @@ class ChallanListView extends StatelessWidget {
   Widget _buildExcelTableView(BuildContext context, List<ChallanEntry> entries) {
     final provider = context.watch<ChallanProvider>();
     final sumChallan = entries.fold(0.0, (s, c) => s + c.challanAmount);
+    final sumDiscount = entries.fold(0.0, (s, c) => s + c.discountAmount);
     final sumGst = entries.fold(0.0, (s, c) => s + c.gstAmount);
     final sumFinal = entries.fold(0.0, (s, c) => s + c.finalAmount);
     final sumPaid = entries.fold(0.0, (s, c) => s + c.paidAmount);
@@ -1388,7 +1389,7 @@ class ChallanListView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth = constraints.maxWidth < 1220 ? 1220.0 : constraints.maxWidth;
+        final tableWidth = constraints.maxWidth < 1320 ? 1320.0 : constraints.maxWidth;
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
@@ -1480,6 +1481,7 @@ class ChallanListView extends StatelessWidget {
                 const Expanded(flex: 3, child: Text('PARTY NAME', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('CHALLAN AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 12), child: Text('GST BILL & AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
+                const Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: Padding(padding: EdgeInsets.only(left: 8), child: Text('DESIGN NO.', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('DISCOUNT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('FINAL AMT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
                 const Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('PAID / RECVD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))))),
@@ -1596,6 +1598,27 @@ class ChallanListView extends StatelessWidget {
                                 color: item.gstBillNo.isNotEmpty ? null : Colors.grey,
                               ),
                               overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // DESIGN NO.
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                item.designNo.isNotEmpty ? item.designNo : '-',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: item.designNo.isNotEmpty
+                                      ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
+                                      : Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.4),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                         ),
@@ -1793,6 +1816,25 @@ class ChallanListView extends StatelessWidget {
                       child: Text(
                         Formatters.currency(sumGst),
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ),
+                // DESIGN NO. (empty in totals)
+                const Expanded(flex: 2, child: SizedBox()),
+                // DISCOUNT TOTAL
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      sumDiscount > 0 ? Formatters.currency(sumDiscount) : '-',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: sumDiscount > 0
+                            ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706))
+                            : Colors.grey,
                       ),
                     ),
                   ),

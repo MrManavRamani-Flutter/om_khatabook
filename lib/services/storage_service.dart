@@ -314,6 +314,12 @@ class StorageService {
     await _prefs.setString(_keyAdminRole, role);
   }
 
+  // --- GENERIC INT PREFERENCE (for session timeout, custom days, etc.) ---
+  int? getInt(String key) => _prefs.getInt(key);
+  Future<void> setInt(String key, int value) async {
+    await _prefs.setInt(key, value);
+  }
+
   // --- PARTIES ---
   Future<List<Party>> loadParties() async {
     final str = _prefs.getString(_keyParties);

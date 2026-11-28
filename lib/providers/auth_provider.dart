@@ -51,6 +51,41 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
+
+  // ── Auto-logout on sleep / idle ──────────────────────────────────────────
+  DateTime? _lastPausedAt;
+
+  int get sessionTimeoutMinutes => _storage.getInt('om_session_timeout_minutes') ?? 5;
+
+  Future<void> setSessionTimeoutMinutes(int minutes) async {
+    await _storage.setInt('om_session_timeout_minutes', minutes);
+    notifyListeners();
+  }
+
+  /// Called from AppLifecycleObserver when app is paused (goes to background/sleep).
+  void onAppPaused() {
+    _lastPausedAt = DateTime.now();
+  }
+
+  /// Called from AppLifecycleObserver when app resumes.
+  /// Auto-logs out if the app was paused for more than [_idleTimeout].
+  Future<void> onAppResumed() async {
+    final paused = _lastPausedAt;
+    _lastPausedAt = null;
+    if (paused == null) return;
+    final elapsed = DateTime.now().difference(paused);
+    if (elapsed >= _idleTimeout && _currentUser != null) {
+      await logout();
+    }
+  }
+
+  Duration get _idleTimeout {
+    final minutes = sessionTimeoutMinutes;
+    if (minutes < 0) return const Duration(days: 365); // "Never"
+    if (minutes == 0) return const Duration(seconds: 15); // "Immediate on sleep"
+    return Duration(minutes: minutes);
+  }
+  // ────────────────────────────────────────────────────────────────────────
   AppUser? get currentUser => _currentUser;
   List<AppUser> get users => List.unmodifiable(_users);
   List<AppRole> get customRoles => List.unmodifiable(_customRoles);

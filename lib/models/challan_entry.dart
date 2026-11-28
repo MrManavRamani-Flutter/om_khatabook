@@ -175,6 +175,7 @@ class ChallanEntry {
   final String challanNo;
   final String partyId;
   final String partyName;
+  final String designNo; // Optional design number (e.g. D-101, 550, etc.)
   final double challanAmount;
   final double discountAmount; // Discount given on challan (Challan Amt - Discount = Final Amt)
   final double finalAmount;
@@ -200,6 +201,7 @@ class ChallanEntry {
     required this.challanNo,
     required this.partyId,
     required this.partyName,
+    this.designNo = '',
     required this.challanAmount,
     this.discountAmount = 0.0,
     required this.finalAmount,
@@ -314,6 +316,7 @@ class ChallanEntry {
       'challanNo': challanNo,
       'partyId': partyId,
       'partyName': partyName,
+      'designNo': designNo,
       'challanAmount': challanAmount,
       'discountAmount': discountAmount,
       'finalAmount': finalAmount,
@@ -368,6 +371,7 @@ class ChallanEntry {
     final rawChallanNo = (json['challanNo'] ?? json['challanNumber'] ?? json['challan_no'] ?? json['referenceNo'] ?? json['refNo'] ?? json['billNo'] ?? '').toString().trim();
     final rawPartyName = (json['partyName'] ?? json['party'] ?? json['party_name'] ?? json['customerName'] ?? json['clientName'] ?? '').toString().trim();
     final rawPartyId = (json['partyId'] ?? json['party_id'] ?? json['customerId'] ?? '').toString().trim();
+    final rawDesignNo = (json['designNo'] ?? json['design_no'] ?? json['designNumber'] ?? json['design'] ?? '').toString().trim();
     final rawGstBillNo = (json['gstBillNo'] ?? json['gst_bill_no'] ?? json['billNo'] ?? json['invoiceNo'] ?? json['taxInvoiceNo'] ?? '').toString().trim();
 
     final parsedChallanAmt = _parseAmount(json['challanAmount'] ?? json['challan_amount'] ?? json['billAmount'] ?? json['subTotal']);
@@ -441,6 +445,7 @@ class ChallanEntry {
       challanNo: rawChallanNo,
       partyId: rawPartyId,
       partyName: rawPartyName,
+      designNo: rawDesignNo,
       challanAmount: parsedChallanAmt,
       discountAmount: parsedDiscountAmt,
       finalAmount: finalAmt,
@@ -468,6 +473,7 @@ class ChallanEntry {
     String? challanNo,
     String? partyId,
     String? partyName,
+    String? designNo,
     double? challanAmount,
     double? discountAmount,
     double? finalAmount,
@@ -494,6 +500,7 @@ class ChallanEntry {
       challanNo: challanNo ?? this.challanNo,
       partyId: partyId ?? this.partyId,
       partyName: partyName ?? this.partyName,
+      designNo: designNo ?? this.designNo,
       challanAmount: challanAmount ?? this.challanAmount,
       discountAmount: discountAmount ?? this.discountAmount,
       finalAmount: finalAmount ?? this.finalAmount,
