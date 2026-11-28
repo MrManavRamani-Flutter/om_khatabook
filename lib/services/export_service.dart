@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
 import '../models/party.dart';
+import '../providers/challan_provider.dart';
 import '../utils/formatters.dart';
 
 class ExportService {
@@ -1470,6 +1471,344 @@ class ExportService {
     if (bytes != null) {
       await file.writeAsBytes(bytes);
     }
+    return file.path;
+  }
+
+  // =========================================================================
+  // NET PROFIT & LOSS FINANCIAL STATEMENT PDF EXPORT
+  // =========================================================================
+
+  /// Generates a comprehensive Net Profit & Loss Statement PDF with separate Expenses & Income tables and conclusion
+  static Future<Uint8List> generateProfitLossPdfData({
+    required ProfitLossCalculation calc,
+    required String periodLabel,
+    String? companyName,
+    String? companyTagline,
+  }) async {
+    final pdf = pw.Document();
+
+    final cName = companyName?.trim().isNotEmpty == true ? companyName!.trim() : 'OM Mavtar Group';
+    final cTagline = companyTagline?.trim().isNotEmpty == true ? companyTagline!.trim() : 'Khata Book Desktop';
+
+    final netLabel = calc.isProfit ? 'NET PROFIT (Surplus)' : 'NET LOSS (Deficit)';
+    final netColor = calc.isProfit ? PdfColors.green800 : PdfColors.red800;
+    final netBgColor = calc.isProfit ? PdfColors.green50 : PdfColors.red50;
+
+    final expenseHeaders = ['#', 'Date', 'Particulars / Description', 'Category', 'Notes', 'Amount (Rs.)'];
+    final expenseData = <List<String>>[];
+    for (int i = 0; i < calc.expenses.length; i++) {
+      final e = calc.expenses[i];
+      expenseData.add([
+        '${i + 1}',
+        Formatters.shortDate(e.date),
+        e.particular,
+        e.category,
+        e.notes.isNotEmpty ? e.notes : '-',
+        Formatters.currencyPdf(e.amount),
+      ]);
+    }
+    if (calc.expenses.isNotEmpty) {
+      expenseData.add([
+        '',
+        'TOTAL',
+        'Total Operating Expenses (${calc.expenses.length} entries)',
+        '',
+        '',
+        Formatters.currencyPdf(calc.totalExpenses),
+      ]);
+    }
+
+    final incomeHeaders = ['#', 'Date', 'Particulars / Party', 'Source / Mode', 'Notes', 'Amount (Rs.)'];
+    final incomeData = <List<String>>[];
+    for (int i = 0; i < calc.incomes.length; i++) {
+      final e = calc.incomes[i];
+      incomeData.add([
+        '${i + 1}',
+        Formatters.shortDate(e.date),
+        e.particular,
+        e.category,
+        e.notes.isNotEmpty ? e.notes : '-',
+        Formatters.currencyPdf(e.amount),
+      ]);
+    }
+    if (calc.incomes.isNotEmpty) {
+      incomeData.add([
+        '',
+        'TOTAL',
+        'Total Revenue & Collections (${calc.incomes.length} entries)',
+        '',
+        '',
+        Formatters.currencyPdf(calc.totalIncome),
+      ]);
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (context) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 8),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 1)),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(cName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                  pw.SizedBox(height: 2),
+                  pw.Text(cTagline, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.SizedBox(height: 2),
+                  pw.Text('NET PROFIT & LOSS FINANCIAL STATEMENT', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey900)),
+                ],
+              ),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text('Period: $periodLabel', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 2),
+                  pw.Text('Date: ${Formatters.date(DateTime.now())}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        footer: (context) => _buildPdfFooter(context),
+        build: (context) => [
+          pw.SizedBox(height: 10),
+
+          // SUMMARY KPIS (INCOME, EXPENSES, RESULT)
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.green50,
+                    borderRadius: pw.BorderRadius.circular(6),
+                    border: pw.Border.all(color: PdfColors.green300),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('TOTAL REVENUE / INCOME', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.green800)),
+                      pw.SizedBox(height: 3),
+                      pw.Text('Rs. ${Formatters.currencyPdf(calc.totalIncome)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+                      pw.Text('${calc.incomes.length} Entries', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.red50,
+                    borderRadius: pw.BorderRadius.circular(6),
+                    border: pw.Border.all(color: PdfColors.red300),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('TOTAL OPERATING EXPENSES', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.red800)),
+                      pw.SizedBox(height: 3),
+                      pw.Text('Rs. ${Formatters.currencyPdf(calc.totalExpenses)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                      pw.Text('${calc.expenses.length} Entries', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: netBgColor,
+                    borderRadius: pw.BorderRadius.circular(6),
+                    border: pw.Border.all(color: netColor),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(calc.isProfit ? 'NET PROFIT (SURPLUS)' : 'NET LOSS (DEFICIT)', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: netColor)),
+                      pw.SizedBox(height: 3),
+                      pw.Text('${calc.isProfit ? '+' : '-'}Rs. ${Formatters.currencyPdf(calc.netAmount)}', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: netColor)),
+                      pw.Text(calc.isProfit ? 'Net Operating Surplus' : 'Net Operating Deficit', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          pw.SizedBox(height: 16),
+
+          // 1. EXPENSES TABLE
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.red50,
+              borderRadius: pw.BorderRadius.circular(4),
+              border: pw.Border.all(color: PdfColors.red300),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('1. OPERATING EXPENSES (વ્યાપાર ખર્ચ વિગત)', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                pw.Text('Total: Rs. ${Formatters.currencyPdf(calc.totalExpenses)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          if (calc.expenses.isEmpty)
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              alignment: pw.Alignment.center,
+              child: pw.Text('No operating expenses recorded for this period.', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey600)),
+            )
+          else
+            pw.TableHelper.fromTextArray(
+              headers: expenseHeaders,
+              data: expenseData,
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              headerStyle: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.red800),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              cellHeight: 20,
+              cellAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.centerLeft,
+                3: pw.Alignment.centerLeft,
+                4: pw.Alignment.centerLeft,
+                5: pw.Alignment.centerRight,
+              },
+            ),
+
+          pw.SizedBox(height: 18),
+
+          // 2. REVENUE / INCOME TABLE
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.green50,
+              borderRadius: pw.BorderRadius.circular(4),
+              border: pw.Border.all(color: PdfColors.green300),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('2. REVENUE & COLLECTIONS (આવક વિગત)', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+                pw.Text('Total: Rs. ${Formatters.currencyPdf(calc.totalIncome)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          if (calc.incomes.isEmpty)
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              alignment: pw.Alignment.center,
+              child: pw.Text('No revenue or collections recorded for this period.', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey600)),
+            )
+          else
+            pw.TableHelper.fromTextArray(
+              headers: incomeHeaders,
+              data: incomeData,
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              headerStyle: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.green800),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              cellHeight: 20,
+              cellAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.centerLeft,
+                3: pw.Alignment.centerLeft,
+                4: pw.Alignment.centerLeft,
+                5: pw.Alignment.centerRight,
+              },
+            ),
+
+          pw.SizedBox(height: 18),
+
+          // 3. FINAL FINANCIAL CONCLUSION BOX
+          pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              color: netBgColor,
+              borderRadius: pw.BorderRadius.circular(8),
+              border: pw.Border.all(color: netColor, width: 1.5),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('3. FINANCIAL CONCLUSION (અંતિમ નાણાકીય તારણ)', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: netColor)),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: pw.BoxDecoration(color: netColor, borderRadius: pw.BorderRadius.circular(4)),
+                      child: pw.Text(netLabel, style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 6),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Total Operational Revenue (કુલ આવક):', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
+                    pw.Text('Rs. ${Formatters.currencyPdf(calc.totalIncome)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
+                  ],
+                ),
+                pw.SizedBox(height: 3),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Less Total Operating Costs (કુલ ખર્ચ):', style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800)),
+                    pw.Text('- Rs. ${Formatters.currencyPdf(calc.totalExpenses)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                  ],
+                ),
+                pw.Container(margin: const pw.EdgeInsets.symmetric(vertical: 4), height: 1, color: netColor),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('NET FINANCIAL BALANCE (ચોખ્ખો નફો / ખોટ):', style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: netColor)),
+                    pw.Text('${calc.isProfit ? '+' : '-'}Rs. ${Formatters.currencyPdf(calc.netAmount)}', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: netColor)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  /// Generates and exports Net Profit & Loss PDF to application documents directory
+  static Future<String> exportProfitLossPdf({
+    required ProfitLossCalculation calc,
+    required String periodLabel,
+    String? companyName,
+    String? companyTagline,
+  }) async {
+    final bytes = await generateProfitLossPdfData(
+      calc: calc,
+      periodLabel: periodLabel,
+      companyName: companyName,
+      companyTagline: companyTagline,
+    );
+
+    final dir = await getApplicationDocumentsDirectory();
+    final filename =
+        'OM_Mavtar_Profit_Loss_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes);
     return file.path;
   }
 }
