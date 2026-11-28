@@ -823,6 +823,7 @@ class StorageService {
               'gstAmount': 0.0,
               'finalAmount': amt,
               'paidAmount': amt,
+              'designNo': m['designNo'] ?? m['design_no'] ?? m['design'] ?? '',
               'paymentOption': 'cash',
               'paymentStatus': 'paid',
               'notes': m['description'] ?? m['notes'] ?? m['remarks'] ?? 'Migrated from legacy backup',
@@ -882,6 +883,11 @@ class StorageService {
       }
       if (data.containsKey('ledgerCategoryItems')) {
         await _prefs.setString(_keyLedgerCategoryItems, jsonEncode(data['ledgerCategoryItems']));
+      } else {
+        final existing = _prefs.getString(_keyLedgerCategoryItems);
+        if (existing == null || existing.isEmpty || existing == '[]') {
+          await saveLedgerCategoryItems(LedgerCategoryItem.defaultItems());
+        }
       }
 
       if (data.containsKey('branding') &&

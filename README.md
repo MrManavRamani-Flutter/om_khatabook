@@ -8,7 +8,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-blue.svg?logo=flutter)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-informational.svg)](https://flutter.dev)
 [![Build](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions%20(Inno%20Setup)-success.svg)](.github/workflows/build_windows_exe.yml)
-[![Tests](https://img.shields.io/badge/Tests-39%20Passed-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/Tests-81%20Passed-brightgreen.svg)](test/)
 [![Security](https://img.shields.io/badge/Security-RBAC%20%2B%20Audit%20Trail-blueviolet.svg)]()
 [![Language](https://img.shields.io/badge/UI%20Language-100%25%20English-blue.svg)]()
 
@@ -86,6 +86,51 @@ Live summary cards calculating Total Challan Amount, Total Final Amount, Total G
 <p align="center">
   <img src="docs/screenshots/overview_dashboard.jpg" alt="Financial KPI Metrics" width="95%" style="border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08);" />
 </p>
+
+---
+
+## 🆕 Recent Updates & Master Features Guide (v2.1.0 - v2.2.0)
+
+### 1. Ledger Categories Directory & 1-Click Fast Presets (New!)
+- **Sidebar Navigation**: Dedicated **Ledger Categories** section in the main sidebar with live preset count badges.
+- **Expenses & Income Presets**: Full directory management for regular business operating expenses (`Electricity Bill`, `Staff Salary / Wages`, `Office Rent`, `Refreshments & Tea`, `Packaging`, etc.) and income sources (`Om Kiran`, `Pradip`, `Cash Sales`, `Commission`, etc.).
+- **1-Click Rapid Ledger Entry**: In "Add New Expense" / "Add New Income", all items appear as interactive **Quick Presets** chips. Clicking any preset instantly auto-populates Particulars/Details, Category group, and default amounts without typing.
+- **Inline Modal Shortcut & Dropdown Picker**: Add brand-new preset items right from within the entry modal via `+ Add Preset`, or choose from saved items via the Particulars dropdown menu.
+
+### 2. Custom Date Range (From - To Date) Period Filter
+- **Custom Calendar Range Picker**: Added `From - To Date...` action chip next to the standard Period chips (`All Time`, `Today`, `Last 7 Days`, `Last 30 Days`, `Pick Month...`).
+- **Live Range Display & One-Click Reset**: When selected, displays exact dates (e.g. `From: 01/10/26 To: 28/11/26`) with an instant `(✕)` clear button to revert to All Time.
+- **Cross-View Support**: Available in both the main Challan Ledger and individual Party Ledger views.
+
+### 3. Session Security & Polished UI Controls
+- **Polished Settings Dropdown**: The `Auto-Logout on Sleep / Inactive` control has been redesigned with rounded borders, theme-colored container backgrounds, and standard dropdown arrow indicators.
+- **Mandatory App Launch Login**: Whenever the application is closed and reopened, it strictly directs the user to the `LoginView` (Zero session hijacking).
+
+### 4. Non-Blocking Floating Recycle Bin SnackBar
+- **Floating Pill SnackBar**: Replacing the full-width bottom bar with an unobtrusive, elevated floating SnackBar.
+- **4-Second Auto-Dismiss & Immediate Actions**: Features an immediate **UNDO** button to restore soft-deleted items, and a dedicated **Close `(✕)`** button for instant dismissal.
+
+### 5. Net Profit & Loss Ledger & PDF Table Export
+- **Comprehensive P&L Statement PDF**: Generates professional, clean A4 tables categorizing all Incomes, Expenses, and Final Conclusion (Net Profit or Loss).
+- **Consolidated Toolbar Actions**: Removed redundant per-row and notes share buttons; centralized PDF statement generation and WhatsApp sharing directly into the period toolbar.
+
+### 6. Dynamic Company Invoicing & Banking Details
+- **Editable in Settings**: Dynamically configure Company Name, Address, GSTIN, Phone, Email, Bank Name, Account Number, IFSC Code, and Branch.
+- **Live Propagation**: All settings dynamically render across single-page A4 and A5 GST tax invoices with zero hardcoded dummy data.
+
+### 7. Design No. & Due Days Enhancements
+- **Design No. Tracking**: Added a dedicated `Design No.` field in challan entries and table columns.
+- **Payment Due Management**: Quick `+90 Days` button, custom due day selector, overdue warning badges, and countdown timers.
+
+### 8. Centralized Theme Palettes & 100% English UI
+- **6 Handcrafted Palettes**: Teal (default), Blue, Emerald, Slate, Indigo, and Purple with live theme switching.
+- **Custom Status Color Pickers**: Individual color management for Paid, Partially Paid, and Unpaid/Warning records.
+- **Accessibility**: High-contrast text toggle and pure English UI strings with no horizontal scroll in desktop/mobile table layouts.
+
+### 9. Old Database Backup Auto-Migration & Tolerant Schema
+- **Legacy Version Compatibility**: Auto-detects and migrates backups from v1.0.0, raw JSON arrays, legacy `transactions`, and `dayEntries`.
+- **Fault-Tolerant Parsing**: Safely handles missing fields, stringified numbers (e.g. `"15,000.00"`, `"Rs. 2500"`, `"₹ 4000"`), and varied date string formats (`DD-MM-YYYY`, `DD/MM/YYYY`, ISO 8601).
+- **Preset Preservation**: If an older backup lacks `ledgerCategoryItems` or `incomeExpenseEntries`, defaults are automatically seeded so the application never starts with empty or corrupted categories.
 
 ---
 

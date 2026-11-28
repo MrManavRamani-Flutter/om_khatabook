@@ -363,6 +363,54 @@ void main() {
       expect(entry.notes, contains('BEADS=571140'));
       expect(entry.category, equals('Salary'));
     });
+
+    test('Old version v1.0.0 backup without category items or expense entries imports without errors and preserves presets', () async {
+      // Legacy backup format from older version: only parties and legacy transactions
+      final legacyBackupJson = jsonEncode({
+        'version': '1.0.0',
+        'parties': [
+          {'id': 'p_old_1', 'name': 'SHREE RAM TEXTILES', 'createdAt': '2025-01-01T10:00:00.000'},
+        ],
+        'transactions': [
+          {
+            'id': 'tx_old_1',
+            'referenceNo': 'CH-OLD-88',
+            'partyId': 'p_old_1',
+            'partyName': 'SHREE RAM TEXTILES',
+            'amount': '12,500',
+            'date': '2025-01-05T10:00:00.000',
+            'description': 'Old delivery order',
+          }
+        ]
+      });
+
+      // Analyze legacy backup
+      final analysis = provider.analyzeBackupJson(legacyBackupJson);
+      expect(analysis.isValid, isTrue);
+      expect(analysis.totalChallans, equals(1));
+      expect(analysis.totalParties, equals(1));
+
+      // Import in Replace Mode
+      final replaceSummary = await provider.importBackupWithStrategy(
+        jsonString: legacyBackupJson,
+        mode: BackupImportMode.replace,
+      );
+      expect(replaceSummary.success, isTrue);
+      expect(provider.challans.length, equals(1));
+      expect(provider.challans.first.challanNo, equals('CH-OLD-88'));
+      expect(provider.challans.first.finalAmount, equals(12500.0));
+      // Presets are guaranteed not empty
+      expect(provider.ledgerCategoryItems.isNotEmpty, isTrue);
+      expect(provider.expenseCategoryItems.any((e) => e.name == 'Electricity Bill'), isTrue);
+
+      // Import in Merge Mode
+      final mergeSummary = await provider.importBackupWithStrategy(
+        jsonString: legacyBackupJson,
+        mode: BackupImportMode.merge,
+      );
+      expect(mergeSummary.success, isTrue);
+      expect(provider.ledgerCategoryItems.isNotEmpty, isTrue);
+    });
   });
 }
 

@@ -1714,6 +1714,9 @@ class ChallanProvider extends ChangeNotifier {
       if (analysis.ledgerCategoryItems.isNotEmpty) {
         _ledgerCategoryItems = List.from(analysis.ledgerCategoryItems);
         await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      } else if (_ledgerCategoryItems.isEmpty) {
+        _ledgerCategoryItems = LedgerCategoryItem.defaultItems();
+        await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
       }
 
       if (importBranding && analysis.branding != null) {
@@ -1870,6 +1873,9 @@ class ChallanProvider extends ChangeNotifier {
             _ledgerCategoryItems.add(item);
           }
         }
+        await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      } else if (_ledgerCategoryItems.isEmpty) {
+        _ledgerCategoryItems = LedgerCategoryItem.defaultItems();
         await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
       }
 
