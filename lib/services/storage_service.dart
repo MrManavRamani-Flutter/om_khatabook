@@ -8,6 +8,7 @@ import '../models/app_user.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
 import '../models/income_expense_entry.dart';
+import '../models/ledger_category_item.dart';
 import '../models/party.dart';
 
 class StorageService {
@@ -40,6 +41,7 @@ class StorageService {
   static const String _keyRolePermissions = 'om_role_permissions_v2';
   static const String _keyCustomRoles = 'om_custom_roles_v2';
   static const String _keyIncomeExpenseEntries = 'om_income_expense_entries_v1';
+  static const String _keyLedgerCategoryItems = 'om_ledger_category_items_v1';
 
   late SharedPreferences _prefs;
 
@@ -666,6 +668,30 @@ class StorageService {
     await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(list));
   }
 
+  // --- LEDGER CATEGORY ITEMS (EXPENSE & INCOME PRESETS) ---
+  Future<List<LedgerCategoryItem>> loadLedgerCategoryItems() async {
+    final str = _prefs.getString(_keyLedgerCategoryItems);
+    if (str == null || str.isEmpty) {
+      final defaults = LedgerCategoryItem.defaultItems();
+      await saveLedgerCategoryItems(defaults);
+      return defaults;
+    }
+    try {
+      final List decoded = jsonDecode(str) as List;
+      return decoded
+          .map((e) => LedgerCategoryItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading ledger category items: $e');
+      return LedgerCategoryItem.defaultItems();
+    }
+  }
+
+  Future<void> saveLedgerCategoryItems(List<LedgerCategoryItem> items) async {
+    final list = items.map((e) => e.toJson()).toList();
+    await _prefs.setString(_keyLedgerCategoryItems, jsonEncode(list));
+  }
+
   // --- BACKUP & RESTORE ---
   Future<String> exportBackupJson() async {
     final partiesStr = _prefs.getString(_keyParties) ?? '[]';
@@ -675,6 +701,7 @@ class StorageService {
     final permissionsStr = _prefs.getString(_keyRolePermissions) ?? '{}';
     final customRolesStr = _prefs.getString(_keyCustomRoles) ?? '[]';
     final entriesStr = _prefs.getString(_keyIncomeExpenseEntries) ?? '[]';
+    final categoryItemsStr = _prefs.getString(_keyLedgerCategoryItems) ?? '[]';
 
     final data = {
       'app': 'OM Mavtar Group Khata Book',
@@ -687,6 +714,7 @@ class StorageService {
       'rolePermissions': jsonDecode(permissionsStr),
       'customRoles': jsonDecode(customRolesStr),
       'incomeExpenseEntries': jsonDecode(entriesStr),
+      'ledgerCategoryItems': jsonDecode(categoryItemsStr),
       'branding': {
         'companyName': companyName,
         'companyTagline': companyTagline,
@@ -852,6 +880,9 @@ class StorageService {
         }).toList();
         await _prefs.setString(_keyIncomeExpenseEntries, jsonEncode(converted));
       }
+      if (data.containsKey('ledgerCategoryItems')) {
+        await _prefs.setString(_keyLedgerCategoryItems, jsonEncode(data['ledgerCategoryItems']));
+      }
 
       if (data.containsKey('branding') &&
           data['branding'] is Map<String, dynamic>) {
@@ -889,5 +920,6 @@ class StorageService {
     await _prefs.remove(_keyRolePermissions);
     await _prefs.remove(_keyCustomRoles);
     await _prefs.remove(_keyIncomeExpenseEntries);
+    await _prefs.remove(_keyLedgerCategoryItems);
   }
 }

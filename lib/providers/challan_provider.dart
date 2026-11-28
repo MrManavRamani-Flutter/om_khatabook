@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/audit_log_entry.dart';
 import '../models/challan_entry.dart';
 import '../models/income_expense_entry.dart';
+import '../models/ledger_category_item.dart';
 import '../models/party.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -48,6 +49,7 @@ class BackupAnalysisResult {
   final List<ChallanEntry> challans;
   final List<Party> parties;
   final List<IncomeExpenseEntry> incomeExpenseEntries;
+  final List<LedgerCategoryItem> ledgerCategoryItems;
   final Map<String, dynamic>? branding;
   final bool isPartialOrLegacy;
   final int totalChallans;
@@ -59,6 +61,7 @@ class BackupAnalysisResult {
     this.challans = const [],
     this.parties = const [],
     this.incomeExpenseEntries = const [],
+    this.ledgerCategoryItems = const [],
     this.branding,
     this.isPartialOrLegacy = false,
     this.totalChallans = 0,
@@ -189,6 +192,7 @@ class ChallanProvider extends ChangeNotifier {
   bool _isSidebarCollapsed = false;
   List<AuditLogEntry> _auditLogs = [];
   List<IncomeExpenseEntry> _incomeExpenseEntries = [];
+  List<LedgerCategoryItem> _ledgerCategoryItems = [];
 
   ChallanProvider(this._storage);
 
@@ -389,6 +393,7 @@ class ChallanProvider extends ChangeNotifier {
     _challans.sort((a, b) => b.date.compareTo(a.date));
     _auditLogs = await _storage.loadAuditLogs();
     _incomeExpenseEntries = await _storage.loadIncomeExpenseEntries();
+    _ledgerCategoryItems = await _storage.loadLedgerCategoryItems();
 
     if (!_storage.isCleanDataMigrated) {
       await _cleanAndSeedRealParties();
@@ -801,6 +806,74 @@ class ChallanProvider extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  // --- LEDGER CATEGORY ITEMS (EXPENSES & INCOME PRESETS) ---
+  List<LedgerCategoryItem> get ledgerCategoryItems =>
+      List.unmodifiable(_ledgerCategoryItems);
+
+  List<LedgerCategoryItem> get expenseCategoryItems =>
+      _ledgerCategoryItems.where((i) => i.isExpense).toList();
+
+  List<LedgerCategoryItem> get incomeCategoryItems =>
+      _ledgerCategoryItems.where((i) => i.isIncome).toList();
+
+  Future<void> addLedgerCategoryItem(LedgerCategoryItem item) async {
+    _ledgerCategoryItems.insert(0, item);
+    await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+    await logAction(
+      action: AuditAction.create,
+      entityType: AuditEntityType.challan,
+      entityId: item.id,
+      entityTitle: '${item.type.name.toUpperCase()} ITEM: ${item.name}',
+      performedBy: 'OM MAVTAR',
+      userRole: 'MASTER',
+      description: 'Added ${item.type.name} category item: ${item.name} (${item.category})',
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateLedgerCategoryItem(LedgerCategoryItem updated) async {
+    final idx = _ledgerCategoryItems.indexWhere((i) => i.id == updated.id);
+    if (idx != -1) {
+      _ledgerCategoryItems[idx] = updated;
+      await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      await logAction(
+        action: AuditAction.update,
+        entityType: AuditEntityType.challan,
+        entityId: updated.id,
+        entityTitle: '${updated.type.name.toUpperCase()} ITEM: ${updated.name}',
+        performedBy: 'OM MAVTAR',
+        userRole: 'MASTER',
+        description: 'Updated ${updated.type.name} category item: ${updated.name}',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteLedgerCategoryItem(String id) async {
+    final idx = _ledgerCategoryItems.indexWhere((i) => i.id == id);
+    if (idx != -1) {
+      final removed = _ledgerCategoryItems[idx];
+      _ledgerCategoryItems.removeAt(idx);
+      await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      await logAction(
+        action: AuditAction.permanentDelete,
+        entityType: AuditEntityType.challan,
+        entityId: removed.id,
+        entityTitle: '${removed.type.name.toUpperCase()} ITEM: ${removed.name}',
+        performedBy: 'OM MAVTAR',
+        userRole: 'MASTER',
+        description: 'Deleted ${removed.type.name} category item: ${removed.name}',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetDefaultLedgerCategoryItems() async {
+    _ledgerCategoryItems = LedgerCategoryItem.defaultItems();
+    await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+    notifyListeners();
   }
 
   /// All unique months formatted as 'yyyy-MM' present across challans & expense entries
@@ -1364,6 +1437,7 @@ class ChallanProvider extends ChangeNotifier {
       List<dynamic> rawChallans = [];
       List<dynamic> rawParties = [];
       List<dynamic> rawEntries = [];
+      List<dynamic> rawCategoryItems = [];
       Map<String, dynamic>? brandingMap;
       bool isPartial = false;
 
@@ -1489,6 +1563,10 @@ class ChallanProvider extends ChangeNotifier {
             return de;
           }).toList();
         }
+
+        if (map['ledgerCategoryItems'] is List) {
+          rawCategoryItems = map['ledgerCategoryItems'] as List;
+        }
       } else {
         return BackupAnalysisResult(
           isValid: false,
@@ -1545,7 +1623,16 @@ class ChallanProvider extends ChangeNotifier {
         }
       }
 
-      if (parsedChallans.isEmpty && parsedParties.isEmpty && parsedEntries.isEmpty && brandingMap == null) {
+      final parsedCategoryItems = <LedgerCategoryItem>[];
+      for (var item in rawCategoryItems) {
+        if (item is Map) {
+          try {
+            parsedCategoryItems.add(LedgerCategoryItem.fromJson(Map<String, dynamic>.from(item)));
+          } catch (_) {}
+        }
+      }
+
+      if (parsedChallans.isEmpty && parsedParties.isEmpty && parsedEntries.isEmpty && parsedCategoryItems.isEmpty && brandingMap == null) {
         return BackupAnalysisResult(
           isValid: false,
           errorMessage: 'No challan records or parties could be identified in the provided file.',
@@ -1557,6 +1644,7 @@ class ChallanProvider extends ChangeNotifier {
         challans: parsedChallans,
         parties: parsedParties,
         incomeExpenseEntries: parsedEntries,
+        ledgerCategoryItems: parsedCategoryItems,
         branding: brandingMap,
         isPartialOrLegacy: isPartial,
         totalChallans: parsedChallans.length,
@@ -1622,6 +1710,11 @@ class ChallanProvider extends ChangeNotifier {
       await _storage.saveChallans(_challans);
       _incomeExpenseEntries = List.from(analysis.incomeExpenseEntries);
       await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
+
+      if (analysis.ledgerCategoryItems.isNotEmpty) {
+        _ledgerCategoryItems = List.from(analysis.ledgerCategoryItems);
+        await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      }
 
       if (importBranding && analysis.branding != null) {
         await _applyBranding(analysis.branding!);
@@ -1768,6 +1861,17 @@ class ChallanProvider extends ChangeNotifier {
         }
       }
       await _storage.saveIncomeExpenseEntries(_incomeExpenseEntries);
+
+      if (analysis.ledgerCategoryItems.isNotEmpty) {
+        for (var item in analysis.ledgerCategoryItems) {
+          if (!_ledgerCategoryItems.any((i) =>
+              i.id == item.id ||
+              (i.name.trim().toLowerCase() == item.name.trim().toLowerCase() && i.type == item.type))) {
+            _ledgerCategoryItems.add(item);
+          }
+        }
+        await _storage.saveLedgerCategoryItems(_ledgerCategoryItems);
+      }
 
       if (importBranding && analysis.branding != null) {
         await _applyBranding(analysis.branding!);

@@ -4,9 +4,11 @@ import '../providers/auth_provider.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_edit_challan_dialog.dart';
+import '../widgets/add_edit_ledger_item_dialog.dart';
 import '../widgets/add_edit_party_dialog.dart';
 import '../widgets/branding_dialogs.dart';
 import 'challan_list_view.dart';
+import 'ledger_categories_view.dart';
 import 'net_profit_loss_view.dart';
 import 'parties_view.dart';
 import 'recycle_bin_view.dart';
@@ -51,7 +53,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
   void _navigateToSettings({int categoryIndex = 0}) {
     setState(() {
-      _selectedIndex = 5;
+      _selectedIndex = 6;
       _settingsCategoryIndex = categoryIndex;
     });
   }
@@ -98,15 +100,18 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         contentBody = const PartiesView();
         break;
       case 2:
-        contentBody = const NetProfitLossView();
+        contentBody = const LedgerCategoriesView();
         break;
       case 3:
-        contentBody = const SummaryReportsView();
+        contentBody = const NetProfitLossView();
         break;
       case 4:
-        contentBody = const RecycleBinView();
+        contentBody = const SummaryReportsView();
         break;
       case 5:
+        contentBody = const RecycleBinView();
+        break;
+      case 6:
         contentBody = SettingsView(
           key: ValueKey('settings_category_$_settingsCategoryIndex'),
           initialCategoryIndex: _settingsCategoryIndex,
@@ -122,7 +127,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
     // Mobile layout with drawer & bottom navigation bar
     if (isMobile) {
-      final navIndex = _selectedIndex == 5 ? 4 : (_selectedIndex < 4 ? _selectedIndex : 0);
+      final navIndex = _selectedIndex == 6 ? 4 : (_selectedIndex < 4 ? _selectedIndex : 0);
       return Scaffold(
         appBar: AppBar(
           elevation: 0,
@@ -194,6 +199,28 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                     );
                   },
                 ),
+              )
+            else if (_selectedIndex == 2)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: provider.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.add, size: 15),
+                  label: const Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const AddEditLedgerItemDialog(),
+                    );
+                  },
+                ),
               ),
             if (warningCount > 0)
               Padding(
@@ -257,7 +284,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
           onDestinationSelected: (idx) {
             setState(() {
               if (idx == 4) {
-                _selectedIndex = 5;
+                _selectedIndex = 6;
               } else {
                 _selectedIndex = idx;
               }
@@ -457,6 +484,15 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
               ),
               _buildNavItem(
                 index: 2,
+                icon: Icons.category_outlined,
+                activeIcon: Icons.category,
+                label: 'Ledger Categories',
+                badge: '${provider.ledgerCategoryItems.length}',
+                isCollapsed: isCollapsed,
+                isDrawer: isDrawer,
+              ),
+              _buildNavItem(
+                index: 3,
                 icon: Icons.analytics_outlined,
                 activeIcon: Icons.analytics,
                 label: 'Net Profit - Loss',
@@ -464,7 +500,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                 isDrawer: isDrawer,
               ),
               _buildNavItem(
-                index: 3,
+                index: 4,
                 icon: Icons.bar_chart_outlined,
                 activeIcon: Icons.bar_chart,
                 label: 'Financial Reports',
@@ -472,7 +508,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                 isDrawer: isDrawer,
               ),
               _buildNavItem(
-                index: 4,
+                index: 5,
                 icon: Icons.delete_outline,
                 activeIcon: Icons.delete,
                 label: 'Recycle Bin',
@@ -482,7 +518,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
                 isDrawer: isDrawer,
               ),
               _buildNavItem(
-                index: 5,
+                index: 6,
                 icon: Icons.settings_outlined,
                 activeIcon: Icons.settings,
                 label: 'Settings',

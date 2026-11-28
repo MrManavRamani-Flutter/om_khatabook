@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/income_expense_entry.dart';
+import '../models/ledger_category_item.dart';
 import '../providers/challan_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/add_edit_ledger_item_dialog.dart';
 import '../widgets/password_confirmation_dialog.dart';
 import '../services/whatsapp_share_service.dart';
 
@@ -380,30 +382,6 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
     DateTime selectedDate = entryToEdit?.date ?? DateTime.now();
     String paymentMode = entryToEdit?.paymentMode ?? 'Cash';
 
-    // Preset quick chips for common business ledger entries
-    final expenseSuggestions = [
-      'Electricity Bill',
-      'Staff Salary / Wages',
-      'Office Rent',
-      'Refreshments & Tea',
-      'Transportation & Travel',
-      'Stationary & Printing',
-      'Packing Materials',
-      'Repairs & Maintenance',
-      'Other Operating Expenses',
-    ];
-
-    final incomeSuggestions = [
-      'Om Kiran (Sales)',
-      'Pradip (Sales)',
-      'Direct Cash Sales',
-      'Commission Received',
-      'Interest Received',
-      'Other Business Income',
-    ];
-
-    final suggestions = type == EntryType.expense ? expenseSuggestions : incomeSuggestions;
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -412,6 +390,9 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
           final isDark = Theme.of(ctx).brightness == Brightness.dark;
           final isExpense = type == EntryType.expense;
           final accentColor = isExpense ? const Color(0xFFE11D48) : const Color(0xFF059669);
+          final dynamicCategoryItems = isExpense
+              ? provider.expenseCategoryItems
+              : provider.incomeCategoryItems;
 
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -445,28 +426,81 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // QUICK SUGGESTION CHIPS
-                    Text(
-                      'Quick Presets:',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-                      ),
+                    // QUICK SUGGESTION CHIPS HEADER & ADD SHORTCUT
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Quick Presets (1-Click Select):',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () async {
+                            final added = await showDialog<bool>(
+                              context: ctx,
+                              builder: (_) => AddEditLedgerItemDialog(defaultType: type),
+                            );
+                            if (added == true) {
+                              setDialogState(() {});
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add_circle_outline, size: 13, color: accentColor),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '+ Add Preset',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: accentColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: suggestions.take(6).map((s) {
+                      children: dynamicCategoryItems.map((item) {
+                        final isSelected = particularController.text.trim().toLowerCase() ==
+                            item.name.trim().toLowerCase();
                         return ActionChip(
                           visualDensity: VisualDensity.compact,
-                          label: Text(s, style: const TextStyle(fontSize: 11)),
-                          backgroundColor: accentColor.withValues(alpha: 0.08),
-                          side: BorderSide(color: accentColor.withValues(alpha: 0.2)),
+                          label: Text(
+                            item.name,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? accentColor : null,
+                            ),
+                          ),
+                          backgroundColor: isSelected
+                              ? accentColor.withValues(alpha: 0.18)
+                              : accentColor.withValues(alpha: 0.08),
+                          side: BorderSide(
+                            color: isSelected ? accentColor : accentColor.withValues(alpha: 0.2),
+                            width: isSelected ? 1.5 : 1,
+                          ),
                           onPressed: () {
                             setDialogState(() {
-                              particularController.text = s;
+                              particularController.text = item.name;
+                              categoryController.text = item.category;
+                              if (item.defaultAmount > 0) {
+                                amountController.text = item.defaultAmount.toStringAsFixed(2);
+                              }
                             });
                           },
                         );
@@ -474,13 +508,54 @@ class _NetProfitLossViewState extends State<NetProfitLossView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // PARTICULAR / DETAILS
+                    // PARTICULAR / DETAILS WITH DROPDOWN SHORTCUT
                     TextField(
                       controller: particularController,
                       decoration: InputDecoration(
                         labelText: 'Particulars / Details *',
                         hintText: isExpense ? 'e.g. Electricity Bill, Staff Salary' : 'e.g. Om Kiran, Cash Sales',
                         prefixIcon: const Icon(Icons.description_outlined, size: 20),
+                        suffixIcon: dynamicCategoryItems.isNotEmpty
+                            ? PopupMenuButton<LedgerCategoryItem>(
+                                tooltip: 'Select from saved presets',
+                                icon: Icon(
+                                  Icons.arrow_drop_down_circle_outlined,
+                                  size: 20,
+                                  color: accentColor,
+                                ),
+                                onSelected: (item) {
+                                  setDialogState(() {
+                                    particularController.text = item.name;
+                                    categoryController.text = item.category;
+                                    if (item.defaultAmount > 0) {
+                                      amountController.text = item.defaultAmount.toStringAsFixed(2);
+                                    }
+                                  });
+                                },
+                                itemBuilder: (_) => dynamicCategoryItems.map((item) {
+                                  return PopupMenuItem<LedgerCategoryItem>(
+                                    value: item,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          item.category,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Theme.of(ctx).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              )
+                            : null,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         filled: true,
                         fillColor: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
